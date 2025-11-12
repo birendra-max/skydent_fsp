@@ -1,0 +1,75 @@
+import { useContext, useState, useEffect } from "react";
+import Sidebar from "./Sidebar";
+import Hd from "./Hd";
+import Foot from "./Foot";
+import { ThemeContext } from "../../Context/ThemeContext";
+import Datatable from "./Datatable";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChartBar } from "@fortawesome/free-solid-svg-icons";
+import { fetchWithAuth } from "../../utils/adminapi";
+
+export default function ClientReports() {
+    const { theme } = useContext(ThemeContext);
+    const [data, setData] = useState([]);
+
+    const columns = [
+        { header: "Client Id", accessor: "userid" },
+        { header: "Name", accessor: "name" },
+        { header: "Email", accessor: "email" },
+        { header: "Case Status", accessor: "case_status" },
+        { header: "Total", accessor: "count" },
+    ];
+
+    useEffect(() => {
+        async function getClients() {
+            try {
+                const data = await fetchWithAuth("/get-reports", { method: "GET" });
+                if (data && data.status === "success") setData(data.data);
+                else setData([]);
+            } catch (error) {
+                console.error("Error fetching clients:", error);
+                setData([]);
+            }
+        }
+        getClients();
+    }, []);
+
+    return (
+        <>
+            <Hd />
+            <main
+                className={`min-h-screen flex transition-all duration-300 ${theme === "dark"
+                    ? "bg-gray-950 text-gray-100"
+                    : "bg-gray-200 text-gray-800"
+                    }`}
+            >
+                <div className="fixed top-0 left-0 h-full w-64 z-20">
+                    <Sidebar />
+                </div>
+
+                <div className="flex-1 ml-64 flex flex-col min-h-screen p-4 mt-16">
+                    {/* Header */}
+                    <div className="mb-6">
+                        <h1
+                            className={`text-3xl font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"
+                                }`}
+                        >
+                            <FontAwesomeIcon icon={faChartBar} className="text-blue-500" />
+                            Clients Reports
+                        </h1>
+                        <p
+                            className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"
+                                }`}
+                        >
+                            Manage and monitor your client reports.
+                        </p>
+                    </div>
+
+                    {/* 📊 Client Table */}
+                    <Datatable columns={columns} data={data} rowsPerPage={50} />
+                </div>
+            </main>
+            <Foot/>
+        </>
+    );
+}

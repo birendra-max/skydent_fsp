@@ -1,0 +1,283 @@
+import { useState, useEffect, useContext } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEye, faEyeSlash, faUser, faLock } from "@fortawesome/free-solid-svg-icons";
+import { UserContext } from "../../Context/UserContext";
+import { useNavigate } from 'react-router-dom';
+import config from '../../config';
+
+export default function Login() {
+
+    useEffect(() => {
+        const data = localStorage.getItem('user') ? localStorage.getItem('user') : "";
+        const token = localStorage.getItem('token') ? localStorage.getItem('token') : "";
+
+        if (data !== '' && token !== '') {
+            navigate("/user/home");
+        }
+    })
+    const { setUser } = useContext(UserContext)
+
+    const navigate = useNavigate();
+    const [form, setForm] = useState({
+        email: "",
+        password: "",
+        remember: "false"
+    });
+
+    const [status, setStatus] = useState({ type: "", message: "" });
+    const [showPassword, setShowPassword] = useState(false);
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    const images = ["/img/bg0.png", "/img/bg1.png", "/img/bg2.jpg"];
+
+    const handleChange = (e) => {
+        const { name, type, value, checked } = e.target;
+        setForm({
+            ...form,
+            [name]: type === 'checkbox' ? checked : value
+        })
+    }
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch(`${config.API_BASE_URL}/validate-user`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", 'X-Tenant': 'skydent' },
+                body: JSON.stringify(form),
+            });
+
+            if (!res.ok) {
+                setStatus({ type: "error", message: "Server error. Try again later." });
+                return;
+            }
+
+            const data = await res.json();
+            if (data.status === "success" && data.message === "Login successfully" && data.user?.userid) {
+                setUser(data.user);
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('base_url', data.base_url);
+                setStatus({ type: "success", message: data.message });
+                navigate('/user/home');
+            } else {
+                setStatus({ type: "error", message: data.message || "Invalid login" });
+            }
+        } catch (err) {
+            setStatus({ type: "error", message: "Something went wrong!" });
+        }
+    };
+
+    const nextSlide = () => {
+        setActiveIndex((prev) => (prev + 1) % images.length);
+    };
+
+    const prevSlide = () => {
+        setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
+    };
+
+    useEffect(() => {
+        const interval = setInterval(nextSlide, 4000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <section className="min-h-screen flex items-center justify-center bg-[#87CEEB] px-4 py-8">
+            <div className="w-full max-w-8xl flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12">
+                {/* Carousel - Now on Right */}
+                <div className="w-full lg:w-3/5 max-w-4xl order-1 lg:order-1">
+                    <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+                        <div className="relative w-full h-72 md:h-96 lg:h-[520px] overflow-hidden">
+                            {images.map((img, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out ${idx === activeIndex
+                                        ? "opacity-100 scale-100"
+                                        : "opacity-0 scale-110"
+                                        }`}
+                                >
+                                    <img
+                                        src={img}
+                                        alt={`slide-${idx}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30"></div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Carousel Controls */}
+                        <button
+                            onClick={prevSlide}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-sm text-white w-12 h-12 rounded-full flex items-center justify-center hover:bg-black/60 transition-all duration-300 border border-white/20"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={nextSlide}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-sm text-white w-12 h-12 rounded-full flex items-center justify-center hover:bg-black/60 transition-all duration-300 border border-white/20"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+
+                        {/* Indicators */}
+                        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3">
+                            {images.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setActiveIndex(idx)}
+                                    className={`w-3 h-3 rounded-full transition-all duration-300 ${idx === activeIndex ? "bg-white scale-125" : "bg-white/40"
+                                        }`}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Text Content */}
+                        <div className="absolute bottom-20 left-8 right-8 text-white">
+                            <h2 className="text-2xl md:text-3xl font-bold mb-3">Experience Dental Excellence</h2>
+                            <p className="text-sm md:text-base text-gray-200 leading-relaxed">
+                                Where your smile receives the care and attention it truly deserves.
+                                Advanced technology meets compassionate care.
+                            </p>
+                        </div>
+
+                        {/* Decorative Elements */}
+                        <div className="absolute top-6 right-6">
+                            <div className="bg-blue-500/20 backdrop-blur-sm rounded-full p-3 border border-blue-400/30">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Login Form - Now on Left */}
+                <div className="w-full lg:w-2/4 max-w-md order-2 lg:order-2 ">
+                    <div className="bg-gradient-to-r from-slate-800 to-gray-900 rounded-2xl shadow-2xl p-8 border border-white/20">
+
+                        <div className="flex justify-between text-center mb-2">
+                            {/* Logo */}
+                            <div className="flex justify-center mb-8">
+                                <img
+                                    src="/img/logo.png"
+                                    alt="Skydent Logo"
+                                    className="h-14 w-auto object-contain"
+                                />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
+                                <p className="text-gray-300">Sign in to access your account</p>
+                            </div>
+                        </div>
+
+                        {/* Status Alert */}
+                        {status.message && (
+                            <div
+                                className={`flex items-center p-4 mb-6 rounded-xl border backdrop-blur-sm ${status.type === "success"
+                                    ? "bg-green-500/20 border-green-400/30 text-green-200"
+                                    : "bg-red-500/20 border-red-400/30 text-red-200"
+                                    }`}
+                                role="alert"
+                            >
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium">{status.message}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        <form className="space-y-6" onSubmit={handleSubmit}>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-200 mb-3">
+                                    Username
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <FontAwesomeIcon
+                                            icon={faUser}
+                                            className="text-gray-400"
+                                            size="sm"
+                                        />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="email"
+                                        required
+                                        className="w-full pl-10 pr-4 py-3 bg-white/5 border border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-white placeholder-gray-400 transition-all duration-200"
+                                        value={form.email}
+                                        onChange={handleChange}
+                                        placeholder="Enter your username"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-200 mb-3">
+                                    Password
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <FontAwesomeIcon
+                                            icon={faLock}
+                                            className="text-gray-400"
+                                            size="sm"
+                                        />
+                                    </div>
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        required
+                                        className="w-full pl-10 pr-12 py-3 bg-white/5 border border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-white placeholder-gray-400 transition-all duration-200"
+                                        value={form.password}
+                                        onChange={handleChange}
+                                        placeholder="Enter your password"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white transition-colors duration-200"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        <FontAwesomeIcon
+                                            icon={showPassword ? faEyeSlash : faEye}
+                                            size="sm"
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <label className="flex items-center text-sm text-gray-300 hover:text-white cursor-pointer transition-colors duration-200">
+                                    <input
+                                        type="checkbox"
+                                        name="remember"
+                                        onChange={handleChange}
+                                        className="w-4 h-4 text-blue-400 bg-white/5 border-gray-600 rounded focus:ring-blue-400"
+                                    />
+                                    <span className="ml-2">Remember me</span>
+                                </label>
+                                <button
+                                    type="submit"
+                                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
+                                >
+                                    Sign In
+                                </button>
+                            </div>
+                        </form>
+
+                        <div className="mt-8 pt-6 border-t border-gray-700">
+                            <p className="text-center text-xs text-gray-400">
+                                © 2024 Sdkydent Pvt Ltd. All rights reserved.
+                                <span className="block mt-1">
+                                    Created with <span className="text-red-400">♥</span> for better smiles
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
