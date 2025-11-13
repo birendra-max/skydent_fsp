@@ -154,51 +154,59 @@ export default function Login() {
                         </div>
                     </div>
                 </div>
-                
-                {/* Login Form - Now on Left */}
-                <div className="w-full lg:w-2/4 max-w-md order-2 lg:order-2 ">
-                    <div className="bg-gradient-to-r from-slate-800 to-gray-900 rounded-2xl shadow-2xl p-8 border border-white/20">
 
-                        <div className="flex justify-between text-center mb-2">
-                            {/* Logo */}
-                            <div className="flex justify-center mb-8">
+                {/* Login Container */}
+                <div className="w-full lg:w-2/4 max-w-md order-2 lg:order-2">
+
+                    {/* Login Form */}
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
+                        {/* Logo Above Form */}
+                        <div className="flex justify-start mb-4">
+                            <div>
                                 <img
                                     src="/img/logo.png"
                                     alt="Skydent Logo"
-                                    className="h-14 w-auto object-contain"
+                                    className="h-10 w-auto object-contain"
                                 />
                             </div>
-                            <div>
-                                <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-                                <p className="text-gray-300">Sign in to access your account</p>
-                            </div>
+                        </div>
+
+                        {/* Header Section */}
+                        <div className="mb-8">
+                            <h1 className="text-3xl font-bold text-gray-900 mb-2 font-serif">
+                                Client Portal
+                            </h1>
+                            <p className="text-gray-600 font-light tracking-wide text-sm">
+                                Sign in to access client dashboard
+                            </p>
                         </div>
 
                         {/* Status Alert */}
                         {status.message && (
                             <div
-                                className={`flex items-center p-4 mb-6 rounded-xl border backdrop-blur-sm ${status.type === "success"
-                                    ? "bg-green-500/20 border-green-400/30 text-green-200"
-                                    : "bg-red-500/20 border-red-400/30 text-red-200"
+                                className={`flex items-center p-4 mb-6 rounded-xl border ${status.type === "success"
+                                    ? "bg-green-50 border-green-200 text-green-800"
+                                    : "bg-red-50 border-red-200 text-red-800"
                                     }`}
                                 role="alert"
                             >
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium">{status.message}</p>
+                                    <p className="text-sm font-medium tracking-wide">{status.message}</p>
                                 </div>
                             </div>
                         )}
 
                         <form className="space-y-6" onSubmit={handleSubmit}>
+                            {/* Username Field */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-200 mb-3">
+                                <label className="block text-sm font-semibold text-gray-800 mb-3 tracking-wide">
                                     Username
                                 </label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <FontAwesomeIcon
                                             icon={faUser}
-                                            className="text-gray-400"
+                                            className="text-gray-500"
                                             size="sm"
                                         />
                                     </div>
@@ -206,7 +214,7 @@ export default function Login() {
                                         type="text"
                                         name="email"
                                         required
-                                        className="w-full pl-10 pr-4 py-3 bg-white/5 border border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-white placeholder-gray-400 transition-all duration-200"
+                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-gray-900 placeholder-gray-500 transition-all duration-200 font-medium tracking-wide"
                                         value={form.email}
                                         onChange={handleChange}
                                         placeholder="Enter your username"
@@ -214,15 +222,16 @@ export default function Login() {
                                 </div>
                             </div>
 
+                            {/* Password Field */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-200 mb-3">
+                                <label className="block text-sm font-semibold text-gray-800 mb-3 tracking-wide">
                                     Password
                                 </label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <FontAwesomeIcon
                                             icon={faLock}
-                                            className="text-gray-400"
+                                            className="text-gray-500"
                                             size="sm"
                                         />
                                     </div>
@@ -230,14 +239,14 @@ export default function Login() {
                                         type={showPassword ? "text" : "password"}
                                         name="password"
                                         required
-                                        className="w-full pl-10 pr-12 py-3 bg-white/5 border border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-white placeholder-gray-400 transition-all duration-200"
+                                        className="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-gray-900 placeholder-gray-500 transition-all duration-200 font-medium tracking-wide"
                                         value={form.password}
                                         onChange={handleChange}
                                         placeholder="Enter your password"
                                     />
                                     <button
                                         type="button"
-                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white transition-colors duration-200"
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 transition-colors duration-200"
                                         onClick={() => setShowPassword(!showPassword)}
                                     >
                                         <FontAwesomeIcon
@@ -248,30 +257,32 @@ export default function Login() {
                                 </div>
                             </div>
 
+                            {/* Remember Me & Submit */}
                             <div className="flex items-center justify-between">
-                                <label className="flex items-center text-sm text-gray-300 hover:text-white cursor-pointer transition-colors duration-200">
+                                <label className="flex items-center text-sm text-gray-700 hover:text-gray-900 cursor-pointer transition-colors duration-200 font-medium">
                                     <input
                                         type="checkbox"
                                         name="remember"
                                         onChange={handleChange}
-                                        className="w-4 h-4 text-blue-400 bg-white/5 border-gray-600 rounded focus:ring-blue-400"
+                                        className="w-4 h-4 text-blue-400 bg-gray-100 border-gray-300 rounded focus:ring-blue-400"
                                     />
-                                    <span className="ml-2">Remember me</span>
+                                    <span className="ml-2 tracking-wide">Remember me</span>
                                 </label>
                                 <button
                                     type="submit"
-                                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
+                                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-blue-500/25 tracking-wide"
                                 >
                                     Sign In
                                 </button>
                             </div>
                         </form>
 
-                        <div className="mt-8 pt-6 border-t border-gray-700">
-                            <p className="text-center text-xs text-gray-400">
-                                © 2024 Sdkydent Pvt Ltd. All rights reserved.
+                        {/* Footer */}
+                        <div className="mt-8 pt-6 border-t border-gray-300">
+                            <p className="text-center text-xs text-gray-600 tracking-wide font-light">
+                                © 2024 Skydent Pvt Ltd. All rights reserved.
                                 <span className="block mt-1">
-                                    Created with <span className="text-red-400">♥</span> for better smiles
+                                    Created with <span className="text-red-500">♥</span> for better smiles
                                 </span>
                             </p>
                         </div>

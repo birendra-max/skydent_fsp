@@ -7,8 +7,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from '../../utils/designerapi';
 import { Link } from 'react-router-dom';
-import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
-
+import {
+    faFolderOpen,
+    faSearch,
+    faSort,
+    faSortUp,
+    faSortDown
+} from '@fortawesome/free-solid-svg-icons';
 
 export default function Datatable({
     columns = [],
@@ -137,81 +142,68 @@ export default function Datatable({
     // Theme-based styling functions
     const getBackgroundClass = () => {
         return theme === 'dark'
-            ? 'bg-gray-900 text-white'
-            : 'bg-gray-200 text-gray-800';
+            ? 'bg-gray-900 text-white mt-4'
+            : 'bg-gray-200 text-gray-800 mt-4';
     };
 
     const getTableHeaderClass = () => {
         return theme === 'dark'
-            ? 'bg-gray-700 text-white'
-            : 'bg-blue-600 text-white';
+            ? 'bg-gradient-to-r from-gray-800 to-gray-700 text-white border-b border-gray-600'
+            : 'bg-gradient-to-r from-cyan-800 to-cyan-900 text-white border-b border-blue-500';
     };
 
     const getTableRowClass = (idx) => {
         if (theme === 'dark') {
-            return idx % 2 === 0 ? 'bg-gray-800 text-white' : 'bg-gray-700 text-white';
+            return idx % 2 === 0 ? 'bg-gray-800 hover:bg-gray-750 text-white' : 'bg-gray-700 hover:bg-gray-650 text-white';
         } else {
-            return idx % 2 === 0 ? 'bg-gray-100 text-gray-800' : 'bg-white text-gray-800';
+            return idx % 2 === 0 ? 'bg-white hover:bg-blue-50 text-gray-800' : 'bg-gray-50 hover:bg-blue-50 text-gray-800';
         }
     };
 
     const getInputClass = () => {
         return theme === 'dark'
-            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-            : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500';
+            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+            : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
     };
 
     const getSelectClass = () => {
         return theme === 'dark'
-            ? 'bg-gray-700 border-gray-600 text-white'
-            : 'bg-white border-gray-300 text-gray-800';
+            ? 'bg-gray-700 border-gray-600 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+            : 'bg-white border-gray-300 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
     };
 
-    const getPaginationButtonStyle = (isActive = false) => {
-        const baseStyle = {
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontWeight: "bold",
-        };
-
+    const getButtonClass = (isActive = false) => {
         if (theme === 'dark') {
-            return {
-                ...baseStyle,
-                background: isActive ? "#4f46e5" : "#374151",
-                color: isActive ? "#fff" : "#d1d5db",
-                borderColor: isActive ? "#4f46e5" : "#4b5563",
-            };
+            return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
+                isActive 
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+            }`;
         } else {
-            return {
-                ...baseStyle,
-                background: isActive ? "#007bff" : "#fff",
-                color: isActive ? "#fff" : "#000",
-                borderColor: "#ccc",
-            };
+            return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
+                isActive 
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+            }`;
         }
     };
 
-    const getDisabledButtonStyle = () => {
+    const getDisabledButtonClass = () => {
         return theme === 'dark'
-            ? { ...getPaginationButtonStyle(), background: "#1f2937", color: "#6b7280", cursor: "not-allowed" }
-            : { ...getPaginationButtonStyle(), background: "#f8f9fa", color: "#6c757d", cursor: "not-allowed" };
+            ? 'px-3 py-2 rounded-lg bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed'
+            : 'px-3 py-2 rounded-lg bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed';
     };
 
     const getNoDataClass = () => {
         return theme === 'dark'
-            ? 'bg-gray-800 text-gray-300'
-            : 'bg-gray-100 text-gray-600';
+            ? 'bg-gray-800 text-gray-300 border border-gray-700'
+            : 'bg-white text-gray-600 border border-gray-200';
     };
 
     const downloadFile = (filename, path) => {
-        // Encode only the last part of the URL (the filename)
         const parts = path.split('/');
-        const encodedFile = encodeURIComponent(parts.pop()); // safely encode the filename
-        const encodedUrl = parts.join('/') + '/' + encodedFile; // rebuild the full URL
-
-        console.log('Encoded URL:', encodedUrl);
+        const encodedFile = encodeURIComponent(parts.pop());
+        const encodedUrl = parts.join('/') + '/' + encodedFile;
 
         const link = document.createElement('a');
         link.href = encodedUrl;
@@ -222,7 +214,6 @@ export default function Datatable({
         document.body.removeChild(link);
     };
 
-
     const sendRedesign = async (orderId, status) => {
         if (status === 'Completed') {
             try {
@@ -230,7 +221,6 @@ export default function Datatable({
                     method: "GET",
                 });
 
-                // data is already the parsed JSON response
                 if (data.status === 'success') {
                     alert(data.message);
                 } else {
@@ -252,7 +242,6 @@ export default function Datatable({
                 : [...prev, id]
         );
 
-
     const toggleSelectAll = () => {
         const visibleIds = paginatedData.map((r) => r.orderid);
         if (paginatedData.every((r) => selectedRows.includes(r.orderid))) {
@@ -261,7 +250,6 @@ export default function Datatable({
             setSelectedRows([...new Set([...selectedRows, ...visibleIds])]);
         }
     };
-
 
     const handleBulkDownload = () => {
         if (!selectedRows.length) return alert("Please select at least one record!");
@@ -279,10 +267,8 @@ export default function Datatable({
             else if (fileType === "stl") path = row.stl_file_path;
             else if (fileType === "finish") path = row.finish_file_path;
 
-            // ✅ Check if valid path exists
             if (path && path.trim() !== "") {
                 try {
-                    // ✅ Use your symbol-safe download logic
                     const parts = path.split("/");
                     const encodedFile = encodeURIComponent(parts.pop());
                     const encodedUrl = parts.join("/") + "/" + encodedFile;
@@ -305,7 +291,6 @@ export default function Datatable({
             }
         });
 
-        // ✅ Final alert summary
         if (missingFiles.length > 0) {
             alert(`File not available for these record(s): ${missingFiles.join(", ")}`);
         } else if (downloadedCount === 0) {
@@ -313,38 +298,34 @@ export default function Datatable({
         }
     };
 
-
-
     return (
         <>
             <Loder status={status} />
             <Chatbox orderid={orderid} />
-            {/* Table is only shown after loader is hidden */}
+            
             {status === "hide" && (
-                <section
-                    style={{ padding: "20px" }}
-                    className={`overflow-scroll md:overflow-hidden rounded-xl mt-4 ${getBackgroundClass()}`}
-                >
+                <section className={`p-4 rounded-xl ${getBackgroundClass()}`}>
                     {(!Array.isArray(columns) || columns.length === 0) && (
-                        <div className={`p-5 text-center rounded-lg ${getNoDataClass()}`}>
-                            ⚠️ No columns provided.
+                        <div className={`p-8 text-center rounded-xl border ${getNoDataClass()}`}>
+                            <FontAwesomeIcon icon={faFolderOpen} size="2x" className="mb-3 text-blue-500 opacity-60" />
+                            <p className="text-lg font-medium">⚠️ No columns provided.</p>
                         </div>
                     )}
 
                     {Array.isArray(columns) && columns.length > 0 && (
                         <>
-                            {/* Search + Rows per page */}
-                            <div
-                                style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}
-                            >
-                                <div className="flex justify-around items-center gap-4">
-                                    {/* Rows per page dropdown */}
-                                    <label className={theme === "dark" ? "text-white" : "text-gray-800"}>
-                                        Rows per page:{" "}
+                            {/* Header Controls */}
+                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                    {/* Rows per page */}
+                                    <div className="flex items-center gap-2">
+                                        <label className={`text-sm font-medium ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                                            Rows per page:
+                                        </label>
                                         <select
                                             value={rowsPerPage}
                                             onChange={handleRowsPerPageChange}
-                                            className={`p-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 ${getSelectClass()}`}
+                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass()}`}
                                         >
                                             {rowsPerPageOptions.map((option) => (
                                                 <option key={option} value={option}>
@@ -352,218 +333,211 @@ export default function Datatable({
                                                 </option>
                                             ))}
                                         </select>
-                                    </label>
+                                    </div>
 
+                                    {/* Download Report */}
                                     <button
                                         onClick={() => exportToExcel(data, "Reports")}
-                                        className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-800 text-white text-sm font-medium rounded-md border border-green-600 transition-all duration-200 shadow-sm hover:shadow-md">
-                                        <FontAwesomeIcon icon={faDownload} className="text-white text-base" />
+                                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm font-medium rounded-lg border border-green-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+                                    >
+                                        <FontAwesomeIcon icon={faDownload} className="text-white" />
                                         Download Report
                                     </button>
-
                                 </div>
 
-                                {/* Search bar */}
-                                <div>
+                                {/* Search */}
+                                <div className="relative">
+                                    <FontAwesomeIcon 
+                                        icon={faSearch} 
+                                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
+                                    />
                                     <input
                                         type="text"
-                                        placeholder="Search..."
+                                        placeholder="Search across all columns..."
                                         value={search}
                                         onChange={handleSearch}
-                                        className={`p-2 w-64 rounded border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${getInputClass()}`}
+                                        className={`pl-10 pr-4 py-2 w-80 rounded-lg border text-sm focus:outline-none transition-all ${getInputClass()}`}
                                     />
                                 </div>
                             </div>
 
-
-                            {/* Table */}
-                            <table id="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
-                                <thead>
-                                    <tr className={getTableHeaderClass()}>
-                                        {/* ✅ Fixed checkbox column only */}
-                                        <th style={{
-                                            border: "1px solid #ddd",
-                                            width: "10vh",
-                                            minWidth: "10vh",
-                                            maxWidth: "10vh",
-                                            textAlign: "center",
-                                            padding: "8px"
-                                        }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={paginatedData.length > 0 && paginatedData.every((r) => selectedRows.includes(r.orderid))}
-                                                onChange={toggleSelectAll}
-                                                style={{ transform: "scale(1.3)", cursor: "pointer" }}
-                                            />
-                                        </th>
-
-                                        {columns.map((col) => (
-                                            <th
-                                                key={col.accessor}
-                                                onClick={() => handleSort(col.accessor)}
-                                                style={{ border: "1px solid #ddd", padding: "12px", cursor: "pointer" }}
-                                            >
-                                                {col.header}
-                                                {sortConfig.key === col.accessor && (
-                                                    <span style={{ marginLeft: "5px" }}>
-                                                        {sortConfig.direction === "asc" ? "▲" : "▼"}
-                                                    </span>
-                                                )}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {paginatedData.length > 0 ? (
-                                        paginatedData.map((row, idx) => (
-                                            <tr key={idx} className={getTableRowClass(idx)}>
-                                                {/* ✅ Fixed checkbox cell only */}
-                                                <td style={{
-                                                    border: "1px solid #ddd",
-                                                    textAlign: "center",
-                                                    padding: "8px",
-                                                    width: "40px",
-                                                    minWidth: "40px",
-                                                    maxWidth: "40px"
-                                                }}>
+                            {/* Table Container */}
+                            <div className="rounded-sm overflow-hidden shadow-lg">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse">
+                                        <thead>
+                                            <tr className={getTableHeaderClass()}>
+                                                {/* Checkbox Column */}
+                                                <th className="p-4 text-center border-r border-gray-500/30 w-16">
                                                     <input
                                                         type="checkbox"
-                                                        checked={selectedRows.includes(row.orderid)}
-                                                        onChange={() => toggleSelectRow(row.orderid)}
-                                                        style={{ transform: "scale(1.3)", cursor: "pointer" }}
+                                                        checked={paginatedData.length > 0 && paginatedData.every((r) => selectedRows.includes(r.orderid))}
+                                                        onChange={toggleSelectAll}
+                                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transform scale-125"
                                                     />
-                                                </td>
+                                                </th>
 
                                                 {columns.map((col) => (
-                                                    <td
+                                                    <th
                                                         key={col.accessor}
-                                                        style={{
-                                                            border: "1px solid #ddd",
-                                                            padding: "10px",
-                                                            wordBreak: "break-word",
-                                                            maxWidth: "200px",
-                                                            overflowWrap: "break-word",
-                                                            whiteSpace: "normal",
-                                                            fontSize: "12px",
-                                                            textAlign: "center",
-                                                        }}
+                                                        onClick={() => handleSort(col.accessor)}
+                                                        className="p-4 text-left font-semibold text-sm cursor-pointer hover:bg-gray-600/50 transition-colors border-r border-gray-500/100 last:border-r-0"
                                                     >
-                                                        {
-                                                            col.header === 'Order Id' ? (
-                                                                <div>
-                                                                    <Link to={`/designer/orderDeatails/${row.orderid}`} className="text-blue-600 hover:text-blue-800 hover:underline" > {row.orderid} </Link>
-                                                                </div>
-                                                            ) : col.header === 'Message' ? (
-                                                                <div className="w-full flex justify-center items-center relative mt-4">
-                                                                    <img
-                                                                        src="/img/messages.png"
-                                                                        alt="Message"
-                                                                        className="w-8 h-8 cursor-pointer hover:scale-110 transition-transform duration-200"
-                                                                        onClick={() => openPopup(`${row.orderid}`)}
-                                                                    />
-
-                                                                    {/* 🔹 Stylish message count badge */}
-                                                                    {row.totalMessages > 0 && (
-                                                                        <span
-                                                                            className="
-                                                                                    absolute -top-2 right-7
-                                                                                    bg-gradient-to-r from-red-600 to-red-700
-                                                                                    text-white text-[10px] font-bold
-                                                                                    rounded-full min-w-[18px] h-[18px]
-                                                                                    flex items-center justify-center
-                                                                                    shadow-lg animate-pulse
-                                                                                "
-                                                                        >
-                                                                            {row.totalMessages > 99 ? '99+' : row.totalMessages}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            ) : col.header === 'Status' ? (
-                                                                <div className="flex justify-center items-center">
-                                                                    {(() => {
-                                                                        let statusColor = '';
-                                                                        let textColor = 'text-white';
-
-                                                                        switch (row.status?.toLowerCase()) {
-                                                                            case 'completed':
-                                                                                statusColor = 'bg-green-600';
-                                                                                break;
-                                                                            case 'pending':
-                                                                                statusColor = 'bg-yellow-500';
-                                                                                textColor = 'text-black';
-                                                                                break;
-                                                                            case 'new':
-                                                                                statusColor = 'bg-blue-500';
-                                                                                break;
-                                                                            case 'cancelled':
-                                                                                statusColor = 'bg-red-600';
-                                                                                break;
-                                                                            case 'qc':
-                                                                                statusColor = 'bg-purple-600';
-                                                                                break;
-                                                                            case 'redesign':
-                                                                                statusColor = 'bg-orange-500'
-                                                                                break;
-                                                                            default:
-                                                                                statusColor = 'bg-gray-400';
-                                                                                break;
-                                                                        }
-
-                                                                        return (
-                                                                            <span
-                                                                                className={`px-3 py-1 text-xs font-bold rounded-full shadow-md ${statusColor} ${textColor}`}
-                                                                            >
-                                                                                {row.status ? row.status : 'Unknown'}
-                                                                            </span>
-                                                                        );
-                                                                    })()}
-                                                                </div>
-                                                            ) : (
-                                                                row[col.accessor] ?? "-"
-                                                            )
-                                                        }
-
-                                                    </td>
+                                                        <div className="flex items-center gap-2">
+                                                            {col.header}
+                                                            <FontAwesomeIcon 
+                                                                icon={
+                                                                    sortConfig.key === col.accessor 
+                                                                        ? sortConfig.direction === "asc" 
+                                                                            ? faSortUp 
+                                                                            : faSortDown
+                                                                        : faSort
+                                                                } 
+                                                                className={`text-xs ${
+                                                                    sortConfig.key === col.accessor 
+                                                                        ? 'text-blue-300' 
+                                                                        : 'text-gray-400'
+                                                                }`} 
+                                                            />
+                                                        </div>
+                                                    </th>
                                                 ))}
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td
-                                                colSpan={columns.length}
-                                                className={`pl-50 p-5 text-center`}
-                                            >
-                                                <FontAwesomeIcon icon={faFolderOpen} size="lg" className="me-2 text-blue-500" />
-                                                No records found.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                        </thead>
+                                        <tbody>
+                                            {paginatedData.length > 0 ? (
+                                                paginatedData.map((row, idx) => (
+                                                    <tr key={idx} className={`${getTableRowClass(idx)} transition-colors duration-200`}>
+                                                        {/* Checkbox Cell */}
+                                                        <td className="p-4 text-center border-r border-gray-300/30 dark:border-gray-600/30">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedRows.includes(row.orderid)}
+                                                                onChange={() => toggleSelectRow(row.orderid)}
+                                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transform scale-125"
+                                                            />
+                                                        </td>
+
+                                                        {columns.map((col) => (
+                                                            <td
+                                                                key={col.accessor}
+                                                                className="p-4 text-[12px] border-r border-gray-300/30 dark:border-gray-600/30 last:border-r-0"
+                                                            >
+                                                                {col.header === 'Order Id' ? (
+                                                                    <div>
+                                                                        <Link 
+                                                                            to={`/designer/orderDeatails/${row.orderid}`} 
+                                                                            className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors" 
+                                                                        >
+                                                                            {row.orderid}
+                                                                        </Link>
+                                                                    </div>
+                                                                ) : col.header === 'Message' ? (
+                                                                    <div className="flex justify-center items-center relative">
+                                                                        <div className="relative group">
+                                                                            <img
+                                                                                src="/img/messages.png"
+                                                                                alt="Message"
+                                                                                className="w-8 h-8 cursor-pointer transition-all duration-200 group-hover:scale-110 group-hover:rotate-12"
+                                                                                onClick={() => openPopup(`${row.orderid}`)}
+                                                                            />
+                                                                            {row.totalMessages > 0 && (
+                                                                                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center shadow-lg animate-pulse border-2 border-white dark:border-gray-800">
+                                                                                    {row.totalMessages > 99 ? '99+' : row.totalMessages}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : col.header === 'Status' ? (
+                                                                    <div className="flex justify-center">
+                                                                        {(() => {
+                                                                            let statusColor = '';
+                                                                            let textColor = 'text-white';
+
+                                                                            switch (row.status?.toLowerCase()) {
+                                                                                case 'completed':
+                                                                                    statusColor = 'bg-gradient-to-r from-green-500 to-green-600';
+                                                                                    break;
+                                                                                case 'pending':
+                                                                                    statusColor = 'bg-gradient-to-r from-yellow-500 to-yellow-600';
+                                                                                    textColor = 'text-gray-900';
+                                                                                    break;
+                                                                                case 'new':
+                                                                                    statusColor = 'bg-gradient-to-r from-blue-500 to-blue-600';
+                                                                                    break;
+                                                                                case 'cancelled':
+                                                                                    statusColor = 'bg-gradient-to-r from-red-500 to-red-600';
+                                                                                    break;
+                                                                                case 'qc':
+                                                                                    statusColor = 'bg-gradient-to-r from-purple-500 to-purple-600';
+                                                                                    break;
+                                                                                case 'redesign':
+                                                                                    statusColor = 'bg-gradient-to-r from-orange-500 to-orange-600';
+                                                                                    break;
+                                                                                default:
+                                                                                    statusColor = 'bg-gradient-to-r from-gray-500 to-gray-600';
+                                                                                    break;
+                                                                            }
+
+                                                                            return (
+                                                                                <span
+                                                                                    className={`px-3 py-1.5 text-xs font-bold rounded-full shadow-md ${statusColor} ${textColor} transition-all duration-200 hover:shadow-lg`}
+                                                                                >
+                                                                                    {row.status ? row.status : 'Unknown'}
+                                                                                </span>
+                                                                            );
+                                                                        })()}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="truncate max-w-xs" title={row[col.accessor] ?? "-"}>
+                                                                        {row[col.accessor] ?? "-"}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={columns.length + 1} className="p-8 text-center">
+                                                        <div className={`flex flex-col items-center justify-center p-8 rounded-lg ${getNoDataClass()}`}>
+                                                            <FontAwesomeIcon icon={faFolderOpen} size="3x" className="mb-4 text-blue-500 opacity-60" />
+                                                            <p className="text-lg font-medium mb-2">No records found</p>
+                                                            <p className="text-sm opacity-75">Try adjusting your search criteria</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
 
                             {/* Pagination */}
                             {paginatedData.length > 0 && (
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "15px" }}>
-                                    <div className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
-                                        Showing {paginatedData.length} of {filteredData.length} entries
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
+                                    <div className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                                        Showing <span className="font-bold">{paginatedData.length}</span> of <span className="font-bold">{filteredData.length}</span> entries
                                     </div>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                                    <div className="flex items-center gap-2">
                                         <button
                                             onClick={() => handlePageChange(currentPage - 1)}
                                             disabled={currentPage === 1}
-                                            style={currentPage === 1 ? getDisabledButtonStyle() : getPaginationButtonStyle()}
+                                            className={currentPage === 1 ? getDisabledButtonClass() : getButtonClass()}
                                         >
-                                            Prev
+                                            Previous
                                         </button>
 
                                         {getPageNumbers(totalPages, currentPage).map((page, i) => (
                                             <button
                                                 key={i}
-                                                style={
+                                                className={
                                                     typeof page === "number" && currentPage === page
-                                                        ? getPaginationButtonStyle(true)
-                                                        : getPaginationButtonStyle()
+                                                        ? getButtonClass(true)
+                                                        : page === "..." 
+                                                        ? getDisabledButtonClass()
+                                                        : getButtonClass()
                                                 }
                                                 onClick={() => typeof page === "number" && handlePageChange(page)}
                                                 disabled={page === "..."}
@@ -575,7 +549,7 @@ export default function Datatable({
                                         <button
                                             onClick={() => handlePageChange(currentPage + 1)}
                                             disabled={currentPage === totalPages}
-                                            style={currentPage === totalPages ? getDisabledButtonStyle() : getPaginationButtonStyle()}
+                                            className={currentPage === totalPages ? getDisabledButtonClass() : getButtonClass()}
                                         >
                                             Next
                                         </button>
@@ -583,37 +557,35 @@ export default function Datatable({
                                 </div>
                             )}
 
-                            {/* ✅ Floating Toolbar */}
+                            {/* Floating Action Toolbar */}
                             {selectedRows.length > 0 && (
-                                <div
-                                    className={`w-[33%] fixed flex justify-center items-center bottom-5 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-3 rounded-xl shadow-lg ${theme === "dark"
-                                        ? "bg-gradient-to-r from-gray-800 to-gray-700 text-white border border-gray-600"
-                                        : "bg-gradient-to-r from-blue-50 to-white border border-gray-300 text-gray-800"
-                                        }`}
-                                >
-                                    <span className="font-semibold">
-                                        ✅ {selectedRows.length} selected
-                                    </span>
+                                <div className={`w-[35%] fixed justify-center bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border ${
+                                    theme === "dark"
+                                        ? "bg-gradient-to-r from-gray-800 to-gray-700 text-white border-gray-600"
+                                        : "bg-gradient-to-r from-white to-blue-50 border-gray-200 text-gray-800 shadow-xl"
+                                }`}>
+                                    <div className="flex items-center gap-4">
+                                        <span className="font-semibold text-sm bg-blue-600 text-white px-3 py-1 rounded-full">
+                                            ✅ {selectedRows.length} selected
+                                        </span>
 
-                                    <select
-                                        value={fileType}
-                                        onChange={(e) => setFileType(e.target.value)}
-                                        className={`p-2 rounded-md border focus:outline-none focus:ring-2 focus:ring-blue-400 ${theme === "dark"
-                                            ? "bg-gray-700 border-gray-600 text-white"
-                                            : "bg-white border-gray-300 text-gray-800"
-                                            }`}
-                                    >
-                                        <option value="initial">Initial Files</option>
-                                        <option value="stl">STL Files</option>
-                                        <option value="finish">Finished Files</option>
-                                    </select>
+                                        <select
+                                            value={fileType}
+                                            onChange={(e) => setFileType(e.target.value)}
+                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass()}`}
+                                        >
+                                            <option value="initial">Initial Files</option>
+                                            <option value="stl">STL Files</option>
+                                            <option value="finish">Finished Files</option>
+                                        </select>
 
-                                    <button
-                                        onClick={handleBulkDownload}
-                                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md flex items-center gap-2 transition"
-                                    >
-                                        <FontAwesomeIcon icon={faDownload} /> Download All
-                                    </button>
+                                        <button
+                                            onClick={handleBulkDownload}
+                                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium"
+                                        >
+                                            <FontAwesomeIcon icon={faDownload} /> Download All
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </>

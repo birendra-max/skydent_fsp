@@ -298,14 +298,6 @@ export default function Hd() {
                                         />
                                         <div className="absolute bottom-0 right-0 h-2 w-2 bg-green-400 rounded-full border-2 border-emerald-600"></div>
                                     </div>
-                                    <div className="hidden sm:block text-left">
-                                        <div className="text-sm font-medium text-white">
-                                            {user?.name || 'User'}
-                                        </div>
-                                        <div className="text-xs text-white/70">
-                                            {user?.role || 'Admin'}
-                                        </div>
-                                    </div>
                                 </button>
 
                                 {dropdownOpen && (

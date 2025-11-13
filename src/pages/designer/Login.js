@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faEye, faEyeSlash, faUser, faLock } from "@fortawesome/free-solid-svg-icons";
 import { DesignerContext } from '../../Context/DesignerContext';
 import { useNavigate } from "react-router-dom";
 import config from '../../config';
@@ -9,7 +9,7 @@ export default function Login() {
     const { setDesigner } = useContext(DesignerContext);
     const [activeIndex, setActiveIndex] = useState(0);
     const [showPassword, setShowPassword] = useState(false);
-    const [status, setStatus] = useState({ type: "", message: "" }); // success / error
+    const [status, setStatus] = useState({ type: "", message: "" });
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -35,7 +35,7 @@ export default function Login() {
         })
     }
 
-    const handleForm = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const res = await fetch(`${config.API_BASE_URL}/designer/validate-designer`, {
@@ -59,7 +59,6 @@ export default function Login() {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('base_url', data.base_url);
                 setDesigner(data.designer);
-                setStatus({ type: 'success', message: data.message })
                 navigate('/designer/home');
             } else {
                 setStatus({ type: "error", message: data.message || "Invalid login" });
@@ -83,136 +82,216 @@ export default function Login() {
         setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
     };
 
-    // Auto-scroll effect
     useEffect(() => {
-        const interval = setInterval(() => {
-            nextSlide();
-        }, 4000);
-
+        const interval = setInterval(nextSlide, 4000);
         return () => clearInterval(interval);
     }, []);
 
-
     return (
-        <section className="min-h-screen flex flex-col items-center justify-center bg-[#FFB88C] px-4 py-10">
-            <div className="w-full max-w-6xl">
-                {/* Logo */}
-                <img
-                    src="/img/logo.png"
-                    alt="skydent Logo"
-                    className="h-20 w-40 object-contain mb-6"
-                />
-            </div>
+        <section className="min-h-screen flex items-center justify-center bg-[#87CEEB] px-4 py-8">
+            <div className="w-full max-w-8xl flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12">
+                {/* Carousel - Now on Right */}
+                <div className="w-full lg:w-3/5 max-w-4xl order-1 lg:order-1">
+                    <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+                        <div className="relative w-full h-72 md:h-96 lg:h-[520px] overflow-hidden">
+                            {images.map((img, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out ${idx === activeIndex
+                                        ? "opacity-100 scale-100"
+                                        : "opacity-0 scale-110"
+                                        }`}
+                                >
+                                    <img
+                                        src={img}
+                                        alt={`slide-${idx}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30"></div>
+                                </div>
+                            ))}
+                        </div>
 
-            <div className="w-full max-w-6xl bg-white shadow-2xl rounded-2xl overflow-hidden grid grid-cols-1 md:grid-cols-3">
-                {/* Left: Login Form */}
-                <div className="p-8 md:col-span-1 flex flex-col justify-center bg-gradient-to-b from-gray-50 to-gray-100">
-                    <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
-                        Designer Login
-                    </h2>
-                    {/* Status Alert */}
-                    {status.message && (
-                        <div
-                            className={`flex items-center p-4 mb-4 text-sm rounded-lg ${status.type === "success"
-                                ? "text-green-800 bg-green-50 dark:bg-gray-800 dark:text-green-400"
-                                : "text-red-800 bg-red-50 dark:bg-gray-800 dark:text-red-400"
-                                }`}
-                            role="alert"
+                        {/* Carousel Controls */}
+                        <button
+                            onClick={prevSlide}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-sm text-white w-12 h-12 rounded-full flex items-center justify-center hover:bg-black/60 transition-all duration-300 border border-white/20"
                         >
-                            {status.message}
-                        </div>
-                    )}
-                    <form onSubmit={handleForm} className="space-y-5">
-                        <div>
-                            <label className="block text-sm font-semibold uppercase text-gray-700 mb-2">
-                                Username
-                            </label>
-                            <input
-                                type="text"
-                                name="email"
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            />
-                        </div>
-                        <div className="relative">
-                            <label className="block text-sm font-semibold uppercase text-gray-700 mb-2">
-                                Password
-                            </label>
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                name="password"
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none pr-10"
-                            />
-                            {/* Eye toggle button */}
-                            <button
-                                type="button"
-                                className="absolute right-3 top-9 text-gray-500 hover:text-gray-800"
-                                onClick={() => setShowPassword(!showPassword)}
-                            >
-                                <FontAwesomeIcon
-                                    icon={showPassword ? faEyeSlash : faEye}
-                                    size="lg"
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={nextSlide}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-sm text-white w-12 h-12 rounded-full flex items-center justify-center hover:bg-black/60 transition-all duration-300 border border-white/20"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+
+                        {/* Indicators */}
+                        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3">
+                            {images.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setActiveIndex(idx)}
+                                    className={`w-3 h-3 rounded-full transition-all duration-300 ${idx === activeIndex ? "bg-white scale-125" : "bg-white/40"
+                                        }`}
                                 />
-                            </button>
+                            ))}
                         </div>
-                        <div className="flex items-center justify-between">
-                            <label className="flex items-center text-sm text-gray-600">
-                                <input type="checkbox" name="remember" className="mr-2" onChange={handleChange} /> Remember Me
-                            </label>
-                            <button
-                                type="submit"
-                                className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition cursor-pointer"
-                            >
-                                Submit
-                            </button>
+
+                        {/* Text Content */}
+                        <div className="absolute bottom-20 left-8 right-8 text-white">
+                            <h2 className="text-2xl md:text-3xl font-bold mb-3">Design Dental Excellence</h2>
+                            <p className="text-sm md:text-base text-gray-200 leading-relaxed">
+                                Where creativity meets precision in dental design. 
+                                Transform visions into beautiful, functional dental solutions.
+                            </p>
                         </div>
-                    </form>
-                    <p className="text-xs text-gray-500 mt-8 text-center">
-                        Created with <span className="text-red-500">♥</span> skydent
-                    </p>
+
+                        {/* Decorative Elements */}
+                        <div className="absolute top-6 right-6">
+                            <div className="bg-blue-500/20 backdrop-blur-sm rounded-full p-3 border border-blue-400/30">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Right: Carousel */}
-                <div className="md:col-span-2 relative">
-                    <div className="relative w-full h-96 md:h-full overflow-hidden">
-                        {images.map((img, idx) => (
-                            <img
-                                key={idx}
-                                src={img}
-                                alt={`slide-${idx}`}
-                                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${idx === activeIndex ? "opacity-100" : "opacity-0"
-                                    }`}
-                            />
-                        ))}
-                    </div>
+                {/* Login Container */}
+                <div className="w-full lg:w-2/4 max-w-md order-2 lg:order-2">
+                    {/* Login Form */}
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
+                        {/* Logo Above Form */}
+                        <div className="flex justify-start mb-4">
+                            <div>
+                                <img
+                                    src="/img/logo.png"
+                                    alt="Skydent Logo"
+                                    className="h-10 w-auto object-contain"
+                                />
+                            </div>
+                        </div>
 
-                    {/* Carousel Controls */}
-                    <button
-                        onClick={prevSlide}
-                        className="absolute top-1/2 left-4 -translate-y-1/2 bg-black bg-opacity-40 text-white px-3 py-2 rounded-full hover:bg-opacity-70"
-                    >
-                        ❮
-                    </button>
-                    <button
-                        onClick={nextSlide}
-                        className="absolute top-1/2 right-4 -translate-y-1/2 bg-black bg-opacity-40 text-white px-3 py-2 rounded-full hover:bg-opacity-70"
-                    >
-                        ❯
-                    </button>
+                        {/* Header Section */}
+                        <div className="mb-8">
+                            <h1 className="text-3xl font-bold text-gray-900 mb-2 font-serif">
+                                Designer Portal
+                            </h1>
+                            <p className="text-gray-600 font-light tracking-wide text-sm">
+                                Sign in to access design dashboard
+                            </p>
+                        </div>
 
-                    {/* Indicators */}
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-3">
-                        {images.map((_, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => setActiveIndex(idx)}
-                                className={`w-3 h-3 rounded-full ${idx === activeIndex ? "bg-blue-600" : "bg-gray-400"
+                        {/* Status Alert */}
+                        {status.message && (
+                            <div
+                                className={`flex items-center p-4 mb-6 rounded-xl border ${status.type === "success"
+                                    ? "bg-green-50 border-green-200 text-green-800"
+                                    : "bg-red-50 border-red-200 text-red-800"
                                     }`}
-                            />
-                        ))}
+                                role="alert"
+                            >
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium tracking-wide">{status.message}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        <form className="space-y-6" onSubmit={handleSubmit}>
+                            {/* Username Field */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-800 mb-3 tracking-wide">
+                                    Username
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <FontAwesomeIcon
+                                            icon={faUser}
+                                            className="text-gray-500"
+                                            size="sm"
+                                        />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="email"
+                                        required
+                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-gray-900 placeholder-gray-500 transition-all duration-200 font-medium tracking-wide"
+                                        value={form.email}
+                                        onChange={handleChange}
+                                        placeholder="Enter your username"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Password Field */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-800 mb-3 tracking-wide">
+                                    Password
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <FontAwesomeIcon
+                                            icon={faLock}
+                                            className="text-gray-500"
+                                            size="sm"
+                                        />
+                                    </div>
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        required
+                                        className="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-gray-900 placeholder-gray-500 transition-all duration-200 font-medium tracking-wide"
+                                        value={form.password}
+                                        onChange={handleChange}
+                                        placeholder="Enter your password"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        <FontAwesomeIcon
+                                            icon={showPassword ? faEyeSlash : faEye}
+                                            size="sm"
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Remember Me & Submit */}
+                            <div className="flex items-center justify-between">
+                                <label className="flex items-center text-sm text-gray-700 hover:text-gray-900 cursor-pointer transition-colors duration-200 font-medium">
+                                    <input
+                                        type="checkbox"
+                                        name="remember"
+                                        onChange={handleChange}
+                                        className="w-4 h-4 text-blue-400 bg-gray-100 border-gray-300 rounded focus:ring-blue-400"
+                                    />
+                                    <span className="ml-2 tracking-wide">Remember me</span>
+                                </label>
+                                <button
+                                    type="submit"
+                                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-blue-500/25 tracking-wide"
+                                >
+                                    Sign In
+                                </button>
+                            </div>
+                        </form>
+
+                        {/* Footer */}
+                        <div className="mt-8 pt-6 border-t border-gray-300">
+                            <p className="text-center text-xs text-gray-600 tracking-wide font-light">
+                                © 2024 Skydent Pvt Ltd. All rights reserved.
+                                <span className="block mt-1">
+                                    Created with <span className="text-red-500">♥</span> for better smiles
+                                </span>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

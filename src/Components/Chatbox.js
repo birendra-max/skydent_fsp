@@ -124,7 +124,9 @@ export default function Chatbox({ orderid }) {
     const startSSEConnection = () => {
         if (!orderid || !token || eventSourceRef.current) return;
 
-        const url = `${config.API_BASE_URL}/chat/stream-chat/${orderid}?lastId=${lastMessageIdRef.current}`;
+        // const url = `${config.API_BASE_URL}/chat/stream-chat/${orderid}?lastId=${lastMessageIdRef.current}`;
+        const url = `${config.API_BASE_URL}/chat/stream-chat/${orderid}?lastId=${lastMessageIdRef.current}&tenant=skydent`;
+
 
         try {
             eventSourceRef.current = new EventSource(url);
@@ -229,10 +231,6 @@ export default function Chatbox({ orderid }) {
 
         const messageText = newMessage.trim();
 
-        // Create a unique identifier for this message to track duplicates
-        const messageKey = `${messageText}_${Date.now()}`;
-        recentlySentMessagesRef.current.add(messageKey);
-
         try {
             const response = await fetch(`${config.API_BASE_URL}/chat/send-message`, {
                 method: 'POST',
@@ -243,29 +241,24 @@ export default function Chatbox({ orderid }) {
                 },
                 body: JSON.stringify({
                     orderid,
-                    text: messageText
+                    text: messageText,
+                    user_type: userRole === "client" ? "Client" : "Designer"
                 }),
             });
 
             const data = await response.json();
 
-            if (data.status !== 'success') {
-                console.error("❌ Message send failed:", data.message);
+            if (data.status === 'success') {
+                lastMessageIdRef.current = data.data.id;   // <-- FIX
             }
 
-            // Clear input regardless of success/failure
             setNewMessage('');
-
-            // Remove the message key after some time
-            setTimeout(() => {
-                recentlySentMessagesRef.current.delete(messageKey);
-            }, 5000);
-
         } catch (err) {
-            console.error("❌ Network error:", err);
-            setNewMessage(''); // Still clear input on error
+            console.error(err);
+            setNewMessage('');
         }
     };
+
 
     // File upload - FIXED: No optimistic updates to avoid duplicates
     const handleFileUpload = (e) => {
