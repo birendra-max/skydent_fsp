@@ -174,7 +174,7 @@ export default function Hd() {
     };
 
     return (
-        <header className="fixed z-50 top-0 left-0 w-full h-16 bg-gradient-to-r from-slate-800 to-gray-900 border-b border-gray-700 shadow-xl">
+        <header className="fixed z-50 top-0 left-0 w-full h-16 bg-gradient-to-r from-slate-800 to-indigo-900 border-b border-gray-700 shadow-xl">
             <nav className="w-full h-full">
                 <div className="w-full mx-auto px-3 sm:px-4 lg:px-6 h-full">
                     {/* Main Navigation Bar */}
@@ -282,49 +282,50 @@ export default function Hd() {
                             </button>
 
                             {/* Profile Dropdown */}
+                            {/* Profile Dropdown */}
                             <div className="relative dropdown-container">
                                 <button
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                                    className="flex items-center space-x-2 sm:space-x-3 p-1 cursor-pointer rounded-lg hover:bg-white/10 transition-colors duration-200"
+                                    className="flex items-center text-white hover:text-orange-300 transition-all duration-300 p-1 cursor-pointer rounded-lg hover:bg-gray-800"
                                 >
                                     <div className="relative">
                                         <img
                                             src={user?.pic && user.pic !== '' ? user.pic : '/img/user.webp'}
                                             alt="User profile"
-                                            className="h-8 w-8 rounded-full border-2 border-white/60 object-cover"
+                                            className="h-7 w-7 sm:h-8 sm:w-8 lg:h-9 lg:w-9 rounded-full border-2 border-orange-400 object-cover hover:border-orange-300 transition-colors"
                                             onError={(e) => {
                                                 e.target.src = '/img/user.webp';
                                             }}
                                         />
-                                        <div className="absolute bottom-0 right-0 h-2 w-2 bg-green-400 rounded-full border-2 border-emerald-600"></div>
+                                        <div className="absolute bottom-0 right-0 h-2 w-2 sm:h-2.5 sm:w-2.5 bg-green-500 rounded-full border-2 border-gray-900"></div>
                                     </div>
                                 </button>
 
                                 {dropdownOpen && (
-                                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 cursor-pointer">
-                                        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                                            <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                    <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-gray-800 rounded-xl shadow-2xl py-2 border border-gray-700 z-50 cursor-pointer backdrop-blur-sm">
+                                        <div className="px-4 py-3 border-b border-gray-700">
+                                            <div className="text-white font-semibold truncate text-sm sm:text-base">
                                                 {user?.name || 'User'}
                                             </div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                            <div className="text-gray-400 text-xs sm:text-sm truncate mt-1">
                                                 {user?.email || ''}
                                             </div>
                                         </div>
                                         <div className="py-1">
                                             <Link
                                                 to="/user/profile"
-                                                className="block px-4 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 flex items-center text-sm"
+                                                className="block px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-all duration-200 flex items-center text-sm sm:text-base"
                                                 onClick={() => setDropdownOpen(false)}
                                             >
                                                 <FontAwesomeIcon icon={faUser} className="w-4 h-4 mr-3" />
-                                                Profile Settings
+                                                Profile
                                             </Link>
                                             <button
                                                 onClick={logout}
-                                                className="block w-full text-left px-4 py-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 flex items-center text-sm"
+                                                className="block w-full text-left px-4 py-3 text-red-400 hover:bg-red-600 hover:text-white transition-all duration-200 flex items-center text-sm sm:text-base"
                                             >
                                                 <FontAwesomeIcon icon={faSignOutAlt} className="w-4 h-4 mr-3" />
-                                                Sign Out
+                                                Logout
                                             </button>
                                         </div>
                                     </div>

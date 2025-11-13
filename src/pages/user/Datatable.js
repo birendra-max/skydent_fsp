@@ -145,7 +145,7 @@ export default function Datatable({
     const getBackgroundClass = () => {
         return theme === 'dark'
             ? 'bg-gray-900 text-white mt-4'
-            : 'bg-gray-200 text-gray-800 mt-4';
+            : 'bg-gradient-to-br from-slate-50 to-blue-50 text-gray-800 mt-4';
     };
 
     const getTableHeaderClass = () => {

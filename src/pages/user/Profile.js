@@ -179,7 +179,7 @@ export default function Profile() {
     // Theme-based styling functions
     const getMainClass = () => {
         return theme === 'light'
-            ? 'bg-gray-100 sm:bg-gray-200'
+            ? 'bg-gradient-to-br from-slate-50 to-blue-50 sm:bg-gray-200'
             : 'bg-black';
     };
 
