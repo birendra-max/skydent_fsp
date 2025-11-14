@@ -17,6 +17,7 @@ import WeeklyCases from '../pages/user/WeeklyCases';
 import Profile from '../pages/user/Profile';
 import RedesignCases from '../pages/user/RedesignCases';
 import { UserProvider } from "../Context/UserContext";
+import SearchOrder from '../pages/user/SearchOrder';
 
 export default function UserRoutes() {
     return (
@@ -40,7 +41,7 @@ export default function UserRoutes() {
                 <Route path="/today_cases" element={<TodayCases />} />
                 <Route path="/weekly_case" element={<WeeklyCases />} />
                 <Route path="/redesign_cases" element={<RedesignCases />} />
-
+                <Route path='/search-order/:id' element={<SearchOrder />} />
                 <Route path='/profile' element={<Profile />} />
             </Routes>
         </UserProvider>

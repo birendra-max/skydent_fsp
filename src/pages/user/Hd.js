@@ -17,6 +17,7 @@ import {
     faBell,
     faCog
 } from '@fortawesome/free-solid-svg-icons';
+import SearchOrder from "./SearchOrder";
 
 export default function Hd() {
     const { setTheme } = useContext(ThemeContext);
@@ -110,8 +111,7 @@ export default function Hd() {
         e.preventDefault();
         if (searchQuery.trim()) {
             setMobileSearchOpen(false);
-            // Your search implementation here
-            console.log("Searching for:", searchQuery);
+            navigate(`/user/search-order/${searchQuery}`)
         }
     };
 

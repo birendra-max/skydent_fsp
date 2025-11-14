@@ -108,48 +108,16 @@ export default function Hd() {
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
-
         if (searchQuery.trim()) {
             setMobileSearchOpen(false);
-
-            // Implement search functionality
-            const rows = document.querySelectorAll('#datatable tbody tr');
-            let found = false;
-
-            rows.forEach((row, index) => {
-                const firstCellText = row.cells[0].innerText.trim();
-                if (firstCellText === searchQuery.trim()) {
-                    row.style.display = "";
-                    found = true;
-                    // Scroll to the found row
-                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    // Highlight the row
-                    row.classList.add('bg-yellow-400');
-                    setTimeout(() => {
-                        row.classList.remove('bg-yellow-400');
-                    }, 2000);
-                } else {
-                    row.style.display = "none";
-                }
-            });
-        } else {
-            // If search is empty — show all rows
-            const rows = document.querySelectorAll('#datatable tbody tr');
-            rows.forEach(row => {
-                row.style.display = "";
-                row.classList.remove('bg-yellow-400');
-            });
+            navigate(`/designer/search-order/${searchQuery}`)
         }
     };
 
     const clearSearch = () => {
         setSearchQuery("");
-        const rows = document.querySelectorAll('#datatable tbody tr');
-        rows.forEach(row => {
-            row.style.display = "";
-            row.classList.remove('bg-yellow-400');
-        });
     };
+
 
     return (
         <header className="fixed z-50 top-0 left-0 w-full h-16 bg-gray-900 border-b border-gray-700">

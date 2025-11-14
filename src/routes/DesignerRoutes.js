@@ -20,6 +20,7 @@ import Reports from "../pages/designer/Reports";
 import RedesignCases from '../pages/designer/RedesignCases';
 import { DesignerProvider } from "../Context/DesignerContext";
 import OrderDetails from "../pages/designer/OrderDetails";
+import SearchOrder from "../pages/designer/SearchOrder";
 
 export default function DesignerRoutes() {
     return (
@@ -46,6 +47,7 @@ export default function DesignerRoutes() {
                 <Route path="/weekly_case" element={<WeeklyCases />} />
                 <Route path="/redesign_cases" element={<RedesignCases />} />
                 <Route path="/orderDeatails/:id" element={<OrderDetails />} />
+                <Route path='/search-order/:id' element={<SearchOrder />} />
             </Routes>
         </DesignerProvider>
     )
