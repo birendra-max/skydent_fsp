@@ -143,7 +143,7 @@ export default function Datatable({
     const getBackgroundClass = () => {
         return theme === 'dark'
             ? 'bg-gray-900 text-white mt-4'
-            : 'bg-gray-200 text-gray-800 mt-4';
+            : 'bg-gradient-to-br from-slate-50 to-blue-50 text-gray-800 mt-4';
     };
 
     const getTableHeaderClass = () => {
@@ -383,7 +383,7 @@ export default function Datatable({
                                                         onClick={() => handleSort(col.accessor)}
                                                         className="p-4 text-left font-semibold text-sm cursor-pointer hover:bg-gray-600/50 transition-colors border-r border-gray-500/100 last:border-r-0"
                                                     >
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 font-bold">
                                                             {col.header}
                                                             <FontAwesomeIcon 
                                                                 icon={
@@ -442,7 +442,7 @@ export default function Datatable({
                                                                                 onClick={() => openPopup(`${row.orderid}`)}
                                                                             />
                                                                             {row.totalMessages > 0 && (
-                                                                                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center shadow-lg animate-pulse border-2 border-white dark:border-gray-800">
+                                                                                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center shadow-lg animate-pulse">
                                                                                     {row.totalMessages > 99 ? '99+' : row.totalMessages}
                                                                                 </span>
                                                                             )}

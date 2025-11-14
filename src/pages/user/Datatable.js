@@ -401,7 +401,7 @@ export default function Datatable({
                                                         onClick={() => handleSort(col.accessor)}
                                                         className="p-4 text-left font-semibold text-sm cursor-pointer hover:bg-gray-600/50 transition-colors border-r border-gray-500/100 last:border-r-0"
                                                     >
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 font-bold">
                                                             {col.header}
                                                             <FontAwesomeIcon 
                                                                 icon={

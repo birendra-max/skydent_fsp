@@ -220,7 +220,7 @@ export default function Dashboard() {
                                     <FontAwesomeIcon icon={card.icon} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className={`text-sm font-medium truncate ${getTextClass()}`}>{card.title}</p>
+                                    <p className={`text-sm font-semebold truncate ${getTextClass()}`}>{card.title}</p>
                                     {card.count !== null ? (
                                         <h3 className={`text-lg font-bold ${getCountClass()}`}>{card.count}</h3>
                                     ) : (

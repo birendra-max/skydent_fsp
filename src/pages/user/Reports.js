@@ -382,15 +382,6 @@ export default function Reports() {
                                     rowsPerPage={50}
                                     theme={theme}
                                 />
-                                {data.length === 0 && !isLoading && (
-                                    <div className={`text-center py-12 ${themeClasses.text.secondary}`}>
-                                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                            <FontAwesomeIcon icon={faFileAlt} className="w-8 h-8 text-gray-400" />
-                                        </div>
-                                        <h3 className="text-lg font-semibold mb-2">No report data available</h3>
-                                        <p>Adjust your search criteria to generate a report</p>
-                                    </div>
-                                )}
                             </div>
 
                         </div>

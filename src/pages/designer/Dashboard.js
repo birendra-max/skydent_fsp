@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link } from 'react-router-dom';
 import { fetchWithAuth } from '../../utils/designerapi';
 import { ThemeContext } from "../../Context/ThemeContext";
+import Loder from "../../Components/Loder";
 
 import {
     faShoppingCart,
@@ -70,7 +71,7 @@ export default function Dashboard() {
     const getBackgroundClass = () => {
         return theme === 'dark'
             ? 'bg-gray-900 text-white rounded-lg'
-            : 'bg-gray-200 text-gray-800 rounded-lg';
+            : 'bg-gradient-to-br from-slate-50 to-blue-50 text-gray-800 rounded-lg';
     };
 
     const getCardClass = () => {
@@ -125,8 +126,7 @@ export default function Dashboard() {
         return (
             <div className={`min-h-screen flex items-center justify-center ${getBackgroundClass()}`}>
                 <div className="text-center">
-                    <div className="w-12 h-12 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                    <h1 className={`text-lg font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Loading dashboard...</h1>
+                    <Loder status="" />
                 </div>
             </div>
         )
