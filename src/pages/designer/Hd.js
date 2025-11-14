@@ -124,44 +124,22 @@ export default function Hd() {
                     // Scroll to the found row
                     row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     // Highlight the row
-                    row.classList.add('bg-yellow-100', 'dark:bg-yellow-900');
+                    row.classList.add('bg-yellow-400');
                     setTimeout(() => {
-                        row.classList.remove('bg-yellow-100', 'dark:bg-yellow-900');
+                        row.classList.remove('bg-yellow-400');
                     }, 2000);
                 } else {
                     row.style.display = "none";
                 }
             });
-
-            if (!found) {
-                showNotification('No orders found with that ID', 'warning');
-            }
         } else {
             // If search is empty — show all rows
             const rows = document.querySelectorAll('#datatable tbody tr');
             rows.forEach(row => {
                 row.style.display = "";
-                row.classList.remove('bg-yellow-100', 'dark:bg-yellow-900');
+                row.classList.remove('bg-yellow-400');
             });
         }
-    };
-
-    const showNotification = (message, type = 'info') => {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `fixed top-20 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium transform transition-all duration-300 ${type === 'warning' ? 'bg-orange-500' : 'bg-blue-500'
-            }`;
-        notification.textContent = message;
-
-        document.body.appendChild(notification);
-
-        // Remove notification after 3 seconds
-        setTimeout(() => {
-            notification.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 300);
-        }, 3000);
     };
 
     const clearSearch = () => {
@@ -169,15 +147,12 @@ export default function Hd() {
         const rows = document.querySelectorAll('#datatable tbody tr');
         rows.forEach(row => {
             row.style.display = "";
-            row.classList.remove('bg-yellow-100', 'dark:bg-yellow-900');
+            row.classList.remove('bg-yellow-400');
         });
     };
 
     return (
-        <header className={`fixed z-50 top-0 left-0 w-full h-16 transition-all duration-300 ${scrolled
-            ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm'
-            : 'bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800'
-            }`}>
+        <header className="fixed z-50 top-0 left-0 w-full h-16 bg-gray-900 border-b border-gray-700">
             <nav className="w-full h-full">
                 <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 h-full">
                     {/* Main Navigation Bar */}
@@ -195,13 +170,13 @@ export default function Hd() {
                             >
                                 <div className="flex items-center space-x-3">
                                     <div className="h-full w-full rounded-lg flex items-center justify-center">
-                                        <img 
-                                            src="/img/logo.png" 
-                                            alt="Logo" 
-                                            className="h-10 w-auto" 
-                                            onError={(e) => { 
-                                                e.target.src = '/img/placeholder-logo.png'; 
-                                            }} 
+                                        <img
+                                            src="/img/logo.png"
+                                            alt="Logo"
+                                            className="h-10 w-auto"
+                                            onError={(e) => {
+                                                e.target.src = '/img/placeholder-logo.png';
+                                            }}
                                         />
                                     </div>
                                 </div>
@@ -214,16 +189,13 @@ export default function Hd() {
                                         to={item.href}
                                         key={item.key}
                                         className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 text-sm ${activePage === item.key
-                                            ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
-                                            : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
+                                            ? "bg-blue-600 text-white border border-blue-500"
+                                            : "text-gray-300 hover:text-white hover:bg-gray-800"
                                             }`}
                                     >
                                         <FontAwesomeIcon
                                             icon={item.icon}
-                                            className={`w-4 h-4 ${activePage === item.key
-                                                ? 'text-blue-600 dark:text-blue-400'
-                                                : 'text-gray-400'
-                                                }`}
+                                            className="w-4 h-4"
                                         />
                                         <span className="whitespace-nowrap font-bold">{item.label}</span>
                                     </Link>
@@ -243,7 +215,7 @@ export default function Hd() {
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             placeholder="Search Order ID..."
-                                            className="pl-10 pr-10 py-2 w-64 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 border border-gray-200 dark:border-gray-700 text-sm"
+                                            className="pl-10 pr-10 py-2 w-64 bg-gray-800 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 text-sm"
                                         />
                                         <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                                             <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
@@ -252,7 +224,7 @@ export default function Hd() {
                                             <button
                                                 type="button"
                                                 onClick={clearSearch}
-                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
                                             >
                                                 <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                                             </button>
@@ -264,13 +236,13 @@ export default function Hd() {
                             {/* Theme Toggle */}
                             <button
                                 onClick={changeIcon}
-                                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className="p-2 text-gray-300 hover:text-white transition-all duration-200 rounded-lg hover:bg-gray-800"
                                 aria-label="Toggle theme"
                             >
                                 {mode === 'light' ? (
                                     <FontAwesomeIcon icon={faMoon} className="w-5 h-5" />
                                 ) : (
-                                    <FontAwesomeIcon icon={faSun} className="w-5 h-5 text-yellow-500" />
+                                    <FontAwesomeIcon icon={faSun} className="w-5 h-5 text-yellow-400" />
                                 )}
                             </button>
 
@@ -280,7 +252,7 @@ export default function Hd() {
                                     setMobileSearchOpen(!mobileSearchOpen);
                                     setIsOpen(false);
                                 }}
-                                className="lg:hidden p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className="lg:hidden p-2 text-gray-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-gray-800"
                             >
                                 <FontAwesomeIcon
                                     icon={mobileSearchOpen ? faTimes : faSearch}
@@ -292,51 +264,45 @@ export default function Hd() {
                             <div className="relative dropdown-container">
                                 <button
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                                    className="flex items-center space-x-3 p-1 cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+                                    className="flex items-center space-x-3 p-1 cursor-pointer rounded-lg hover:bg-gray-800 transition-colors duration-200"
                                 >
                                     <div className="flex items-center space-x-3">
-                                        <div className="text-right hidden sm:block">
-                                            <div className="text-sm font-bold text-gray-900 dark:text-white">
-                                                {designer?.name || 'Designer'}
-                                            </div>
-                                        </div>
                                         <div className="relative">
                                             <img
                                                 src={designer?.pic && designer.pic !== '' ? designer.pic : '/img/user.webp'}
                                                 alt="Designer profile"
-                                                className="h-8 w-8 rounded-full border-2 border-gray-200 dark:border-gray-700 object-cover"
+                                                className="h-8 w-8 rounded-full border-2 border-gray-600 object-cover"
                                                 onError={(e) => {
                                                     e.target.src = '/img/user.webp';
                                                 }}
                                             />
-                                            <div className="absolute bottom-0 right-0 h-2 w-2 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
+                                            <div className="absolute bottom-0 right-0 h-2 w-2 bg-green-500 rounded-full border-2 border-gray-900"></div>
                                         </div>
                                     </div>
                                 </button>
 
                                 {dropdownOpen && (
-                                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-2 border border-gray-200 dark:border-gray-700 z-50 backdrop-blur-sm">
-                                        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                                            <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                    <div className="absolute right-0 mt-2 w-64 bg-gray-800 rounded-xl shadow-lg py-2 border border-gray-700 z-50">
+                                        <div className="px-4 py-3 border-b border-gray-700">
+                                            <div className="text-sm font-semibold text-white">
                                                 {designer?.name || 'Designer'}
                                             </div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
+                                            <div className="text-xs text-gray-400 truncate mt-1">
                                                 {designer?.email || 'designer@example.com'}
                                             </div>
                                         </div>
                                         <div className="py-1">
                                             <Link
                                                 to="/designer/profile"
-                                                className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                                                className="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors duration-200"
                                                 onClick={() => setDropdownOpen(false)}
                                             >
                                                 <FontAwesomeIcon icon={faUser} className="w-4 h-4 mr-3 text-gray-400" />
                                                 Profile Settings
                                             </Link>
-
                                             <button
                                                 onClick={logout}
-                                                className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200"
+                                                className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 transition-colors duration-200"
                                             >
                                                 <FontAwesomeIcon icon={faSignOutAlt} className="w-4 h-4 mr-3" />
                                                 Sign Out
@@ -352,7 +318,7 @@ export default function Hd() {
                                     setIsOpen(!isOpen);
                                     setMobileSearchOpen(false);
                                 }}
-                                className="lg:hidden p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className="lg:hidden p-2 text-gray-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-gray-800"
                                 aria-label="Toggle menu"
                             >
                                 <FontAwesomeIcon
@@ -365,7 +331,7 @@ export default function Hd() {
 
                     {/* Mobile Search Bar */}
                     {mobileSearchOpen && (
-                        <div className="lg:hidden bg-gray-50 dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                        <div className="lg:hidden bg-gray-800 px-4 py-3 border-t border-gray-700">
                             <form onSubmit={handleSearchSubmit} className="flex space-x-3">
                                 <div className="relative flex-1">
                                     <input
@@ -374,14 +340,14 @@ export default function Hd() {
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         placeholder="Search Order ID..."
-                                        className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-200 dark:border-gray-600 text-sm"
+                                        className="w-full px-4 py-2 bg-gray-700 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 text-sm"
                                         autoFocus
                                     />
                                     {searchQuery && (
                                         <button
                                             type="button"
                                             onClick={clearSearch}
-                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
                                         >
                                             <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                                         </button>
@@ -399,24 +365,21 @@ export default function Hd() {
 
                     {/* Mobile Navigation Menu */}
                     {isOpen && (
-                        <div className="lg:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                        <div className="lg:hidden bg-gray-800 border-t border-gray-700">
                             <div className="px-3 py-2 space-y-1">
                                 {navItems.map((item) => (
                                     <Link
                                         to={item.href}
                                         key={item.key}
                                         className={`flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-colors duration-200 text-sm ${activePage === item.key
-                                            ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
-                                            : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+                                            ? "bg-blue-600 text-white border border-blue-500"
+                                            : "text-gray-300 hover:text-white hover:bg-gray-700"
                                             }`}
                                         onClick={() => setIsOpen(false)}
                                     >
                                         <FontAwesomeIcon
                                             icon={item.icon}
-                                            className={`w-4 h-4 ${activePage === item.key
-                                                ? 'text-blue-600 dark:text-blue-400'
-                                                : 'text-gray-400'
-                                                }`}
+                                            className="w-4 h-4"
                                         />
                                         <span>{item.label}</span>
                                     </Link>

@@ -27,6 +27,7 @@ export default function Login() {
     const [status, setStatus] = useState({ type: "", message: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [activeIndex, setActiveIndex] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const images = ["/img/bg0.png", "/img/bg1.png", "/img/bg2.jpg"];
 
@@ -40,6 +41,8 @@ export default function Login() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
+
         try {
             const res = await fetch(`${config.API_BASE_URL}/validate-user`, {
                 method: "POST",
@@ -49,6 +52,7 @@ export default function Login() {
 
             if (!res.ok) {
                 setStatus({ type: "error", message: "Server error. Try again later." });
+                setIsSubmitting(false);
                 return;
             }
 
@@ -61,9 +65,11 @@ export default function Login() {
                 navigate('/user/home');
             } else {
                 setStatus({ type: "error", message: data.message || "Invalid login" });
+                setIsSubmitting(false);
             }
         } catch (err) {
             setStatus({ type: "error", message: "Something went wrong!" });
+            setIsSubmitting(false);
         }
     };
 
@@ -86,7 +92,7 @@ export default function Login() {
                 {/* Carousel - Now on Right */}
                 <div className="w-full lg:w-3/5 max-w-4xl order-1 lg:order-1">
                     <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                        <div className="relative w-full h-72 md:h-96 lg:h-[520px] overflow-hidden">
+                        <div className="relative w-full h-72 md:h-96 lg:h-[550px] overflow-hidden">
                             {images.map((img, idx) => (
                                 <div
                                     key={idx}
@@ -269,21 +275,23 @@ export default function Login() {
                                     <span className="ml-2 tracking-wide">Remember me</span>
                                 </label>
                                 <button
+                                    id="signin"
                                     type="submit"
-                                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-blue-500/25 tracking-wide"
+                                    disabled={isSubmitting}
+                                    className={`px-8 py-3 rounded-xl font-semibold tracking-wide text-white bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg transition-all duration-200${isSubmitting
+                                        ? "opacity-50 cursor-not-allowed hover:scale-100 hover:from-blue-500 hover:to-purple-600"
+                                        : "hover:from-blue-600 hover:to-purple-700 hover:scale-105 hover:shadow-blue-500/25"
+                                        }`}
                                 >
-                                    Sign In
+                                    {isSubmitting ? "Please wait..." : "Sign In"}
                                 </button>
                             </div>
                         </form>
 
                         {/* Footer */}
                         <div className="mt-8 pt-6 border-t border-gray-300">
-                            <p className="text-center text-xs text-gray-600 tracking-wide font-light">
+                            <p className="text-center text-xs text-gray-600 tracking-wide font-bold">
                                 © 2024 Skydent Pvt Ltd. All rights reserved.
-                                <span className="block mt-1">
-                                    Created with <span className="text-red-500">♥</span> for better smiles
-                                </span>
                             </p>
                         </div>
                     </div>
