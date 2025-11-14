@@ -4,6 +4,7 @@ import { faEye, faEyeSlash, faUser, faLock } from "@fortawesome/free-solid-svg-i
 import { DesignerContext } from '../../Context/DesignerContext';
 import { useNavigate } from "react-router-dom";
 import config from '../../config';
+import { motion } from 'framer-motion';
 
 export default function Login() {
     const { setDesigner } = useContext(DesignerContext);
@@ -76,9 +77,9 @@ export default function Login() {
 
 
     const images = [
-        "/img/bg0.png",
+        "/img/bg0.jpg",
         "/img/bg1.png",
-        "/img/bg2.jpg",
+        "/img/bg2.png",
     ];
 
     const nextSlide = () => {
@@ -96,7 +97,12 @@ export default function Login() {
 
     return (
         <section className="min-h-screen flex items-center justify-center bg-[#87CEEB] px-4 py-8">
-            <div className="w-full max-w-8xl flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12">
+            <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="relative w-full max-w-8xl flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12"
+            >
                 {/* Carousel - Now on Right */}
                 <div className="w-full lg:w-3/5 max-w-7xl order-1 lg:order-1">
                     <div className="relative rounded-2xl overflow-hidden shadow-2xl">
@@ -304,7 +310,7 @@ export default function Login() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </section>
     );
 }

@@ -5,6 +5,7 @@ import Datatable from "./Datatable";
 import Dashboard from "./Dashboard";
 import { ThemeContext } from "../../Context/ThemeContext";
 import { fetchWithAuth } from '../../utils/userapi';
+import { motion } from 'framer-motion';
 
 export default function Home() {
     const { theme } = useContext(ThemeContext);

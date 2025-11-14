@@ -150,7 +150,7 @@ export default function Hd() {
                                         to={item.href}
                                         key={item.key}
                                         className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 text-sm ${activePage === item.key
-                                            ? "bg-blue-600 text-white border border-blue-500"
+                                            ? "bg-blue-600 text-white"
                                             : "text-gray-300 hover:text-white hover:bg-gray-800"
                                             }`}
                                     >
@@ -243,30 +243,30 @@ export default function Hd() {
                                 </button>
 
                                 {dropdownOpen && (
-                                    <div className="absolute right-0 mt-2 w-64 bg-gray-800 rounded-xl shadow-lg py-2 border border-gray-700 z-50">
+                                    <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-gray-800 rounded-xl shadow-2xl py-2 border border-gray-700 z-50 cursor-pointer backdrop-blur-sm">
                                         <div className="px-4 py-3 border-b border-gray-700">
-                                            <div className="text-sm font-semibold text-white">
+                                            <div className="text-white font-semibold truncate text-sm sm:text-base">
                                                 {user?.name || 'User'}
                                             </div>
-                                            <div className="text-xs text-gray-400 truncate mt-1">
-                                                {user?.email || 'user@example.com'}
+                                            <div className="text-gray-400 text-xs sm:text-sm truncate mt-1">
+                                                {user?.email || ''}
                                             </div>
                                         </div>
                                         <div className="py-1">
                                             <Link
                                                 to="/user/profile"
-                                                className="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors duration-200"
+                                                className="block px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-all duration-200 flex items-center text-sm sm:text-base"
                                                 onClick={() => setDropdownOpen(false)}
                                             >
-                                                <FontAwesomeIcon icon={faUser} className="w-4 h-4 mr-3 text-gray-400" />
-                                                Profile Settings
+                                                <FontAwesomeIcon icon={faUser} className="w-4 h-4 mr-3" />
+                                                Profile
                                             </Link>
                                             <button
                                                 onClick={logout}
-                                                className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 transition-colors duration-200"
+                                                className="block w-full text-left px-4 py-3 text-red-400 hover:bg-red-600 hover:text-white transition-all duration-200 flex items-center text-sm sm:text-base"
                                             >
                                                 <FontAwesomeIcon icon={faSignOutAlt} className="w-4 h-4 mr-3" />
-                                                Sign Out
+                                                Logout
                                             </button>
                                         </div>
                                     </div>

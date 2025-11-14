@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import config from '../../config';
 
 export default function Login() {
-  const apiUrl = process.env.base_url;
   useEffect(() => {
     const data = localStorage.getItem('admin') ? localStorage.getItem('admin') : "";
     const token = localStorage.getItem('token') ? localStorage.getItem('token') : "";

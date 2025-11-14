@@ -185,7 +185,7 @@ export default function OrderDetails() {
             <>
                 <Hd />
                 <main
-                    className={`min-h-screen flex flex-col items-center justify-center ${theme === "light" ? "bg-gray-50 text-gray-900" : "bg-gray-900 text-white"
+                    className={`min-h-screen flex flex-col items-center justify-center ${theme === "light" ? "bg-gradient-to-br from-slate-50 to-blue-50 text-gray-900" : "bg-gray-900 text-white"
                         }`}
                 >
                     <Loder status="show" />
@@ -199,7 +199,7 @@ export default function OrderDetails() {
             <>
                 <Hd />
                 <main
-                    className={`min-h-screen flex flex-col items-center justify-center ${theme === "light" ? "bg-gray-50 text-gray-900" : "bg-gray-900 text-white"
+                    className={`min-h-screen flex flex-col items-center justify-center ${theme === "light" ? "bg-gradient-to-br from-slate-50 to-blue-50 text-gray-900" : "bg-gray-900 text-white"
                         }`}
                 >
                     <FontAwesomeIcon icon={faTimesCircle} className="text-red-500 text-6xl mb-4" />
@@ -228,7 +228,7 @@ export default function OrderDetails() {
                     {/* Header */}
                     <div
                         className={`rounded-2xl shadow-sm border px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 ${theme === "light"
-                            ? "bg-gray-200 border-gray-200"
+                            ? "bg-gradient-to-br from-slate-50 to-blue-50 border-gray-200"
                             : "bg-gray-800 border-gray-700"
                             }`}
                     >
@@ -257,7 +257,7 @@ export default function OrderDetails() {
                         {/* Left */}
                         <div
                             className={`col-span-2 rounded-2xl shadow-xl border p-8 ${theme === "light"
-                                ? "bg-gray-200 border-gray-200"
+                                ? "bg-gradient-to-br from-slate-50 to-blue-50 border-gray-200"
                                 : "bg-gray-800 border-gray-700"
                                 }`}
                         >
@@ -426,7 +426,7 @@ function InitialFileDownload({ order, theme }) {
 
     return (
         <div
-            className={`rounded-2xl shadow-md border p-6 transition-all duration-300 ${isLight ? "bg-gray-200 border-gray-200" : "bg-gray-800 border-gray-200"
+            className={`rounded-2xl shadow-md border p-6 transition-all duration-300 ${isLight ? "bg-gradient-to-br from-slate-50 to-blue-50 border-gray-200" : "bg-gray-800 border-gray-700"
                 } p-6`}
         >
             {/* Header */}
@@ -521,7 +521,7 @@ function FileHistoryTable({ title, icon, files, fileType, theme, onDeleteFile })
 
     return (
         <div className={`rounded-2xl shadow-md border p-6 ${theme === "light"
-            ? "bg-gray-50 border-gray-200"
+            ? "bg-gradient-to-br from-slate-50 to-blue-50 border-gray-200"
             : "bg-gray-800 border-gray-700"
             }`}>
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -588,7 +588,7 @@ function StatusUpdater({ theme, selectedStatus, setSelectedStatus, handleStatusU
     return (
         <div
             className={`rounded-2xl shadow-md border p-6 ${theme === "light"
-                ? "bg-gray-200 border-gray-200"
+                ? "bg-gradient-to-br from-slate-50 to-blue-50 border-gray-200"
                 : "bg-gray-800 border-gray-700"
                 }`}
         >
@@ -666,7 +666,7 @@ function FileUploader({ theme, onFileUpload }) {
     return (
         <div
             className={`rounded-2xl shadow-md border p-6 ${theme === "light"
-                ? "bg-gray-200 border-gray-200"
+                ? "bg-gradient-to-br from-slate-50 to-blue-50 border-gray-200"
                 : "bg-gray-800 border-gray-700"
                 }`}
         >
