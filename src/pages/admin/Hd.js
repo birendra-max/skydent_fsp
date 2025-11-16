@@ -103,9 +103,9 @@ export default function Hd() {
                         onError={(e) => (e.target.src = "/img/placeholder-logo.png")}
                     />
                     {/* --- Center Welcome Text --- */}
-                    <div className="hidden md:flex items-center space-x-2 text-sm lg:text-base font-medium">
+                    <div className="hidden md:flex items-center space-x-2 text-sm lg:text-base font-bold">
                         <span className="text-gray-300">Welcome,</span>
-                        <span className="text-orange-400 font-semibold">
+                        <span className="text-orange-400 font-bold">
                             {admin?.name || "Admin"}
                         </span>
                     </div>

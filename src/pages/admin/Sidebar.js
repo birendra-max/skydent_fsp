@@ -106,7 +106,7 @@ export default function Sidebar() {
     `;
 
     const navLinkClasses = (isActive) =>
-        `flex items-center w-full gap-3 px-4 py-2 rounded-xl transition-all duration-200
+        `flex items-center w-full gap-3 px-4 py-2 rounded-xl transition-all duration-200 font-bold
         ${isActive
             ? "bg-blue-600 text-white shadow-md"
             : theme === "dark"
@@ -139,7 +139,7 @@ export default function Sidebar() {
                     className={`flex justify-center items-center gap-2 ${collapsed ? "hidden" : "w-full"
                         }`}
                 >
-                    <span className="font-semibold text-xl">Admin Dashboard</span>
+                    <span className="font-bold text-xl">Admin Dashboard</span>
                 </div>
             </div>
 
@@ -173,7 +173,7 @@ export default function Sidebar() {
                                     onClick={() => toggleDropdown(item.id)}
                                     className={dropdownHeaderClasses(isMenuOpen || isSubmenuActive)}
                                 >
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 font-bold">
                                         <FontAwesomeIcon icon={item.icon} className="text-lg" />
                                         {!collapsed && <span>{item.name}</span>}
                                     </div>
@@ -197,7 +197,7 @@ export default function Sidebar() {
                                             <li key={index}>
                                                 <Link
                                                     to={sub.link}
-                                                    className={`block px-3 py-1.5 rounded-md text-sm transition-all ${
+                                                    className={`block px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${
                                                         currentPath === sub.link
                                                             ? "bg-blue-600 text-white"
                                                             : theme === "dark"

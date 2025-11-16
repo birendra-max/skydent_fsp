@@ -292,7 +292,7 @@ export default function DesignerDatatable({
                                             <th
                                                 key={col.accessor}
                                                 onClick={() => handleSort(col.accessor)}
-                                                className="py-3 px-4 border border-gray-300 cursor-pointer text-sm"
+                                                className="py-3 px-4 border border-gray-300 cursor-pointer text-sm font-bold"
                                             >
                                                 {col.header}
                                                 {sortConfig.key === col.accessor && (

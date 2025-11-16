@@ -428,6 +428,7 @@ export default function CommanDatatable({
                                                 key={col.accessor}
                                                 onClick={() => handleSort(col.accessor)}
                                                 style={{ border: "1px solid #ddd", padding: "12px", cursor: "pointer" }}
+                                                className="font-bold"
                                             >
                                                 {col.header}
                                                 {sortConfig.key === col.accessor && (
