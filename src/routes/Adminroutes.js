@@ -20,7 +20,7 @@ export default function Adminroutes() {
             <Routes>
                 <Route index element={<Login />} />
                 <Route path='/dashboard' element={<Dashboard />} />
-                <Route path='/reset-password' element={<ResetPsswordClient />} />
+                <Route path='/reset-password-client' element={<ResetPsswordClient />} />
                 <Route path='/add-client' element={<AddClient />} />
                 <Route path='/clients-reports' element={<ClientReports />} />
                 <Route path='/designer-reports' element={<DesignerReports />} />

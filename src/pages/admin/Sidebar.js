@@ -57,13 +57,13 @@ export default function Sidebar() {
             type: "dropdown",
             submenus: [
                 { name: "Add Clients", link: "/admin/add-client" },
-                { name: "Reset Password", link: "/admin/reset-password" },
+                { name: "Reset Password", link: "/admin/reset-password-client" },
             ],
         },
         {
             name: "Designers",
             icon: faPalette,
-            id: "design",
+            id: "designers",
             type: "dropdown",
             submenus: [
                 { name: "Add Designers", link: "/admin/add-designer" },
