@@ -5,7 +5,7 @@ import Foot from "./Foot";
 import { ThemeContext } from "../../Context/ThemeContext";
 import CasesDatatable from "./CasesDatatable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faClockRotateLeft } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 
 export default function YesteardayCases() {
@@ -26,7 +26,7 @@ export default function YesteardayCases() {
     useEffect(() => {
         async function fetchAllCases() {
             try {
-                const data = await fetchWithAuth('/get-all-cases', {
+                const data = await fetchWithAuth('/yesterday-cases', {
                     method: "GET",
                 });
 
@@ -63,8 +63,8 @@ export default function YesteardayCases() {
                             className={`text-3xl font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"
                                 }`}
                         >
-                            <FontAwesomeIcon icon={faBriefcase} className="text-blue-500" />
-                            All Cases
+                            <FontAwesomeIcon icon={faClockRotateLeft} className="text-blue-500" />
+                            Yestearday Cases
                         </h1>
                         <p
                             className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"

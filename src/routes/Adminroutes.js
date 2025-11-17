@@ -24,7 +24,8 @@ import PendingCases from '../pages/admin/PendingCases';
 import RedesignCases from '../pages/admin/RedesignCases';
 import YesteardayCases from '../pages/admin/YesteardayCases';
 import TodayCases from '../pages/admin/TodayCases';
-
+import NewCases from '../pages/admin/NewCases';
+import HoldCases from '../pages/admin/HoldCases';
 export default function Adminroutes() {
     return (
         <AdminProvider>
@@ -38,6 +39,7 @@ export default function Adminroutes() {
                 <Route path='/reset-password-designer' element={<ResetPasswordDesigner />} />
                 <Route path='/add-designer' element={<AddDesigner />} />
                 <Route path='/all-cases' element={<AllCases />} />
+                <Route path='/new-cases' element={<NewCases />} />
                 <Route path='/cases-reports' element={<CasesReports />} />
                 <Route path='/initial-files' element={<InitialFile />} />
                 <Route path='/stl-files' element={<StlFile />} />
@@ -47,6 +49,7 @@ export default function Adminroutes() {
                 <Route path='/reset-password-admin' element={<ResetPasswordAdmin />} />
                 <Route path='/completed-cases' element={<CompletedCases />} />
                 <Route path='/qc-cases' element={<QcCases />} />
+                <Route path='/hold-cases' element={<HoldCases />} />
                 <Route path='/rush-cases' element={<RushCases />} />
                 <Route path='/cancelled-cases' element={<CancelledCases />} />
                 <Route path='/pending-cases' element={<PendingCases />} />

@@ -22,7 +22,6 @@ export default function Sidebar() {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    // 🎨 Icon colors for dropdowns
     const dropdownIconColors = {
         admin: "text-purple-500",
         client: "text-blue-500",
@@ -77,14 +76,16 @@ export default function Sidebar() {
             type: "dropdown",
             submenus: [
                 { name: "All Cases", link: "/admin/all-cases" },
+                { name: "New Cases", link: "/admin/new-cases" },
                 { name: "Completed Cases", link: "/admin/completed-cases" },
                 { name: "Pending Cases", link: "/admin/pending-cases" },
                 { name: "Cancelled Cases", link: "/admin/cancelled-cases" },
                 { name: "Redesign Cases", link: "/admin/redesign-cases" },
                 { name: "QC Cases", link: "/admin/qc-cases" },
-                { name: "Yesterday Cases", link: "/admin/yesterday-cases" },
-                { name: "Today Cases", link: "/admin/today-cases" },
                 { name: "Rush Cases", link: "/admin/rush-cases" },
+                { name: "Hold Cases", link: "/admin/hold-cases" },
+                { name: "Today Cases", link: "/admin/today-cases" },
+                { name: "Yesterday Cases", link: "/admin/yesterday-cases" },
             ],
         },
         {
@@ -111,7 +112,6 @@ export default function Sidebar() {
         },
     ];
 
-    // Toggle dropdown
     const toggleDropdown = (id) => {
         if (openMenu === id) {
             setAnimatingMenu(id);
@@ -124,7 +124,6 @@ export default function Sidebar() {
         }
     };
 
-    // Auto-open for active submenu
     useEffect(() => {
         const foundMenu = navItems.find(
             (item) => item.submenus && item.submenus.some((sub) => currentPath.includes(sub.link))
@@ -140,20 +139,18 @@ export default function Sidebar() {
 
     const navLinkClasses = (isActive) =>
         `flex items-center w-full gap-3 px-4 py-2 rounded-sm transition-all duration-200 font-bold cursor-pointer
-        ${
-            isActive
-                ? "bg-gray-600 text-white shadow-md"
-                : theme === "dark"
+        ${isActive
+            ? "bg-gray-600 text-white shadow-md"
+            : theme === "dark"
                 ? "text-gray-400 hover:bg-gray-800 hover:text-white"
                 : "text-gray-600 hover:bg-gray-200 hover:text-gray-900"
         }`;
 
     const dropdownHeaderClasses = (isOpen) =>
         `flex items-center justify-between w-full px-4 py-2 rounded-sm transition-all duration-200 cursor-pointer
-        ${
-            isOpen
-                ? "bg-gray-600 text-white shadow-md"
-                : theme === "dark"
+        ${isOpen
+            ? "bg-gray-600 text-white shadow-md"
+            : theme === "dark"
                 ? "text-gray-400 hover:bg-gray-800 hover:text-white"
                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
         }`;
@@ -165,7 +162,6 @@ export default function Sidebar() {
 
     return (
         <aside className={sidebarClasses}>
-            {/* Logo Header */}
             <div
                 className={`flex items-center justify-between p-5 border-b ${
                     theme === "dark" ? "border-gray-800" : "border-gray-200"
@@ -174,7 +170,6 @@ export default function Sidebar() {
                 {!collapsed && <span className="font-bold text-xl">Admin Dashboard</span>}
             </div>
 
-            {/* Navigation */}
             <nav className="flex-1 overflow-y-auto py-4 px-3">
                 <ul className="space-y-2">
                     {navItems.map((item) => {
@@ -219,11 +214,11 @@ export default function Sidebar() {
                                     )}
                                 </button>
 
-                                {/* Smooth open/close animation */}
+                                {/* FIXED → Unlimited height */}
                                 <div
                                     className={`overflow-hidden transition-[max-height,opacity,margin] duration-300 ease-in-out ${
                                         (isMenuOpen && !collapsed) || isClosing
-                                            ? "max-h-96 opacity-100 mt-2"
+                                            ? "max-h-[9999px] opacity-100 mt-2"
                                             : "max-h-0 opacity-0"
                                     }`}
                                 >
@@ -236,8 +231,8 @@ export default function Sidebar() {
                                                         currentPath === sub.link
                                                             ? "bg-blue-600 text-white"
                                                             : theme === "dark"
-                                                            ? "text-gray-400 hover:text-white hover:bg-gray-800"
-                                                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                                                ? "text-gray-400 hover:text-white hover:bg-gray-800"
+                                                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                                                     }`}
                                                 >
                                                     {sub.name}

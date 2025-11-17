@@ -5,7 +5,7 @@ import Foot from "./Foot";
 import { ThemeContext } from "../../Context/ThemeContext";
 import CasesDatatable from "./CasesDatatable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faFolderTree  } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 
 export default function AllCases() {
@@ -32,7 +32,7 @@ export default function AllCases() {
 
                 // data is already the parsed JSON response
                 if (data && data.status === 'success') {
-                    setData(data.new_cases);
+                    setData(data.all_cases);
                 } else {
                     setData([]);
                 }
@@ -63,7 +63,7 @@ export default function AllCases() {
                             className={`text-3xl font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"
                                 }`}
                         >
-                            <FontAwesomeIcon icon={faBriefcase} className="text-blue-500" />
+                            <FontAwesomeIcon icon={faFolderTree } className="text-blue-500" />
                             All Cases
                         </h1>
                         <p

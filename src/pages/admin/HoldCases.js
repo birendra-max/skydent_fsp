@@ -5,10 +5,10 @@ import Foot from "./Foot";
 import { ThemeContext } from "../../Context/ThemeContext";
 import CasesDatatable from "./CasesDatatable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBolt } from "@fortawesome/free-solid-svg-icons";
+import { faPauseCircle } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 
-export default function RushCases() {
+export default function AllCases() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
 
@@ -26,7 +26,7 @@ export default function RushCases() {
     useEffect(() => {
         async function fetchAllCases() {
             try {
-                const data = await fetchWithAuth('/get-rush', {
+                const data = await fetchWithAuth('/get-hold', {
                     method: "GET",
                 });
 
@@ -63,8 +63,8 @@ export default function RushCases() {
                             className={`text-3xl font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"
                                 }`}
                         >
-                            <FontAwesomeIcon icon={faBolt} className="text-blue-500" />
-                            Rush Cases
+                            <FontAwesomeIcon icon={faPauseCircle} className="text-blue-500" />
+                            Hold Cases
                         </h1>
                         <p
                             className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"

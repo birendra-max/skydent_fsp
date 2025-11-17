@@ -177,25 +177,6 @@ export default function CasesReports() {
                     </div>
                     <CasesDatatable columns={columns} data={data} rowsPerPage={50} />
                 </div>
-
-                {/* Loading Overlay */}
-                {isLoading && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-                        <div
-                            className={`rounded-2xl p-8 flex flex-col items-center space-y-4 shadow-2xl ${theme === "dark" ? "bg-gray-800" : "bg-white"
-                                }`}
-                        >
-                            <div className="relative">
-                                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 dark:border-blue-900"></div>
-                                <div className="absolute top-0 left-0 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 dark:border-blue-400"></div>
-                            </div>
-                            <span className="text-xl font-semibold">Loading Reports...</span>
-                            <p className="text-gray-500 text-center">
-                                Please wait while we fetch your report data.
-                            </p>
-                        </div>
-                    </div>
-                )}
             </main>
             <Foot />
         </>
