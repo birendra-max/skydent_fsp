@@ -1,14 +1,14 @@
 import { useContext, useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Hd from "./Hd";
-import Foot from "./Foot";
+import Foot from './Foot';
 import { ThemeContext } from "../../Context/ThemeContext";
-import Datatable from "./Datatable";
+import DesignerDatatable from "./DesignerDatatable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faEye, faEyeSlash, faKey } from "@fortawesome/free-solid-svg-icons";
+import { faUnlockAlt, faEye, faEyeSlash, faKey } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 
-export default function AllClients() {
+export default function ResetPasswordDesigner() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
     const [resetEmail, setResetEmail] = useState("");
@@ -21,7 +21,7 @@ export default function AllClients() {
     const base_url = localStorage.getItem("base_url");
 
     const columns = [
-        { header: "Client Id", accessor: "userid" },
+        { header: "Designer Id", accessor: "desiid" },
         { header: "Name", accessor: "name" },
         { header: "Designation", accessor: "designation" },
         { header: "Email", accessor: "email" },
@@ -35,7 +35,7 @@ export default function AllClients() {
     useEffect(() => {
         async function getClients() {
             try {
-                const data = await fetchWithAuth("/get-all-clients", {
+                const data = await fetchWithAuth("/get-all-designer", {
                     method: "GET",
                 });
                 if (data && data.status === "success") setData(data.clients);
@@ -55,7 +55,7 @@ export default function AllClients() {
         setLoading(true);
 
         try {
-            const res = await fetch(`${base_url}/reset-password`, {
+            const res = await fetch(`${base_url}/reset-password-designer`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -90,8 +90,8 @@ export default function AllClients() {
             <Hd />
             <main
                 className={`min-h-screen flex transition-all duration-300 ${theme === "dark"
-                        ? "bg-gray-950 text-gray-100"
-                        : "bg-gray-200 text-gray-800"
+                    ? "bg-gray-950 text-gray-100"
+                    : "bg-gray-200 text-gray-800"
                     }`}
             >
                 <div className="fixed top-0 left-0 h-full w-64 z-20">
@@ -105,27 +105,29 @@ export default function AllClients() {
                             className={`text-3xl font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"
                                 }`}
                         >
-                            <FontAwesomeIcon icon={faUsers} className="text-blue-500" />
-                            All Clients
+                            <FontAwesomeIcon icon={faUnlockAlt} className="text-blue-500" />
+                            Reset Designer Password
                         </h1>
+
                         <p
                             className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"
                                 }`}
                         >
-                            Manage and monitor your registered client accounts.
+                            Reset and update the password for designer accounts securely.
                         </p>
                     </div>
+
 
                     {/* 🔐 Reset Password Form */}
                     <div
                         className={`p-6 mb-6 rounded-xl shadow-lg border ${theme === "dark"
-                                ? "bg-gray-900 border-gray-800"
-                                : "bg-white border-gray-300"
+                            ? "bg-gray-900 border-gray-800"
+                            : "bg-white border-gray-300"
                             }`}
                     >
                         <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
                             <FontAwesomeIcon icon={faKey} className="text-yellow-500" />
-                            Reset Client Password
+                            Reset Designer Password
                         </h2>
 
                         <form
@@ -134,16 +136,16 @@ export default function AllClients() {
                         >
                             {/* Email */}
                             <div className="md:col-span-1">
-                                <label className="font-semibold block mb-2">Client Email</label>
+                                <label className="font-semibold block mb-2">Designer Email</label>
                                 <input
                                     type="email"
-                                    placeholder="Enter client email"
+                                    placeholder="Enter Designer email"
                                     value={resetEmail}
                                     onChange={(e) => setResetEmail(e.target.value)}
                                     required
                                     className={`w-full p-2.5 rounded-md border focus:ring-2 focus:ring-blue-500 ${theme === "dark"
-                                            ? "bg-gray-800 border-gray-700 text-white"
-                                            : "bg-gray-50 border-gray-300 text-gray-800"
+                                        ? "bg-gray-800 border-gray-700 text-white"
+                                        : "bg-gray-50 border-gray-300 text-gray-800"
                                         }`}
                                 />
                             </div>
@@ -158,8 +160,8 @@ export default function AllClients() {
                                     onChange={(e) => setNewPassword(e.target.value)}
                                     required
                                     className={`w-full p-2.5 rounded-md border focus:ring-2 focus:ring-blue-500 ${theme === "dark"
-                                            ? "bg-gray-800 border-gray-700 text-white"
-                                            : "bg-gray-50 border-gray-300 text-gray-800"
+                                        ? "bg-gray-800 border-gray-700 text-white"
+                                        : "bg-gray-50 border-gray-300 text-gray-800"
                                         }`}
                                 />
                                 <FontAwesomeIcon
@@ -176,8 +178,8 @@ export default function AllClients() {
                                     type="submit"
                                     disabled={loading}
                                     className={`px-6 py-2.5 rounded-lg font-semibold transition-all ${loading
-                                            ? "bg-blue-400 text-white cursor-not-allowed"
-                                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                                        ? "bg-blue-400 text-white cursor-not-allowed"
+                                        : "bg-blue-600 hover:bg-blue-700 text-white"
                                         }`}
                                 >
                                     {loading ? "Resetting..." : "Reset Password"}
@@ -189,8 +191,8 @@ export default function AllClients() {
                         {message.text && (
                             <div
                                 className={`mt-4 inline-block px-4 py-2 rounded-md text-sm font-medium ${message.type === "success"
-                                        ? "bg-green-100 text-green-700 border border-green-300"
-                                        : "bg-red-100 text-red-700 border border-red-300"
+                                    ? "bg-green-100 text-green-700 border border-green-300"
+                                    : "bg-red-100 text-red-700 border border-red-300"
                                     }`}
                             >
                                 {message.text}
@@ -198,8 +200,8 @@ export default function AllClients() {
                         )}
                     </div>
 
-                    {/* 📊 Client Table */}
-                    <Datatable columns={columns} data={data} rowsPerPage={50} />
+                    {/* 📊 Designer Table */}
+                    <DesignerDatatable columns={columns} data={data} rowsPerPage={50} />
                 </div>
             </main>
             <Foot />

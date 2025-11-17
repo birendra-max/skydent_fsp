@@ -34,8 +34,8 @@ export default function Sidebar() {
             id: "client",
             type: "dropdown",
             submenus: [
-                { name: "All Clients", link: "/admin/all-clients" },
                 { name: "Add Clients", link: "/admin/add-client" },
+                { name: "Reset Password", link: "/admin/reset-password" },
                 { name: "Client Reports", link: "/admin/clients-report" },
             ],
         },
@@ -45,8 +45,8 @@ export default function Sidebar() {
             id: "design",
             type: "dropdown",
             submenus: [
-                { name: "All Designers", link: "/admin/all-designer" },
-                { name: "Add Designer", link: "/admin/add-designer" },
+                { name: "Add Designers", link: "/admin/add-designer" },
+                { name: "Reset Password", link: "/admin/reset-password-designer" },
             ],
         },
         {
@@ -56,6 +56,14 @@ export default function Sidebar() {
             type: "dropdown",
             submenus: [
                 { name: "All Cases", link: "/admin/all-cases" },
+                { name: 'Completed Cases', link: "/admin/completed-cases" },
+                { name: 'Pending Cases', link: "/admin/pending-cases" },
+                { name: 'Cancelled Cases', link: "/admin/cancelled-cases" },
+                { name: 'Redesign Cases', link: "/admin/redesign-cases" },
+                { name: 'Qc Cases', link: "/admin/qc-cases" },
+                { name: 'Yestearday Cases', link: "/admin/yestearday-cases" },
+                { name: 'Today Cases', link: "/admin/today-cases" },
+                { name: 'Rush Cases', link: "/admin/rush-cases" },
                 { name: "Reports", link: "/admin/cases-reports" },
             ],
         },
@@ -101,12 +109,12 @@ export default function Sidebar() {
     const sidebarClasses = `
         ${collapsed ? "w-20" : "w-64"} 
         ${theme === "dark" ? "bg-gray-900 text-gray-200" : "bg-gray-100 text-gray-800"} 
-        mt-16 min-h-screen fixed flex flex-col transition-all duration-300 relative shadow-lg border-r 
+        mt-16 min-h-screen fixed flex flex-col transition-all duration-300 relative shadow-lg border-r overflow-auto
         ${theme === "dark" ? "border-gray-800" : "border-gray-200"}
     `;
 
     const navLinkClasses = (isActive) =>
-        `flex items-center w-full gap-3 px-4 py-2 rounded-xl transition-all duration-200 font-bold
+        `flex items-center w-full gap-3 px-4 py-2 rounded-xl transition-all duration-200 font-bold cursor-pointer
         ${isActive
             ? "bg-blue-600 text-white shadow-md"
             : theme === "dark"
@@ -115,7 +123,7 @@ export default function Sidebar() {
         }`;
 
     const dropdownHeaderClasses = (isOpen) =>
-        `flex items-center justify-between w-full px-4 py-2 rounded-xl transition-all duration-200
+        `flex items-center justify-between w-full px-4 py-2 rounded-xl transition-all duration-200 cursor-pointer
         ${isOpen
             ? "bg-blue-600 text-white shadow-md"
             : theme === "dark"
@@ -186,24 +194,22 @@ export default function Sidebar() {
 
                                 {/* ✅ Smooth open & smooth close */}
                                 <div
-                                    className={`overflow-hidden transition-[max-height,opacity,margin] duration-300 ease-in-out ${
-                                        (isMenuOpen && !collapsed) || isClosing
+                                    className={`overflow-hidden transition-[max-height,opacity,margin] duration-300 ease-in-out ${(isMenuOpen && !collapsed) || isClosing
                                             ? "max-h-96 opacity-100 mt-2"
                                             : "max-h-0 opacity-0"
-                                    }`}
+                                        }`}
                                 >
                                     <ul className={submenuClasses}>
                                         {item.submenus.map((sub, index) => (
                                             <li key={index}>
                                                 <Link
                                                     to={sub.link}
-                                                    className={`block px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${
-                                                        currentPath === sub.link
+                                                    className={`block px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${currentPath === sub.link
                                                             ? "bg-blue-600 text-white"
                                                             : theme === "dark"
                                                                 ? "text-gray-400 hover:text-white hover:bg-gray-800"
                                                                 : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {sub.name}
                                                 </Link>

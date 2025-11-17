@@ -1,14 +1,14 @@
 import { useContext, useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Hd from "./Hd";
-import Foot from './Foot';
+import Foot from "./Foot";
 import { ThemeContext } from "../../Context/ThemeContext";
-import DesignerDatatable from "./DesignerDatatable";
+import Datatable from "./Datatable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faEye, faEyeSlash, faKey } from "@fortawesome/free-solid-svg-icons";
+import { faUnlockAlt, faEye, faEyeSlash, faKey } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 
-export default function AllDesigner() {
+export default function ResetPsswordClient() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
     const [resetEmail, setResetEmail] = useState("");
@@ -21,7 +21,7 @@ export default function AllDesigner() {
     const base_url = localStorage.getItem("base_url");
 
     const columns = [
-        { header: "Designer Id", accessor: "desiid" },
+        { header: "Client Id", accessor: "userid" },
         { header: "Name", accessor: "name" },
         { header: "Designation", accessor: "designation" },
         { header: "Email", accessor: "email" },
@@ -35,8 +35,8 @@ export default function AllDesigner() {
     useEffect(() => {
         async function getClients() {
             try {
-                const data = await fetchWithAuth("/get-all-designer", {
-                    method: "GET", 
+                const data = await fetchWithAuth("/get-all-clients", {
+                    method: "GET",
                 });
                 if (data && data.status === "success") setData(data.clients);
                 else setData([]);
@@ -55,7 +55,7 @@ export default function AllDesigner() {
         setLoading(true);
 
         try {
-            const res = await fetch(`${base_url}/reset-password-designer`, {
+            const res = await fetch(`${base_url}/reset-password`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -105,16 +105,18 @@ export default function AllDesigner() {
                             className={`text-3xl font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"
                                 }`}
                         >
-                            <FontAwesomeIcon icon={faUsers} className="text-blue-500" />
-                            All Designer
+                            <FontAwesomeIcon icon={faUnlockAlt} className="text-blue-500" />
+                            Reset Password
                         </h1>
+
                         <p
                             className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"
                                 }`}
                         >
-                            Manage and monitor your registered designer accounts.
+                            Update your account password securely.
                         </p>
                     </div>
+
 
                     {/* 🔐 Reset Password Form */}
                     <div
@@ -125,7 +127,7 @@ export default function AllDesigner() {
                     >
                         <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
                             <FontAwesomeIcon icon={faKey} className="text-yellow-500" />
-                            Reset Designer Password
+                            Reset Client Password
                         </h2>
 
                         <form
@@ -134,10 +136,10 @@ export default function AllDesigner() {
                         >
                             {/* Email */}
                             <div className="md:col-span-1">
-                                <label className="font-semibold block mb-2">Designer Email</label>
+                                <label className="font-semibold block mb-2">Client Email</label>
                                 <input
                                     type="email"
-                                    placeholder="Enter Designer email"
+                                    placeholder="Enter client email"
                                     value={resetEmail}
                                     onChange={(e) => setResetEmail(e.target.value)}
                                     required
@@ -198,8 +200,8 @@ export default function AllDesigner() {
                         )}
                     </div>
 
-                    {/* 📊 Designer Table */}
-                    <DesignerDatatable columns={columns} data={data} rowsPerPage={50} />
+                    {/* 📊 Client Table */}
+                    <Datatable columns={columns} data={data} rowsPerPage={50} />
                 </div>
             </main>
             <Foot />
