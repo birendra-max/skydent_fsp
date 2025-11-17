@@ -14,6 +14,17 @@ import FinishedFile from '../pages/admin/FinishedFile';
 import StlFile from '../pages/admin/StlFile';
 import Profile from '../pages/admin/Profile';
 import DesignerReports from '../pages/admin/DesignerReports';
+import AddAdmin from '../pages/admin/AddAdmin';
+import ResetPasswordAdmin from '../pages/admin/ResetPasswordAdmin';
+import CompletedCases from '../pages/admin/CompletedCases';
+import QcCases from '../pages/admin/QcCases';
+import RushCases from '../pages/admin/RushCases';
+import CancelledCases from '../pages/admin/CancelledCases';
+import PendingCases from '../pages/admin/PendingCases';
+import RedesignCases from '../pages/admin/RedesignCases';
+import YesteardayCases from '../pages/admin/YesteardayCases';
+import TodayCases from '../pages/admin/TodayCases';
+
 export default function Adminroutes() {
     return (
         <AdminProvider>
@@ -32,6 +43,16 @@ export default function Adminroutes() {
                 <Route path='/stl-files' element={<StlFile />} />
                 <Route path='/finished-files' element={<FinishedFile />} />
                 <Route path='/profile' element={<Profile />} />
+                <Route path='/add-admin' element={<AddAdmin />} />
+                <Route path='/reset-password-admin' element={<ResetPasswordAdmin />} />
+                <Route path='/completed-cases' element={<CompletedCases />} />
+                <Route path='/qc-cases' element={<QcCases />} />
+                <Route path='/rush-cases' element={<RushCases />} />
+                <Route path='/cancelled-cases' element={<CancelledCases />} />
+                <Route path='/pending-cases' element={<PendingCases />} />
+                <Route path='/redesign-cases' element={<RedesignCases />} />
+                <Route path='/yesterday-cases' element={<YesteardayCases />} />
+                <Route path='/today-cases' element={<TodayCases />} />
             </Routes>
         </AdminProvider>
     )
