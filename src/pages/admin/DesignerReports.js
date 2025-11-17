@@ -3,46 +3,35 @@ import Sidebar from "./Sidebar";
 import Hd from "./Hd";
 import Foot from "./Foot";
 import { ThemeContext } from "../../Context/ThemeContext";
-import CasesDatatable from "./CasesDatatable";
+import Datatable from "./Datatable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faChartBar } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 
-export default function AllCases() {
+export default function ClientReports() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
 
     const columns = [
-        { header: "Order Id", accessor: "orderid" },
-        { header: "File Name", accessor: "fname" },
-        { header: "TAT", accessor: "tduration" },
-        { header: "Status", accessor: "status" },
-        { header: "Unit", accessor: "unit" },
-        { header: "Tooth", accessor: "tooth" },
-        { header: "Lab Name", accessor: "labname" },
-        { header: "Date", accessor: "order_date" },
+        { header: "Client Id", accessor: "userid" },
+        { header: "Name", accessor: "name" },
+        { header: "Email", accessor: "email" },
+        { header: "Case Status", accessor: "case_status" },
+        { header: "Total", accessor: "count" },
     ];
 
     useEffect(() => {
-        async function fetchAllCases() {
+        async function getClients() {
             try {
-                const data = await fetchWithAuth('/get-all-cases', {
-                    method: "GET",
-                });
-
-                // data is already the parsed JSON response
-                if (data && data.status === 'success') {
-                    setData(data.new_cases);
-                } else {
-                    setData([]);
-                }
+                const data = await fetchWithAuth("/get-reports", { method: "GET" });
+                if (data && data.status === "success") setData(data.data);
+                else setData([]);
             } catch (error) {
-                console.error("Error fetching cases:", error);
+                console.error("Error fetching clients:", error);
                 setData([]);
             }
         }
-
-        fetchAllCases();
+        getClients();
     }, []);
 
     return (
@@ -58,23 +47,24 @@ export default function AllCases() {
 
                 <div className="flex-1 p-6 mt-18">
                     {/* Header */}
-                    <div className="mb-2">
+                    <div className="mb-6">
                         <h1
                             className={`text-3xl font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"
                                 }`}
                         >
-                            <FontAwesomeIcon icon={faBriefcase} className="text-blue-500" />
-                            All Cases
+                            <FontAwesomeIcon icon={faChartBar} className="text-blue-500" />
+                            Designer Reports
                         </h1>
                         <p
                             className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"
                                 }`}
                         >
-                            Manage and monitor your all cases.
+                            Manage and monitor your client reports.
                         </p>
                     </div>
+
                     {/* 📊 Client Table */}
-                    <CasesDatatable columns={columns} data={data} rowsPerPage={50} />
+                    <Datatable columns={columns} data={data} rowsPerPage={50} />
                 </div>
             </main>
             <Foot />

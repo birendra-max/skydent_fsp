@@ -38,16 +38,14 @@ export default function ClientReports() {
         <>
             <Hd />
             <main
-                className={`min-h-screen flex transition-all duration-300 ${theme === "dark"
+                className={`min-h-screen flex ml-64 transition-all duration-300 ${theme === "dark"
                     ? "bg-gray-950 text-gray-100"
                     : "bg-gray-200 text-gray-800"
                     }`}
             >
-                <div className="fixed top-0 left-0 h-full w-64 z-20">
-                    <Sidebar />
-                </div>
+                <Sidebar />
 
-                <div className="flex-1 ml-64 flex flex-col min-h-screen p-4 mt-16">
+                <div className="flex-1 p-6 mt-18">
                     {/* Header */}
                     <div className="mb-6">
                         <h1
@@ -69,7 +67,7 @@ export default function ClientReports() {
                     <Datatable columns={columns} data={data} rowsPerPage={50} />
                 </div>
             </main>
-            <Foot/>
+            <Foot />
         </>
     );
 }

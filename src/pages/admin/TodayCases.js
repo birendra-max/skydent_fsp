@@ -8,7 +8,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 
-export default function AllCases() {
+export default function TodayCases() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
 

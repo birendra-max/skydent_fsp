@@ -54,13 +54,15 @@ export default function Dashboard() {
             <>
                 <Hd />
                 <main
-                    className={`flex items-center justify-center transition-all duration-300 ${theme === "dark"
+                    className={`min-h-screen flex ml-64 transition-all duration-300 ${theme === "dark"
                         ? "bg-gray-950 text-gray-100"
                         : "bg-gray-200 text-gray-800"
                         }`}
                 >
                     <Sidebar />
-                    <Loder status="show" />
+                    <div className="flex-1 p-6 mt-16">
+                        <Loder status="show" />
+                    </div>
                 </main>
             </>
         );
@@ -70,7 +72,7 @@ export default function Dashboard() {
         <>
             <Hd />
             <main
-                className={`flex transition-all duration-300 ${theme === "dark"
+                className={`min-h-screen flex ml-64 transition-all duration-300 ${theme === "dark"
                     ? "bg-gray-950 text-gray-100"
                     : "bg-gray-200 text-gray-800"
                     }`}
@@ -204,7 +206,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </main>
-            <Foot />
+            <Foot/>
         </>
     );
 }

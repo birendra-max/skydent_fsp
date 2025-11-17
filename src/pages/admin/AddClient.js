@@ -114,16 +114,15 @@ export default function AllClients() {
         <>
             <Hd />
             <main
-                className={`min-h-screen flex transition-all duration-300 ${theme === "dark"
+                className={`min-h-screen flex ml-64 transition-all duration-300 ${theme === "dark"
                     ? "bg-gray-950 text-gray-100"
-                    : "bg-gray-100 text-gray-800"
+                    : "bg-gray-200 text-gray-800"
                     }`}
             >
-                <div className="fixed top-0 left-0 h-full w-64 z-20">
-                    <Sidebar />
-                </div>
+                <Sidebar />
 
-                <div className="w-full flex-1 ml-64 flex flex-col min-h-screen p-6 mt-16 space-y-8">
+
+                <div className="flex-1 p-6 mt-18">
                     {/* Header */}
                     <div>
                         <h1
@@ -146,7 +145,7 @@ export default function AllClients() {
 
                     {/* Form Card */}
                     <div
-                        className={`p-8 rounded-2xl shadow-lg border ${theme === "dark"
+                        className={`mt-8 p-8 rounded-2xl shadow-lg border ${theme === "dark"
                             ? "bg-gray-900 border-gray-800"
                             : "bg-white border-gray-200"
                             }`}

@@ -13,6 +13,7 @@ import InitialFile from '../pages/admin/InitialFile';
 import FinishedFile from '../pages/admin/FinishedFile';
 import StlFile from '../pages/admin/StlFile';
 import Profile from '../pages/admin/Profile';
+import DesignerReports from '../pages/admin/DesignerReports';
 export default function Adminroutes() {
     return (
         <AdminProvider>
@@ -21,7 +22,8 @@ export default function Adminroutes() {
                 <Route path='/dashboard' element={<Dashboard />} />
                 <Route path='/reset-password' element={<ResetPsswordClient />} />
                 <Route path='/add-client' element={<AddClient />} />
-                <Route path='/clients-report' element={<ClientReports />} />
+                <Route path='/clients-reports' element={<ClientReports />} />
+                <Route path='/designer-reports' element={<DesignerReports />} />
                 <Route path='/reset-password-designer' element={<ResetPasswordDesigner />} />
                 <Route path='/add-designer' element={<AddDesigner />} />
                 <Route path='/all-cases' element={<AllCases />} />
