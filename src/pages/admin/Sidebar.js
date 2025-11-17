@@ -63,7 +63,7 @@ export default function Sidebar() {
         {
             name: "Designers",
             icon: faPalette,
-            id: "designers",
+            id: "design",
             type: "dropdown",
             submenus: [
                 { name: "Add Designers", link: "/admin/add-designer" },
@@ -139,20 +139,20 @@ export default function Sidebar() {
     `;
 
     const navLinkClasses = (isActive) =>
-        `flex items-center w-full gap-3 px-4 py-2 rounded-xl transition-all duration-200 font-bold cursor-pointer
+        `flex items-center w-full gap-3 px-4 py-2 rounded-sm transition-all duration-200 font-bold cursor-pointer
         ${
             isActive
-                ? "bg-blue-600 text-white shadow-md"
+                ? "bg-gray-600 text-white shadow-md"
                 : theme === "dark"
                 ? "text-gray-400 hover:bg-gray-800 hover:text-white"
                 : "text-gray-600 hover:bg-gray-200 hover:text-gray-900"
         }`;
 
     const dropdownHeaderClasses = (isOpen) =>
-        `flex items-center justify-between w-full px-4 py-2 rounded-xl transition-all duration-200 cursor-pointer
+        `flex items-center justify-between w-full px-4 py-2 rounded-sm transition-all duration-200 cursor-pointer
         ${
             isOpen
-                ? "bg-blue-600 text-white shadow-md"
+                ? "bg-gray-600 text-white shadow-md"
                 : theme === "dark"
                 ? "text-gray-400 hover:bg-gray-800 hover:text-white"
                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
