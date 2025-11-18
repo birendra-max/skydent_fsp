@@ -176,17 +176,15 @@ export default function Datatable({
 
     const getButtonClass = (isActive = false) => {
         if (theme === 'dark') {
-            return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
-                isActive 
-                    ? 'bg-blue-600 text-white shadow-lg' 
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
-            }`;
+            return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${isActive
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+                }`;
         } else {
-            return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
-                isActive 
-                    ? 'bg-blue-600 text-white shadow-lg' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-            }`;
+            return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${isActive
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`;
         }
     };
 
@@ -320,7 +318,7 @@ export default function Datatable({
         <>
             <Loder status={status} />
             <Chatbox orderid={orderid} />
-            
+
             {status === "hide" && (
                 <section className={`p-4 rounded-xl ${getBackgroundClass()}`}>
                     {(!Array.isArray(columns) || columns.length === 0) && (
@@ -361,13 +359,50 @@ export default function Datatable({
                                         <FontAwesomeIcon icon={faDownload} className="text-white" />
                                         Download Report
                                     </button>
+
+                                    {/* Bulk Actions Toolbar - Moved to top */}
+                                    <div className={`flex items-center gap-3 px-4 py-2`}>
+                                        <select
+                                            value={fileType}
+                                            onChange={(e) => setFileType(e.target.value)}
+                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass()}`}
+                                        >
+                                            {/* <option value="initial">Initial Files</option> */}
+                                            <option value="stl">STL Files</option>
+                                            <option value="finish">Finished Files</option>
+                                        </select>
+
+                                        <button
+                                            onClick={handleBulkDownload}
+                                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium text-sm"
+                                        >
+                                            <FontAwesomeIcon icon={faDownload} /> Download All
+                                        </button>
+
+                                        <button
+                                            onClick={async () => {
+                                                if (!selectedRows.length) return;
+                                                let redesignSent = 0;
+                                                for (let id of selectedRows) {
+                                                    const row = data.find((r) => r.orderid === id);
+                                                    if (!row) continue;
+                                                    await sendRedesign(id, row.status);
+                                                    redesignSent++;
+                                                }
+                                            }}
+                                            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium text-sm"
+                                        >
+                                            <FontAwesomeIcon icon={faRepeat} /> Send for Redesign
+                                        </button>
+                                        
+                                    </div>
                                 </div>
 
                                 {/* Search */}
                                 <div className="relative">
-                                    <FontAwesomeIcon 
-                                        icon={faSearch} 
-                                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
+                                    <FontAwesomeIcon
+                                        icon={faSearch}
+                                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                                     />
                                     <input
                                         type="text"
@@ -403,19 +438,18 @@ export default function Datatable({
                                                     >
                                                         <div className="flex items-center gap-2 font-bold">
                                                             {col.header}
-                                                            <FontAwesomeIcon 
+                                                            <FontAwesomeIcon
                                                                 icon={
-                                                                    sortConfig.key === col.accessor 
-                                                                        ? sortConfig.direction === "asc" 
-                                                                            ? faSortUp 
+                                                                    sortConfig.key === col.accessor
+                                                                        ? sortConfig.direction === "asc"
+                                                                            ? faSortUp
                                                                             : faSortDown
                                                                         : faSort
-                                                                } 
-                                                                className={`text-xs ${
-                                                                    sortConfig.key === col.accessor 
-                                                                        ? 'text-blue-300' 
-                                                                        : 'text-gray-400'
-                                                                }`} 
+                                                                }
+                                                                className={`text-xs ${sortConfig.key === col.accessor
+                                                                    ? 'text-blue-300'
+                                                                    : 'text-gray-400'
+                                                                    }`}
                                                             />
                                                         </div>
                                                     </th>
@@ -544,9 +578,9 @@ export default function Datatable({
                                                 className={
                                                     typeof page === "number" && currentPage === page
                                                         ? getButtonClass(true)
-                                                        : page === "..." 
-                                                        ? getDisabledButtonClass()
-                                                        : getButtonClass()
+                                                        : page === "..."
+                                                            ? getDisabledButtonClass()
+                                                            : getButtonClass()
                                                 }
                                                 onClick={() => typeof page === "number" && handlePageChange(page)}
                                                 disabled={page === "..."}
@@ -561,71 +595,6 @@ export default function Datatable({
                                             className={currentPage === totalPages ? getDisabledButtonClass() : getButtonClass()}
                                         >
                                             Next
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Floating Action Toolbar */}
-                            {selectedRows.length > 0 && (
-                                <div className={`w-[70%] fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border ${
-                                    theme === "dark"
-                                        ? "bg-gradient-to-r from-gray-800 to-gray-700 text-white border-gray-600"
-                                        : "bg-gradient-to-r from-white to-blue-50 border-gray-200 text-gray-800 shadow-xl"
-                                }`}>
-                                    <div className="flex items-center gap-4">
-                                        <span className="font-semibold text-sm bg-blue-600 text-white px-3 py-1 rounded-full">
-                                            ✅ {selectedRows.length} selected
-                                        </span>
-
-                                        <select
-                                            value={fileType}
-                                            onChange={(e) => setFileType(e.target.value)}
-                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass()}`}
-                                        >
-                                            <option value="initial">Initial Files</option>
-                                            <option value="stl">STL Files</option>
-                                            <option value="finish">Finished Files</option>
-                                        </select>
-
-                                        <button
-                                            onClick={handleBulkDownload}
-                                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium"
-                                        >
-                                            <FontAwesomeIcon icon={faDownload} /> Download All
-                                        </button>
-
-                                        <button
-                                            onClick={async () => {
-                                                if (!selectedRows.length) return;
-                                                let redesignSent = 0;
-                                                for (let id of selectedRows) {
-                                                    const row = data.find((r) => r.orderid === id);
-                                                    if (!row) continue;
-                                                    await sendRedesign(id, row.status);
-                                                    redesignSent++;
-                                                }
-                                            }}
-                                            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium"
-                                        >
-                                            <FontAwesomeIcon icon={faRepeat} /> Send for Redesign
-                                        </button>
-
-                                        <select
-                                            value={deliveryType}
-                                            onChange={(e) => setDeliveryType(e.target.value)}
-                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass()}`}
-                                        >
-                                            <option value="Rush">Rush Delivery</option>
-                                            <option value="Same Day">Same Day</option>
-                                            <option value="Next Day">Next Day</option>
-                                        </select>
-
-                                        <button
-                                            onClick={updateDeliveryType}
-                                            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium"
-                                        >
-                                            <FontAwesomeIcon icon={faArrowsRotate} /> Update Delivery
                                         </button>
                                     </div>
                                 </div>
