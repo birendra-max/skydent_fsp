@@ -32,7 +32,7 @@ export default function Datatable({
 
     // ✅ NEW STATES for multi-select & dropdown
     const [selectedRows, setSelectedRows] = useState([]);
-    const [fileType, setFileType] = useState("finish");
+    const [fileType, setFileType] = useState("stl");
 
     // Filter & Sort
     const filteredData = useMemo(() => {

@@ -117,7 +117,7 @@ export default function Dashboard() {
             const updatedCards = [
                 { id: "home", href: "/user/home", title: "New Cases", count: cases.new_cases, color: "from-gray-600 to-gray-800", icon: faShoppingCart },
                 { id: "progress", href: "/user/in_progress", title: "In Progress", count: cases.progress, color: "from-yellow-500 to-amber-600", icon: faSpinner },
-                { id: "canceled", href: "/user/canceled_case", title: "Canceled Cases", count: cases.canceled, color: "from-red-500 to-rose-600", icon: faTimes },
+                { id: "canceled", href: "/user/canceled_case", title: "Cancelled Cases", count: cases.canceled, color: "from-red-500 to-rose-600", icon: faTimes },
                 { id: "completed", href: "/user/completed_case", title: "Completed Cases", count: cases.completed, color: "from-green-500 to-emerald-600", icon: faTasks },
                 { id: "rush", href: "/user/rush_cases", title: "Rush Cases", count: cases.rush, color: "from-blue-500 to-indigo-600", icon: faBolt },
                 { id: "qc", href: "/user/qc_required", title: "QC Required", count: cases.qc, color: "from-orange-500 to-amber-600", icon: faBell },
@@ -220,7 +220,7 @@ export default function Dashboard() {
                                     <FontAwesomeIcon icon={card.icon} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className={`text-sm font-bold truncate ${getTextClass()}`}>{card.title}</p>
+                                    <p className={`text-sm font-semibold truncate ${getTextClass()}`}>{card.title}</p>
                                     {card.count !== null ? (
                                         <h3 className={`text-lg font-bold ${getCountClass()}`}>{card.count}</h3>
                                     ) : (

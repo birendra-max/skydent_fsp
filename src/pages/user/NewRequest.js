@@ -74,8 +74,8 @@ export default function NewRequest() {
         prev.map((f) => {
           if (f.fileName === file.name && f.progress < 80) {
             const newProgress = f.progress + 5;
-            return { 
-              ...f, 
+            return {
+              ...f,
               progress: newProgress,
               uploadStatus: `Uploading... ${newProgress}%`
             };
@@ -318,11 +318,11 @@ export default function NewRequest() {
             }`} />
           <span>{status}</span>
         </div>
-        
+
         {/* Progress Bar for Uploading Files */}
         {isUploading && (
           <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-            <div 
+            <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
               style={{ width: `${percentage}%` }}
             ></div>
@@ -375,7 +375,7 @@ export default function NewRequest() {
         <section className="max-w-8xl mx-auto">
           {/* Main Content Card */}
           <div className={`rounded-xl border ${getCardClass()} mb-8`}>
-            
+
             {/* Upload Area */}
             {files.length === 0 && (
               <div className="p-8">
@@ -498,9 +498,9 @@ export default function NewRequest() {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <StatusBadge 
-                                status={file.uploadStatus} 
-                                message={file.message} 
+                              <StatusBadge
+                                status={file.uploadStatus}
+                                message={file.message}
                                 progress={file.progress}
                               />
                             </td>
@@ -530,38 +530,68 @@ export default function NewRequest() {
                 </div>
 
                 {/* Delivery Options and Submit Section */}
-                <div className={`rounded-lg border p-6 ${getTableContainerClass()}`}>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className={`rounded-xl border p-6 ${getTableContainerClass()} shadow-sm`}>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Delivery Options */}
                     <div className="lg:col-span-2">
-                      <h3 className="text-lg font-semibold mb-4">Delivery Options</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <h3 className={`text-xl font-bold mb-6 ${theme === 'light' ? 'text-black' : 'text-white'}`}>Delivery Options</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {[
                           {
                             value: "Rush",
                             label: "Rush Delivery",
                             description: "1-2 Hours",
+                            tagline: "Fastest possible",
                             // price: "+$50",
-                            color: "red"
+                            color: "red",
+                            icon: (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                            )
                           },
                           {
                             value: "Same Day",
                             label: "Same Day",
                             description: "6 Hours",
+                            tagline: "Quick turnaround",
                             // price: "+$25",
-                            color: "yellow"
+                            color: "yellow",
+                            icon: (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )
                           },
                           {
                             value: "Next Day",
                             label: "Next Day",
                             description: "12 Hours",
+                            tagline: "Standard delivery",
                             // price: "Free",
-                            color: "green"
+                            color: "green",
+                            icon: (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )
                           },
                         ].map((option) => (
                           <label
                             key={option.value}
-                            className={getDeliveryOptionClass(option, selectedDuration === option.value)}
+                            className={`
+              relative flex p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group
+              ${selectedDuration === option.value
+                                ? option.color === 'red'
+                                  ? 'border-red-500 bg-red-50 dark:bg-red-900/20 shadow-md ring-2 ring-red-200 dark:ring-red-800'
+                                  : option.color === 'yellow'
+                                    ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 shadow-md ring-2 ring-yellow-200 dark:ring-yellow-800'
+                                    : 'border-green-500 bg-green-50 dark:bg-green-900/20 shadow-md ring-2 ring-green-200 dark:ring-green-800'
+                                : theme === 'light'
+                                  ? 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md hover:bg-gray-50'
+                                  : 'border-gray-600 bg-gray-800 hover:border-gray-500 hover:bg-gray-700'
+                              }
+            `}
                           >
                             <input
                               type="radio"
@@ -571,61 +601,204 @@ export default function NewRequest() {
                               onChange={(e) => setSelectedDuration(e.target.value)}
                               className="sr-only"
                             />
-                            <div className="text-center">
-                              <div className="font-semibold text-sm mb-1">{option.label}</div>
-                              <div className={`text-xs ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'
-                                }`}>{option.description}</div>
-                              <div className={`text-xs font-medium mt-1 ${option.color === 'green' ? 'text-green-600' : option.color === 'yellow' ? 'text-yellow-600' : 'text-red-600'
-                                }`}>{option.price}</div>
+
+                            {/* Traditional Radio Button on Left */}
+                            <div className="flex-shrink-0 mr-4 mt-1">
+                              <div className={`
+                w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200
+                ${selectedDuration === option.value
+                                  ? option.color === 'red'
+                                    ? 'border-red-500 bg-red-500'
+                                    : option.color === 'yellow'
+                                      ? 'border-yellow-500 bg-yellow-500'
+                                      : 'border-green-500 bg-green-500'
+                                  : theme === 'light'
+                                    ? 'border-gray-400 bg-white group-hover:border-gray-500'
+                                    : 'border-gray-500 bg-gray-700 group-hover:border-gray-400'
+                                }
+              `}>
+                                {selectedDuration === option.value && (
+                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                )}
+                              </div>
                             </div>
+
+                            {/* Content */}
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-3 flex-1">
+                                  <div className={`
+                    flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center
+                    ${selectedDuration === option.value
+                                      ? option.color === 'red'
+                                        ? 'bg-red-100 text-red-600 dark:bg-red-800 dark:text-red-200'
+                                        : option.color === 'yellow'
+                                          ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-800 dark:text-yellow-200'
+                                          : 'bg-green-100 text-green-600 dark:bg-green-800 dark:text-green-200'
+                                      : theme === 'light'
+                                        ? 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
+                                        : 'bg-gray-700 text-gray-400 group-hover:bg-gray-600'
+                                    }
+                  `}>
+                                    {option.icon}
+                                  </div>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <span className={`font-bold text-sm ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+                                        {option.label}
+                                      </span>
+                                      {option.price && (
+                                        <span className={`
+                          text-sm font-semibold
+                          ${option.color === 'red' ? 'text-red-600' :
+                                            option.color === 'yellow' ? 'text-yellow-600' : 'text-green-600'
+                                          }
+                        `}>
+                                          {option.price}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div className={`
+                      text-sm font-semibold mt-1
+                      ${theme === 'light' ? 'text-gray-700' : 'text-gray-200'}
+                    `}>
+                                      {option.description}
+                                    </div>
+
+                                    <div className={`
+                      text-xs mt-1
+                      ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}
+                    `}>
+                                      {option.tagline}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Selection indicator for better UX */}
+                            {selectedDuration === option.value && (
+                              <div className="absolute -top-2 -right-2">
+                                <div className={`
+                  w-6 h-6 rounded-full flex items-center justify-center shadow-md
+                  ${option.color === 'red' ? 'bg-red-500' :
+                                    option.color === 'yellow' ? 'bg-yellow-500' : 'bg-green-500'
+                                  }
+                `}>
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
                           </label>
                         ))}
+                      </div>
+
+                      {/* Helper text to indicate selection */}
+                      <div className={`mt-4 text-sm ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 rounded-full border-2 border-gray-400 flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                          </div>
+                          <span>Select your preferred delivery option</span>
+                        </div>
                       </div>
                     </div>
 
                     {/* Submit Section */}
                     <div className="flex flex-col justify-between">
                       <div>
-                        <h3 className="text-lg font-semibold mb-4">Submit Orders</h3>
-                        <div className={`text-sm mb-4 ${files.some(f => f.uploadStatus.startsWith("Uploading..."))
-                          ? theme === 'light' ? "text-yellow-600" : "text-yellow-400"
-                          : !files.some(f => f.uploadStatus === "Success")
-                            ? theme === 'light' ? "text-red-600" : "text-red-400"
-                            : canSubmit
-                              ? theme === 'light' ? "text-green-600" : "text-green-400"
-                              : theme === 'light' ? "text-gray-600" : "text-gray-400"
-                          }`}>
-                          {files.some(f => f.uploadStatus.startsWith("Uploading..."))
-                            ? "Please wait for all uploads to complete"
+                        <h3 className={`text-xl font-bold mb-6 ${theme === 'light' ? 'text-black' : 'text-white'}`}>Submit Orders</h3>
+                        <div className={`
+          flex items-center p-4 rounded-lg mb-6 text-sm font-medium
+          ${files.some(f => f.uploadStatus.startsWith("Uploading..."))
+                            ? theme === 'light'
+                              ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                              : "bg-yellow-900/20 text-yellow-300 border border-yellow-800"
                             : !files.some(f => f.uploadStatus === "Success")
-                              ? "No files successfully uploaded"
-                              : !selectedDuration
-                                ? "Please select delivery timeframe"
-                                : files.some(f => f.uploadStatus === "Failed")
-                                  ? "Some files failed, but you can submit successful ones"
-                                  : "All files are ready for processing"
-                          }
+                              ? theme === 'light'
+                                ? "bg-red-50 text-red-700 border border-red-200"
+                                : "bg-red-900/20 text-red-300 border border-red-800"
+                              : canSubmit
+                                ? theme === 'light'
+                                  ? "bg-green-50 text-green-700 border border-green-200"
+                                  : "bg-green-900/20 text-green-300 border border-green-800"
+                                : theme === 'light'
+                                  ? "bg-gray-50 text-gray-600 border border-gray-200"
+                                  : "bg-gray-800 text-gray-400 border border-gray-700"
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            {files.some(f => f.uploadStatus.startsWith("Uploading...")) ? (
+                              <>
+                                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                                <span>Please wait for all uploads to complete</span>
+                              </>
+                            ) : !files.some(f => f.uploadStatus === "Success") ? (
+                              <>
+                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                <span>No files successfully uploaded</span>
+                              </>
+                            ) : !selectedDuration ? (
+                              <>
+                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                <span>Please select delivery timeframe</span>
+                              </>
+                            ) : files.some(f => f.uploadStatus === "Failed") ? (
+                              <>
+                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                <span>Some files failed, but you can submit successful ones</span>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span>All files are ready for processing</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="space-y-3">
+
+                      <div className="space-y-4">
                         <button
                           onClick={handleSubmit}
                           disabled={!canSubmit}
-                          className={`w-full font-semibold py-3 px-6 rounded-lg text-sm transition-colors ${canSubmit
-                            ? "bg-blue-600 hover:bg-blue-700 text-white"
-                            : theme === 'light'
-                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                              : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                          className={`
+            w-full font-bold py-4 px-6 rounded-xl text-base transition-all duration-200
+            ${canSubmit
+                              ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                              : theme === 'light'
+                                ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                                : "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700"
                             }`}
                         >
-                          Send for Design
+                          {canSubmit ? (
+                            <span className="flex items-center justify-center space-x-2">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              <span>Send for Design</span>
+                            </span>
+                          ) : (
+                            "Send for Design"
+                          )}
                         </button>
+
                         {files.some(f => f.uploadStatus === "Failed") && canSubmit && (
-                          <div className={`text-xs text-center py-1 rounded ${theme === 'light'
-                            ? 'text-yellow-600 bg-yellow-50'
-                            : 'text-yellow-400 bg-yellow-900/20'
-                            }`}>
-                            Only successful files will be submitted
+                          <div className={`
+            flex items-center justify-center space-x-2 p-3 rounded-lg text-sm
+            ${theme === 'light'
+                              ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                              : 'bg-yellow-900/20 text-yellow-300 border border-yellow-800'
+                            }`}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span>Only successful files will be submitted</span>
                           </div>
                         )}
                       </div>

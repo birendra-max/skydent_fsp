@@ -148,7 +148,7 @@ export default function Hd() {
                                     <Link
                                         to={item.href}
                                         key={item.key}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 text-md ${activePage === item.key
+                                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 text-sm ${activePage === item.key
                                             ? "bg-blue-600 text-white"
                                             : "text-gray-300 hover:text-white hover:bg-gray-800"
                                             }`}
@@ -223,7 +223,7 @@ export default function Hd() {
                             <div className="relative dropdown-container">
                                 <button
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                                    className="flex items-center space-x-3 p-1 cursor-pointer rounded-lg hover:bg-gray-800 transition-colors duration-200"
+                                    className="flex items-center space-x-3 p-2 cursor-pointer rounded-lg hover:bg-gray-800 transition-colors duration-200"
                                 >
                                     <div className="flex items-center space-x-3">
                                         <div className="text-white font-semibold truncate text-sm sm:text-base">
