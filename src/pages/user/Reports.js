@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useMemo } from "react";
 import Hd from './Hd';
 import Foot from './Foot';
 import { ThemeContext } from "../../Context/ThemeContext";
@@ -13,23 +13,21 @@ import {
     faFilter,
     faSearch,
     faChartBar,
-    faSync
+    faSync,
+    faHashtag
 } from '@fortawesome/free-solid-svg-icons';
 import { fetchWithAuth } from '../../utils/userapi';
 
 export default function Reports() {
     const { theme } = useContext(ThemeContext);
-    const [selectedFilter, setSelectedFilter] = useState('1'); // Default to 'Today'
+    const [selectedFilter, setSelectedFilter] = useState('4'); // Default to 'All Time'
     const [isLoading, setIsLoading] = useState(false);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [data, setData] = useState([]);
-    const [reportStats, setReportStats] = useState({
-        totalOrders: 0,
-        completed: 0,
-        inProgress: 0,
-        pending: 0
-    });
+    const [orderIdFrom, setOrderIdFrom] = useState('');
+    const [orderIdTo, setOrderIdTo] = useState('');
+    const [allData, setAllData] = useState([]); // Store all data from backend
+    const [filteredData, setFilteredData] = useState([]); // Store filtered data for display
 
     // Professional theme-based classes
     const getThemeClasses = () => {
@@ -46,8 +44,8 @@ export default function Reports() {
                 : 'bg-gray-700 border-gray-600 focus:border-blue-400 text-white placeholder-gray-400 shadow-sm',
             button: {
                 primary: isLight
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all'
-                    : 'bg-blue-700 hover:bg-blue-600 text-white shadow-md hover:shadow-lg transition-all',
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all cursor-pointer'
+                    : 'bg-blue-700 hover:bg-blue-600 text-white shadow-md hover:shadow-lg transition-all cursor-pointer',
                 success: isLight
                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg'
                     : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg',
@@ -89,81 +87,144 @@ export default function Reports() {
         { value: '1', label: 'Today', icon: faCalendarAlt },
         { value: '2', label: 'Weekly', icon: faChartBar },
         { value: '3', label: 'Monthly', icon: faFileAlt },
+        { value: '4', label: 'All Time', icon: faFilter },
     ];
 
-    // Calculate report statistics
-    const calculateStats = (cases) => {
-        const stats = {
-            totalOrders: cases.length,
-            completed: cases.filter(caseItem => caseItem.status === 'Designed Completed').length,
-            inProgress: cases.filter(caseItem => caseItem.status === 'In Progress').length,
-            pending: cases.filter(caseItem => caseItem.status === 'New' || caseItem.status === 'QC Required').length
-        };
-        setReportStats(stats);
-    };
-
-    // Single function to handle both search types
-    const handleSearch = async (filterValue = null) => {
-        const filterToUse = filterValue || selectedFilter;
-
-        if (filterValue) {
-            setSelectedFilter(filterValue);
+    // Filter data based on all criteria
+    const applyFilters = () => {
+        if (!allData.length) {
+            setFilteredData([]);
+            return;
         }
 
-        setIsLoading(true);
+        let filtered = [...allData];
 
-        try {
-            const requestData = {
-                filter: filterToUse,
-                startDate,
-                endDate,
-            };
+        // Apply time period filter
+        const now = new Date();
+        switch (selectedFilter) {
+            case '1': // Today
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                filtered = filtered.filter(item => {
+                    const itemDate = new Date(item.order_date);
+                    return itemDate >= today;
+                });
+                break;
+            case '2': // Weekly
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                weekAgo.setHours(0, 0, 0, 0);
+                filtered = filtered.filter(item => {
+                    const itemDate = new Date(item.order_date);
+                    return itemDate >= weekAgo;
+                });
+                break;
+            case '3': // Monthly
+                const monthAgo = new Date();
+                monthAgo.setMonth(monthAgo.getMonth() - 1);
+                monthAgo.setHours(0, 0, 0, 0);
+                filtered = filtered.filter(item => {
+                    const itemDate = new Date(item.order_date);
+                    return itemDate >= monthAgo;
+                });
+                break;
+            case '4': // All Time - no date filtering
+                break;
+            default:
+                break;
+        }
 
-            const responseData = await fetchWithAuth("get-reports", {
-                method: "POST",
-                body: JSON.stringify(requestData),
+        // Apply order ID range filter
+        if (orderIdFrom) {
+            filtered = filtered.filter(item => {
+                const orderId = parseInt(item.orderid);
+                const fromId = parseInt(orderIdFrom);
+                return orderId >= fromId;
             });
-
-            if (responseData?.status === "success") {
-                setData(responseData.cases);
-                calculateStats(responseData.cases);
-            } else {
-                setData([]);
-                setReportStats({ totalOrders: 0, completed: 0, inProgress: 0, pending: 0 });
-            }
-        } catch (error) {
-            console.error("Report fetch error:", error);
-            setData([]);
-            setReportStats({ totalOrders: 0, completed: 0, inProgress: 0, pending: 0 });
-        } finally {
-            setIsLoading(false);
         }
+
+        if (orderIdTo) {
+            filtered = filtered.filter(item => {
+                const orderId = parseInt(item.orderid);
+                const toId = parseInt(orderIdTo);
+                return orderId <= toId;
+            });
+        }
+
+        // Apply custom date range filter
+        if (startDate) {
+            filtered = filtered.filter(item => {
+                const itemDate = new Date(item.order_date);
+                const start = new Date(startDate);
+                return itemDate >= start;
+            });
+        }
+
+        if (endDate) {
+            filtered = filtered.filter(item => {
+                const itemDate = new Date(item.order_date);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999); // Include entire end day
+                return itemDate <= end;
+            });
+        }
+
+        setFilteredData(filtered);
     };
 
     // Handle search button click
     const handleSearchClick = () => {
-        handleSearch();
+        applyFilters();
     };
 
     // Handle filter button click
     const handleFilterClick = (filterValue) => {
-        handleSearch(filterValue);
+        setSelectedFilter(filterValue);
     };
 
     // Handle download report
     const handleDownloadReport = () => {
-        // Implement download functionality here
-        console.log("Downloading report for data:", data);
-        // This would typically generate a PDF or Excel file
-        alert('Report download functionality would be implemented here');
+        if (filteredData.length > 0) {
+            const fileName = `report_${new Date().toISOString().split('T')[0]}.csv`;
+            
+            // Simple CSV export
+            const headers = columns.map(col => col.header).join(',');
+            const csvData = filteredData.map(row => 
+                columns.map(col => `"${row[col.accessor] || ''}"`).join(',')
+            ).join('\n');
+            
+            const csvContent = `${headers}\n${csvData}`;
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.click();
+            window.URL.revokeObjectURL(url);
+        } else {
+            alert('No data to export');
+        }
     };
 
     // Handle reset filters
     const handleResetFilters = () => {
         setStartDate('');
         setEndDate('');
-        setSelectedFilter('1');
-        handleSearch('1');
+        setOrderIdFrom('');
+        setOrderIdTo('');
+        setSelectedFilter('4'); // Reset to "All Time"
+        setFilteredData(allData);
+    };
+
+    // Handle order ID input validation
+    const handleOrderIdFromChange = (e) => {
+        const value = e.target.value.replace(/[^0-9]/g, '');
+        setOrderIdFrom(value);
+    };
+
+    const handleOrderIdToChange = (e) => {
+        const value = e.target.value.replace(/[^0-9]/g, '');
+        setOrderIdTo(value);
     };
 
     const getHeaderClass = () => {
@@ -172,16 +233,12 @@ export default function Reports() {
             : 'bg-gradient-to-r from-gray-800 to-blue-900/20 border-gray-700 text-white';
     };
 
-    const getStatCardClass = (index) => {
-        const gradients = [
-            'from-blue-500 to-blue-600',
-            'from-emerald-500 to-green-600',
-            'from-amber-500 to-orange-600',
-            'from-purple-500 to-purple-600'
-        ];
-        return `bg-gradient-to-r ${gradients[index]} text-white`;
-    };
+    // Apply filters whenever any filter criteria changes
+    useEffect(() => {
+        applyFilters();
+    }, [selectedFilter, allData]);
 
+    // Initial data fetch
     useEffect(() => {
         async function fetchAllCases() {
             setIsLoading(true);
@@ -191,16 +248,16 @@ export default function Reports() {
                 });
 
                 if (data && data.status === 'success') {
-                    setData(data.new_cases);
-                    calculateStats(data.new_cases);
+                    setAllData(data.new_cases);
+                    setFilteredData(data.new_cases); // Initially show all data
                 } else {
-                    setData([]);
-                    setReportStats({ totalOrders: 0, completed: 0, inProgress: 0, pending: 0 });
+                    setAllData([]);
+                    setFilteredData([]);
                 }
             } catch (error) {
                 console.error("Error fetching cases:", error);
-                setData([]);
-                setReportStats({ totalOrders: 0, completed: 0, inProgress: 0, pending: 0 });
+                setAllData([]);
+                setFilteredData([]);
             } finally {
                 setIsLoading(false);
             }
@@ -264,7 +321,7 @@ export default function Reports() {
                                     <div className="flex space-x-3">
                                         <button
                                             onClick={handleResetFilters}
-                                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${theme === 'light'
+                                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${theme === 'light'
                                                 ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                                                 : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                                                 }`}
@@ -274,8 +331,8 @@ export default function Reports() {
                                         </button>
                                         <button
                                             onClick={handleDownloadReport}
-                                            disabled={data.length === 0}
-                                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${data.length === 0
+                                            disabled={filteredData.length === 0}
+                                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${filteredData.length === 0
                                                     ? 'bg-gray-400 cursor-not-allowed'
                                                     : themeClasses.button.download
                                                 }`}
@@ -286,9 +343,40 @@ export default function Reports() {
                                     </div>
                                 </div>
 
-                                <div className="max-w-6xl mx-auto">
+                                <div className="max-w-6xl mx-auto ml-54">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-                                        <div className="lg:col-span-3">
+                                        {/* Order ID From */}
+                                        <div className="lg:col-span-2">
+                                            <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
+                                                <FontAwesomeIcon icon={faHashtag} className="w-4 h-4 mr-2 text-blue-500" />
+                                                Order ID From
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={orderIdFrom}
+                                                onChange={handleOrderIdFromChange}
+                                                placeholder="e.g., 1001"
+                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
+                                            />
+                                        </div>
+
+                                        {/* Order ID To */}
+                                        <div className="lg:col-span-2">
+                                            <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
+                                                <FontAwesomeIcon icon={faHashtag} className="w-4 h-4 mr-2 text-blue-500" />
+                                                Order ID To
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={orderIdTo}
+                                                onChange={handleOrderIdToChange}
+                                                placeholder="e.g., 2000"
+                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
+                                            />
+                                        </div>
+
+                                        {/* Start Date */}
+                                        <div className="lg:col-span-2">
                                             <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
                                                 <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4 mr-2 text-blue-500" />
                                                 Start Date
@@ -300,7 +388,9 @@ export default function Reports() {
                                                 className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
                                             />
                                         </div>
-                                        <div className="lg:col-span-3">
+
+                                        {/* End Date */}
+                                        <div className="lg:col-span-2">
                                             <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
                                                 <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4 mr-2 text-blue-500" />
                                                 End Date
@@ -312,11 +402,13 @@ export default function Reports() {
                                                 className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
                                             />
                                         </div>
+
+                                        {/* Search Button */}
                                         <div className="lg:col-span-4">
                                             <button
                                                 onClick={handleSearchClick}
                                                 disabled={isLoading}
-                                                className={`w-full h-12 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 ${isLoading
+                                                className={`w-44 h-12 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer ${isLoading
                                                         ? 'bg-gray-400 cursor-not-allowed'
                                                         : themeClasses.button.success
                                                     }`}
@@ -324,16 +416,23 @@ export default function Reports() {
                                                 {isLoading ? (
                                                     <>
                                                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                                        <span>Generating...</span>
+                                                        <span>Applying Filters...</span>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <FontAwesomeIcon icon={faFileAlt} className="w-4 h-4" />
-                                                        <span>Generate Report</span>
+                                                        <span>Apply Filters</span>
                                                     </>
                                                 )}
                                             </button>
                                         </div>
+                                    </div>
+
+                                    {/* Search Tips */}
+                                    <div className="mt-4 text-left">
+                                        <p className={`text-xs ${themeClasses.text.muted}`}>
+                                            Tip: Use Order ID range and date filters to refine your report. Showing {filteredData.length} of {allData.length} records.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -346,7 +445,7 @@ export default function Reports() {
                                         Time Period
                                     </h3>
                                     <span className={`text-sm ${themeClasses.text.muted}`}>
-                                        {data.length} records in report
+                                        {filteredData.length} of {allData.length} records shown
                                     </span>
                                 </div>
 
@@ -357,7 +456,7 @@ export default function Reports() {
                                                 key={button.value}
                                                 onClick={() => handleFilterClick(button.value)}
                                                 disabled={isLoading}
-                                                className={`cursor-pointer px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3 min-w-[120px] ${selectedFilter === button.value
+                                                className={`cursor-pointer px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3 min-w-[120px] cursor-pointer ${selectedFilter === button.value
                                                         ? `${themeClasses.button.filterActive} transform scale-105`
                                                         : themeClasses.button.filterInactive
                                                     } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
@@ -378,7 +477,7 @@ export default function Reports() {
                             <div className="mt-8">
                                 <Datatable
                                     columns={columns}
-                                    data={data}
+                                    data={filteredData}
                                     rowsPerPage={50}
                                     theme={theme}
                                 />

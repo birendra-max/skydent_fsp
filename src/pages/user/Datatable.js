@@ -231,24 +231,39 @@ export default function Datatable({
     };
 
     const sendRedesign = async (orderId, status) => {
-        if (status.toLowerCase() === 'completed') {
-            try {
-                const data = await fetchWithAuth(`send-for-redesign/${orderId}`, {
-                    method: "GET",
-                });
+        // If not completed → direct fail response
+        if (status.toLowerCase() !== "completed") {
+            return {
+                status: "failed",
+                message: "Please contact design team"
+            };
+        }
 
-                if (data.status === 'success') {
-                    alert(data.message);
-                } else {
-                    console.log(data.message);
-                }
-            } catch (error) {
-                console.error("Error fetching cases:", error);
+        try {
+            const data = await fetchWithAuth(`send-for-redesign/${orderId}`, {
+                method: "GET",
+            });
+
+            if (data.status === "success") {
+                return {
+                    status: "success",
+                    message: data.message
+                };
+            } else {
+                return {
+                    status: "failed",
+                    message: data.message || "Unknown error"
+                };
             }
-        } else {
-            alert(`${orderId} is not completed yet! You can't send it for redesign.`);
+        } catch (error) {
+            return {
+                status: "failed",
+                message: "Server error"
+            };
         }
     };
+
+
 
     // ✅ Multi-select logic
     const toggleSelectRow = (id) =>
@@ -268,7 +283,10 @@ export default function Datatable({
     };
 
     const handleBulkDownload = () => {
-        if (!selectedRows.length) return alert("Please select at least one record!");
+        if (!selectedRows.length) {
+            alert("Please select at least one record to proceed with the download.");
+            return;
+        }
 
         let missingFiles = [];
         let downloadedCount = 0;
@@ -307,12 +325,21 @@ export default function Datatable({
             }
         });
 
+
+        // --- Professional Notification Section ---
         if (missingFiles.length > 0) {
-            alert(`File not available for these record(s): ${missingFiles.join(", ")}`);
-        } else if (downloadedCount === 0) {
-            alert("No files available for the selected type.");
+            alert(
+                `Download Summary\n\n` +
+                `Files Successfully Downloaded: ${downloadedCount}\n` +
+                `Files Not Available: ${missingFiles.length}\n\n` +
+                `File Not found for this IDs: ${missingFiles.join(", ")}`
+            );
+        }
+        else if (downloadedCount === 0) {
+            alert("No files are available for the selected file type.");
         }
     };
+
 
     return (
         <>
@@ -354,7 +381,7 @@ export default function Datatable({
                                     {/* Download Report */}
                                     <button
                                         onClick={() => exportToExcel(data, "Reports")}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm font-medium rounded-lg border border-green-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+                                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm font-medium rounded-lg border border-green-600 transition-all duration-200 shadow-lg hover:shadow-xl cursor-pointer"
                                     >
                                         <FontAwesomeIcon icon={faDownload} className="text-white" />
                                         Download Report
@@ -374,27 +401,56 @@ export default function Datatable({
 
                                         <button
                                             onClick={handleBulkDownload}
-                                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium text-sm"
+                                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium text-sm cursor-pointer"
                                         >
                                             <FontAwesomeIcon icon={faDownload} /> Download All
                                         </button>
 
                                         <button
                                             onClick={async () => {
-                                                if (!selectedRows.length) return;
-                                                let redesignSent = 0;
+                                                if (!selectedRows.length) {
+                                                    alert("Please select at least one case to proceed with the redesign request.");
+                                                    return;
+                                                }
+
+                                                let successCount = 0;
+                                                let failCount = 0;
+                                                let failMessages = [];
+
                                                 for (let id of selectedRows) {
                                                     const row = data.find((r) => r.orderid === id);
-                                                    if (!row) continue;
-                                                    await sendRedesign(id, row.status);
-                                                    redesignSent++;
+                                                    if (!row) {
+                                                        failCount++;
+                                                        failMessages.push(`${id}: Order record not found`);
+                                                        continue;
+                                                    }
+
+                                                    const res = await sendRedesign(id, row.status);
+
+                                                    if (res.status === "success") {
+                                                        successCount++;
+                                                    } else {
+                                                        failCount++;
+                                                        failMessages.push(`${id}: ${res.message}`);
+                                                    }
                                                 }
+
+                                                // Professional summary message
+                                                let message =
+                                                    `Redesign Request Summary\n\n` +
+                                                    `Successful Requests: ${successCount}\n` +
+                                                    `Failed Requests: ${failCount}\n`;
+
+                                                if (failMessages.length) {
+                                                    message += `\nDetails for Failed Requests:\n` + failMessages.join("\n");
+                                                }
+
+                                                alert(message);
                                             }}
-                                            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium text-sm"
+                                            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium text-sm cursor-pointer"
                                         >
                                             <FontAwesomeIcon icon={faRepeat} /> Send for Redesign
                                         </button>
-                                        
                                     </div>
                                 </div>
 

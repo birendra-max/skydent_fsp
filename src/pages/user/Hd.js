@@ -7,17 +7,14 @@ import {
     faHome,
     faUpload,
     faSearch,
-    faChartBar,
     faUser,
     faSignOutAlt,
     faMoon,
     faSun,
     faTimes,
     faBars,
-    faBell,
-    faCog
+    faChartLine
 } from '@fortawesome/free-solid-svg-icons';
-import SearchOrder from "./SearchOrder";
 
 export default function Hd() {
     const { setTheme } = useContext(ThemeContext);
@@ -91,9 +88,9 @@ export default function Hd() {
 
     const navItems = [
         { href: "/user/home", label: "Dashboard", key: "index", icon: faHome },
-        { href: "/user/new_request", label: "Upload Cases", key: "new_request", icon: faUpload },
-        { href: "/user/multisearch", label: "Multi Search", key: "multisearch", icon: faSearch },
-        { href: "/user/reports", label: "Reports", key: "reports", icon: faChartBar }
+        { href: "/user/new_request", label: "Upload New Cases", key: "new_request", icon: faUpload },
+        { href: "/user/multisearch", label: "Multi-Search", key: "multisearch", icon: faSearch },
+        { href: "/user/reports", label: "Reports", key: "reports", icon: faChartLine }
     ];
 
     const applyTheme = (newTheme) => {
@@ -148,7 +145,7 @@ export default function Hd() {
                                     <Link
                                         to={item.href}
                                         key={item.key}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 text-sm ${activePage === item.key
+                                        className={`px-4 py-2 rounded-md font-medium transition-all duration-200 flex items-center space-x-2 text-sm ${activePage === item.key
                                             ? "bg-blue-600 text-white"
                                             : "text-gray-300 hover:text-white hover:bg-gray-800"
                                             }`}

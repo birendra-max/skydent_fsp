@@ -767,7 +767,7 @@ export default function NewRequest() {
                           onClick={handleSubmit}
                           disabled={!canSubmit}
                           className={`
-            w-full font-bold py-4 px-6 rounded-xl text-base transition-all duration-200
+            w-full font-bold py-4 px-6 rounded-xl text-base transition-all duration-200 cursor-pointer
             ${canSubmit
                               ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                               : theme === 'light'

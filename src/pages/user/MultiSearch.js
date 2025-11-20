@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useMemo } from "react";
 import Hd from './Hd';
 import Foot from './Foot';
 import { ThemeContext } from "../../Context/ThemeContext";
@@ -10,7 +10,8 @@ import {
     faSearch,
     faFilter,
     faCalendarAlt,
-    faSync
+    faSync,
+    faHashtag
 } from '@fortawesome/free-solid-svg-icons';
 import { fetchWithAuth } from '../../utils/userapi';
 
@@ -20,7 +21,10 @@ export default function MultiSearch() {
     const [isLoading, setIsLoading] = useState(false);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [data, setData] = useState([]);
+    const [orderIdFrom, setOrderIdFrom] = useState('');
+    const [orderIdTo, setOrderIdTo] = useState('');
+    const [allData, setAllData] = useState([]); // Store all data from backend
+    const [filteredData, setFilteredData] = useState([]); // Store filtered data for display
 
     // Professional theme-based classes
     const getThemeClasses = () => {
@@ -83,60 +87,125 @@ export default function MultiSearch() {
         { value: '7', label: 'Canceled', count: 0 },
     ];
 
-    // Single function to handle both search types
-    const handleSearch = async (filterValue = null) => {
-        const filterToUse = filterValue || selectedFilter;
-
-        // Update filter state if a filter button was clicked
-        if (filterValue) {
-            setSelectedFilter(filterValue);
+    // Filter data based on all criteria
+    const applyFilters = () => {
+        if (!allData.length) {
+            setFilteredData([]);
+            return;
         }
 
-        setIsLoading(true);
+        let filtered = [...allData];
 
-        try {
-            const requestData = {
-                filter: filterToUse,
-                startDate,
-                endDate,
+        // Apply status filter
+        if (selectedFilter !== '1') {
+            const statusMap = {
+                '2': 'New',
+                '3': 'Pending',
+                '4': 'Qc',
+                '5': 'Hold',
+                '6': 'Completed',
+                '7': 'Cancelled'
             };
-
-            const responseData = await fetchWithAuth("get-cases-data", {
-                method: "POST",
-                body: JSON.stringify(requestData),
-            });
-
-            if (responseData?.status === "success") {
-                setData(responseData.cases);
-            } else {
-                setData([]);
-            }
-        } catch (error) {
-            console.error("Search error:", error);
-            setData([]);
-        } finally {
-            setIsLoading(false);
+            const targetStatus = statusMap[selectedFilter];
+            filtered = filtered.filter(item => item.status === targetStatus);
         }
+
+        // Apply order ID range filter
+        if (orderIdFrom) {
+            filtered = filtered.filter(item => {
+                const orderId = parseInt(item.orderid);
+                const fromId = parseInt(orderIdFrom);
+                return orderId >= fromId;
+            });
+        }
+
+        if (orderIdTo) {
+            filtered = filtered.filter(item => {
+                const orderId = parseInt(item.orderid);
+                const toId = parseInt(orderIdTo);
+                return orderId <= toId;
+            });
+        }
+
+        // Apply date range filter
+        if (startDate) {
+            filtered = filtered.filter(item => {
+                const itemDate = new Date(item.order_date);
+                const start = new Date(startDate);
+                return itemDate >= start;
+            });
+        }
+
+        if (endDate) {
+            filtered = filtered.filter(item => {
+                const itemDate = new Date(item.order_date);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999); // Include entire end day
+                return itemDate <= end;
+            });
+        }
+
+        setFilteredData(filtered);
     };
 
     // Handle search button click
     const handleSearchClick = () => {
-        handleSearch();
+        applyFilters();
     };
 
     // Handle filter button click
     const handleFilterClick = (filterValue) => {
-        handleSearch(filterValue);
+        setSelectedFilter(filterValue);
+        // We'll apply all filters in useEffect
     };
 
     // Handle reset filters
     const handleResetFilters = () => {
         setStartDate('');
         setEndDate('');
+        setOrderIdFrom('');
+        setOrderIdTo('');
         setSelectedFilter('1');
-        // Trigger search with reset values
-        handleSearch('1');
+        // Reset will show all data
+        setFilteredData(allData);
     };
+
+    // Handle order ID input validation
+    const handleOrderIdFromChange = (e) => {
+        const value = e.target.value.replace(/[^0-9]/g, '');
+        setOrderIdFrom(value);
+    };
+
+    const handleOrderIdToChange = (e) => {
+        const value = e.target.value.replace(/[^0-9]/g, '');
+        setOrderIdTo(value);
+    };
+
+    // Update filter counts based on allData
+    const updatedFilterButtons = useMemo(() => {
+        if (!allData.length) return filterButtons;
+
+        return filterButtons.map(button => {
+            let count = 0;
+            
+            if (button.value === '1') {
+                count = allData.length;
+            } else {
+                const statusMap = {
+                    '2': 'New',
+                    '3': 'Pending',
+                    '4': 'Qc',
+                    '5': 'Hold',
+                    '6': 'Completed',
+                    '7': 'Cancelled'
+                };
+                const targetStatus = statusMap[button.value];
+                count = allData.filter(item => item.status === targetStatus).length;
+            }
+            
+            return { ...button, count };
+        });
+    }, [allData]);
 
     const getHeaderClass = () => {
         return theme === 'light'
@@ -171,6 +240,12 @@ export default function MultiSearch() {
         return `${baseClasses} ${statusConfig[status] || statusConfig['New']}`;
     };
 
+    // Apply filters whenever any filter criteria changes
+    useEffect(() => {
+        applyFilters();
+    }, [selectedFilter, allData]); // Removed other dependencies to prevent excessive filtering
+
+    // Initial data fetch
     useEffect(() => {
         async function fetchAllCases() {
             setIsLoading(true);
@@ -180,13 +255,16 @@ export default function MultiSearch() {
                 });
 
                 if (data && data.status === 'success') {
-                    setData(data.new_cases);
+                    setAllData(data.new_cases);
+                    setFilteredData(data.new_cases); // Initially show all data
                 } else {
-                    setData([]);
+                    setAllData([]);
+                    setFilteredData([]);
                 }
             } catch (error) {
                 console.error("Error fetching cases:", error);
-                setData([]);
+                setAllData([]);
+                setFilteredData([]);
             } finally {
                 setIsLoading(false);
             }
@@ -249,7 +327,7 @@ export default function MultiSearch() {
                                     </h2>
                                     <button
                                         onClick={handleResetFilters}
-                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${theme === 'light'
+                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${theme === 'light'
                                             ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                                             : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                                             }`}
@@ -259,9 +337,40 @@ export default function MultiSearch() {
                                     </button>
                                 </div>
 
-                                <div className="mr-20 max-w-5xl mx-auto">
+                                <div className="ml-54 max-w-6xl mx-auto">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-                                        <div className="lg:col-span-3">
+                                        {/* Order ID From */}
+                                        <div className="lg:col-span-2">
+                                            <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
+                                                <FontAwesomeIcon icon={faHashtag} className="w-4 h-4 mr-2 text-blue-500" />
+                                                Order ID From
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={orderIdFrom}
+                                                onChange={handleOrderIdFromChange}
+                                                placeholder="e.g., 1001"
+                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
+                                            />
+                                        </div>
+
+                                        {/* Order ID To */}
+                                        <div className="lg:col-span-2">
+                                            <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
+                                                <FontAwesomeIcon icon={faHashtag} className="w-4 h-4 mr-2 text-blue-500" />
+                                                Order ID To
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={orderIdTo}
+                                                onChange={handleOrderIdToChange}
+                                                placeholder="e.g., 2000"
+                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
+                                            />
+                                        </div>
+
+                                        {/* Start Date */}
+                                        <div className="lg:col-span-2">
                                             <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
                                                 <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4 mr-2 text-blue-500" />
                                                 Start Date
@@ -273,7 +382,9 @@ export default function MultiSearch() {
                                                 className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
                                             />
                                         </div>
-                                        <div className="lg:col-span-3">
+
+                                        {/* End Date */}
+                                        <div className="lg:col-span-2">
                                             <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
                                                 <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4 mr-2 text-blue-500" />
                                                 End Date
@@ -285,11 +396,13 @@ export default function MultiSearch() {
                                                 className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
                                             />
                                         </div>
+
+                                        {/* Search Button */}
                                         <div className="lg:col-span-4">
                                             <button
                                                 onClick={handleSearchClick}
                                                 disabled={isLoading}
-                                                className={`w-full h-12 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 ${isLoading
+                                                className={`w-44 h-12 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center cursor-pointer space-x-2 ${isLoading
                                                     ? 'bg-gray-400 cursor-not-allowed'
                                                     : themeClasses.button.success
                                                     }`}
@@ -302,11 +415,18 @@ export default function MultiSearch() {
                                                 ) : (
                                                     <>
                                                         <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
-                                                        <span>Search Orders</span>
+                                                        <span>Apply Filters</span>
                                                     </>
                                                 )}
                                             </button>
                                         </div>
+                                    </div>
+
+                                    {/* Search Tips */}
+                                    <div className="mt-4 text-left">
+                                        <p className={`text-xs ${themeClasses.text.muted}`}>
+                                            Tip: Use filters to search within your {allData.length} orders. All filtering happens instantly!
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -319,13 +439,13 @@ export default function MultiSearch() {
                                         Quick Filters
                                     </h3>
                                     <span className={`text-sm ${themeClasses.text.muted}`}>
-                                        {data.length} orders found
+                                        {filteredData.length} of {allData.length} orders shown
                                     </span>
                                 </div>
 
                                 <div className="max-w-full mx-auto">
                                     <div className="flex flex-wrap justify-center gap-2">
-                                        {filterButtons.map((button) => (
+                                        {updatedFilterButtons.map((button) => (
                                             <button
                                                 key={button.value}
                                                 onClick={() => handleFilterClick(button.value)}
@@ -333,21 +453,19 @@ export default function MultiSearch() {
                                                 className={`cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3 min-w-[120px] ${selectedFilter === button.value
                                                     ? `${themeClasses.button.filterActive} transform scale-105`
                                                     : themeClasses.button.filterInactive
-                                                    } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+                                                    } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-100'}`}
                                             >
                                                 <div className={`w-3 h-3 rounded-full ${selectedFilter === button.value
                                                     ? 'bg-white'
                                                     : 'bg-blue-500'
                                                     }`}></div>
                                                 <span className="font-medium text-sm">{button.label}</span>
-                                                {button.count > 0 && (
-                                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${selectedFilter === button.value
-                                                        ? 'bg-white/20 text-white'
-                                                        : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
-                                                        }`}>
-                                                        {button.count}
-                                                    </span>
-                                                )}
+                                                <span className={`text-xs px-1.5 py-0.5 rounded-full ${selectedFilter === button.value
+                                                    ? 'bg-white/20 text-white'
+                                                    : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
+                                                    }`}>
+                                                    {button.count}
+                                                </span>
                                             </button>
                                         ))}
                                     </div>
@@ -358,7 +476,7 @@ export default function MultiSearch() {
                             <div className="">
                                 <Datatable
                                     columns={columns}
-                                    data={data}
+                                    data={filteredData}
                                     rowsPerPage={50}
                                     theme={theme}
                                 />
