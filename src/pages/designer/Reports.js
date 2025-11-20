@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useMemo } from "react";
 import Hd from './Hd';
 import Foot from './Foot';
 import { ThemeContext } from "../../Context/ThemeContext";
@@ -13,17 +13,21 @@ import {
     faFilter,
     faSearch,
     faChartBar,
-    faSync
+    faSync,
+    faHashtag
 } from '@fortawesome/free-solid-svg-icons';
 import { fetchWithAuth } from "../../utils/designerapi";
 
 export default function Reports() {
     const { theme } = useContext(ThemeContext);
-    const [selectedFilter, setSelectedFilter] = useState('today'); // Default to 'today'
+    const [selectedFilter, setSelectedFilter] = useState('4'); // Default to 'All Time'
     const [isLoading, setIsLoading] = useState(false);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    const [data, setData] = useState([]);
+    const [orderIdFrom, setOrderIdFrom] = useState('');
+    const [orderIdTo, setOrderIdTo] = useState('');
+    const [allData, setAllData] = useState([]); // Store all data from backend
+    const [filteredData, setFilteredData] = useState([]); // Store filtered data for display
     const [reportStats, setReportStats] = useState({
         totalOrders: 0,
         completed: 0,
@@ -46,8 +50,8 @@ export default function Reports() {
                 : 'bg-gray-700 border-gray-600 focus:border-blue-400 text-white placeholder-gray-400 shadow-sm',
             button: {
                 primary: isLight
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all'
-                    : 'bg-blue-700 hover:bg-blue-600 text-white shadow-md hover:shadow-lg transition-all',
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all cursor-pointer'
+                    : 'bg-blue-700 hover:bg-blue-600 text-white shadow-md hover:shadow-lg transition-all cursor-pointer',
                 success: isLight
                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg'
                     : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg',
@@ -85,11 +89,11 @@ export default function Reports() {
         { header: "Message", accessor: "message" },
     ];
 
-    // Updated filter buttons to match backend expectations
     const filterButtons = [
-        { value: 'today', label: 'Today', icon: faCalendarAlt },
-        { value: 'weekly', label: 'Weekly', icon: faChartBar },
-        { value: 'monthly', label: 'Monthly', icon: faFileAlt },
+        { value: '1', label: 'Today', icon: faCalendarAlt },
+        { value: '2', label: 'Weekly', icon: faChartBar },
+        { value: '3', label: 'Monthly', icon: faFileAlt },
+        { value: '4', label: 'All Time', icon: faFilter },
     ];
 
     // Calculate report statistics
@@ -103,85 +107,110 @@ export default function Reports() {
         setReportStats(stats);
     };
 
-    // Single function to handle both search types
-    const handleSearch = async (filterValue = null) => {
-        const filterToUse = filterValue || selectedFilter;
-
-        if (filterValue) {
-            setSelectedFilter(filterValue);
+    // Filter data based on all criteria
+    const applyFilters = () => {
+        if (!allData.length) {
+            setFilteredData([]);
+            calculateStats([]);
+            return;
         }
 
-        setIsLoading(true);
+        let filtered = [...allData];
 
-        try {
-            let requestData = {};
-            
-            // Prepare request data based on filter type
-            if (filterToUse === 'between') {
-                // For custom date range
-                requestData = {
-                    filter: 'between',
-                    startDate: startDate,
-                    endDate: endDate,
-                };
-            } else {
-                // For predefined filters (today, weekly, monthly)
-                requestData = {
-                    filter: filterToUse,
-                    startDate: '', // Clear dates for predefined filters
-                    endDate: '',
-                };
-            }
+        // Apply time period filter
+        const now = new Date();
+        switch (selectedFilter) {
+            case '1': // Today
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                filtered = filtered.filter(item => {
+                    const itemDate = new Date(item.order_date);
+                    return itemDate >= today;
+                });
+                break;
+            case '2': // Weekly
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                weekAgo.setHours(0, 0, 0, 0);
+                filtered = filtered.filter(item => {
+                    const itemDate = new Date(item.order_date);
+                    return itemDate >= weekAgo;
+                });
+                break;
+            case '3': // Monthly
+                const monthAgo = new Date();
+                monthAgo.setMonth(monthAgo.getMonth() - 1);
+                monthAgo.setHours(0, 0, 0, 0);
+                filtered = filtered.filter(item => {
+                    const itemDate = new Date(item.order_date);
+                    return itemDate >= monthAgo;
+                });
+                break;
+            case '4': // All Time - no date filtering
+                break;
+            default:
+                break;
+        }
 
-            console.log("Sending request data:", requestData); // Debug log
-
-            const responseData = await fetchWithAuth("/get-reports", {
-                method: "POST",
-                body: JSON.stringify(requestData),
+        // Apply order ID range filter
+        if (orderIdFrom) {
+            filtered = filtered.filter(item => {
+                const orderId = parseInt(item.orderid);
+                const fromId = parseInt(orderIdFrom);
+                return orderId >= fromId;
             });
-
-            console.log("Received response:", responseData); // Debug log
-
-            if (responseData?.status === "success") {
-                setData(responseData.cases);
-                calculateStats(responseData.cases);
-            } else {
-                setData([]);
-                setReportStats({ totalOrders: 0, completed: 0, inProgress: 0, pending: 0 });
-            }
-        } catch (error) {
-            console.error("Report fetch error:", error);
-            setData([]);
-            setReportStats({ totalOrders: 0, completed: 0, inProgress: 0, pending: 0 });
-        } finally {
-            setIsLoading(false);
         }
+
+        if (orderIdTo) {
+            filtered = filtered.filter(item => {
+                const orderId = parseInt(item.orderid);
+                const toId = parseInt(orderIdTo);
+                return orderId <= toId;
+            });
+        }
+
+        // Apply custom date range filter
+        if (startDate) {
+            filtered = filtered.filter(item => {
+                const itemDate = new Date(item.order_date);
+                const start = new Date(startDate);
+                return itemDate >= start;
+            });
+        }
+
+        if (endDate) {
+            filtered = filtered.filter(item => {
+                const itemDate = new Date(item.order_date);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999); // Include entire end day
+                return itemDate <= end;
+            });
+        }
+
+        setFilteredData(filtered);
+        calculateStats(filtered);
     };
 
-    // Handle search button click - for custom date range
+    // Handle search button click
     const handleSearchClick = () => {
-        // When using custom dates, set filter to 'between'
-        handleSearch('between');
+        applyFilters();
     };
 
-    // Handle filter button click - for predefined filters
+    // Handle filter button click
     const handleFilterClick = (filterValue) => {
-        // Clear date inputs when using predefined filters
-        setStartDate('');
-        setEndDate('');
-        handleSearch(filterValue);
+        setSelectedFilter(filterValue);
     };
 
     // Handle download report
     const handleDownloadReport = () => {
-        if (data.length === 0) {
+        if (filteredData.length === 0) {
             alert('No data available to download');
             return;
         }
         
         // Create CSV content
         const headers = columns.map(col => col.header).join(',');
-        const rows = data.map(item => 
+        const rows = filteredData.map(item => 
             columns.map(col => `"${item[col.accessor] || ''}"`).join(',')
         ).join('\n');
         
@@ -203,9 +232,22 @@ export default function Reports() {
     const handleResetFilters = () => {
         setStartDate('');
         setEndDate('');
-        setSelectedFilter('today');
-        // Fetch today's data on reset
-        handleSearch('today');
+        setOrderIdFrom('');
+        setOrderIdTo('');
+        setSelectedFilter('4'); // Reset to "All Time"
+        setFilteredData(allData);
+        calculateStats(allData);
+    };
+
+    // Handle order ID input validation
+    const handleOrderIdFromChange = (e) => {
+        const value = e.target.value.replace(/[^0-9]/g, '');
+        setOrderIdFrom(value);
+    };
+
+    const handleOrderIdToChange = (e) => {
+        const value = e.target.value.replace(/[^0-9]/g, '');
+        setOrderIdTo(value);
     };
 
     const getHeaderClass = () => {
@@ -224,32 +266,38 @@ export default function Reports() {
         return `bg-gradient-to-r ${gradients[index]} text-white`;
     };
 
+    // Apply filters whenever any filter criteria changes
+    useEffect(() => {
+        applyFilters();
+    }, [selectedFilter, allData]);
+
+    // Initial data fetch
     useEffect(() => {
         async function fetchAllCases() {
             setIsLoading(true);
             try {
-                // Fetch today's data by default
-                const requestData = {
-                    filter: 'today',
-                    startDate: '',
-                    endDate: '',
-                };
-
                 const responseData = await fetchWithAuth("/get-reports", {
                     method: "POST",
-                    body: JSON.stringify(requestData),
+                    body: JSON.stringify({
+                        filter: 'all',
+                        startDate: '',
+                        endDate: '',
+                    }),
                 });
 
-                if (responseData?.status === 'success') {
-                    setData(responseData.cases);
+                if (responseData?.status === "success") {
+                    setAllData(responseData.cases);
+                    setFilteredData(responseData.cases);
                     calculateStats(responseData.cases);
                 } else {
-                    setData([]);
+                    setAllData([]);
+                    setFilteredData([]);
                     setReportStats({ totalOrders: 0, completed: 0, inProgress: 0, pending: 0 });
                 }
             } catch (error) {
-                console.error("Error fetching cases:", error);
-                setData([]);
+                console.error("Report fetch error:", error);
+                setAllData([]);
+                setFilteredData([]);
                 setReportStats({ totalOrders: 0, completed: 0, inProgress: 0, pending: 0 });
             } finally {
                 setIsLoading(false);
@@ -314,7 +362,7 @@ export default function Reports() {
                                     <div className="flex space-x-3">
                                         <button
                                             onClick={handleResetFilters}
-                                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${theme === 'light'
+                                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${theme === 'light'
                                                 ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                                                 : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                                                 }`}
@@ -324,8 +372,8 @@ export default function Reports() {
                                         </button>
                                         <button
                                             onClick={handleDownloadReport}
-                                            disabled={data.length === 0}
-                                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${data.length === 0
+                                            disabled={filteredData.length === 0}
+                                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${filteredData.length === 0
                                                 ? 'bg-gray-400 cursor-not-allowed'
                                                 : themeClasses.button.download
                                                 }`}
@@ -338,7 +386,38 @@ export default function Reports() {
 
                                 <div className="max-w-6xl mx-auto">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-                                        <div className="lg:col-span-3">
+                                        {/* Order ID From */}
+                                        <div className="lg:col-span-2">
+                                            <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
+                                                <FontAwesomeIcon icon={faHashtag} className="w-4 h-4 mr-2 text-blue-500" />
+                                                Order ID From
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={orderIdFrom}
+                                                onChange={handleOrderIdFromChange}
+                                                placeholder="e.g., 1001"
+                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
+                                            />
+                                        </div>
+
+                                        {/* Order ID To */}
+                                        <div className="lg:col-span-2">
+                                            <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
+                                                <FontAwesomeIcon icon={faHashtag} className="w-4 h-4 mr-2 text-blue-500" />
+                                                Order ID To
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={orderIdTo}
+                                                onChange={handleOrderIdToChange}
+                                                placeholder="e.g., 2000"
+                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
+                                            />
+                                        </div>
+
+                                        {/* Start Date */}
+                                        <div className="lg:col-span-2">
                                             <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
                                                 <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4 mr-2 text-blue-500" />
                                                 Start Date
@@ -350,7 +429,9 @@ export default function Reports() {
                                                 className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
                                             />
                                         </div>
-                                        <div className="lg:col-span-3">
+
+                                        {/* End Date */}
+                                        <div className="lg:col-span-2">
                                             <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
                                                 <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4 mr-2 text-blue-500" />
                                                 End Date
@@ -362,11 +443,13 @@ export default function Reports() {
                                                 className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
                                             />
                                         </div>
+
+                                        {/* Search Button */}
                                         <div className="lg:col-span-4">
                                             <button
                                                 onClick={handleSearchClick}
-                                                disabled={isLoading || (!startDate && !endDate)}
-                                                className={`w-full h-12 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 ${isLoading || (!startDate && !endDate)
+                                                disabled={isLoading}
+                                                className={`w-44 h-12 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer ${isLoading
                                                     ? 'bg-gray-400 cursor-not-allowed'
                                                     : themeClasses.button.success
                                                     }`}
@@ -374,20 +457,24 @@ export default function Reports() {
                                                 {isLoading ? (
                                                     <>
                                                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                                        <span>Generating...</span>
+                                                        <span>Applying Filters...</span>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <FontAwesomeIcon icon={faFileAlt} className="w-4 h-4" />
-                                                        <span>Generate Report</span>
+                                                        <span>Apply Filters</span>
                                                     </>
                                                 )}
                                             </button>
                                         </div>
                                     </div>
-                                    <p className={`text-xs mt-2 text-center ${themeClasses.text.muted}`}>
-                                        Select date range for custom report, or use quick filters below
-                                    </p>
+
+                                    {/* Search Tips */}
+                                    <div className="mt-4 text-center">
+                                        <p className={`text-xs ${themeClasses.text.muted}`}>
+                                            Tip: Use Order ID range and date filters to refine your report. Showing {filteredData.length} of {allData.length} records.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -396,10 +483,10 @@ export default function Reports() {
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className={`text-lg font-semibold ${themeClasses.text.primary} flex items-center`}>
                                         <FontAwesomeIcon icon={faFilter} className="w-4 h-4 mr-2 text-blue-500" />
-                                        Quick Filters
+                                        Time Period
                                     </h3>
                                     <span className={`text-sm ${themeClasses.text.muted}`}>
-                                        {data.length} records found
+                                        {filteredData.length} of {allData.length} records shown
                                     </span>
                                 </div>
 
@@ -410,7 +497,7 @@ export default function Reports() {
                                                 key={button.value}
                                                 onClick={() => handleFilterClick(button.value)}
                                                 disabled={isLoading}
-                                                className={`cursor-pointer px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3 min-w-[120px] ${selectedFilter === button.value
+                                                className={`px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3 min-w-[120px] cursor-pointer ${selectedFilter === button.value
                                                     ? `${themeClasses.button.filterActive} transform scale-105`
                                                     : themeClasses.button.filterInactive
                                                     } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
@@ -431,7 +518,7 @@ export default function Reports() {
                             <div className="mt-8">
                                 <Datatable
                                     columns={columns}
-                                    data={data}
+                                    data={filteredData}
                                     rowsPerPage={50}
                                     theme={theme}
                                 />

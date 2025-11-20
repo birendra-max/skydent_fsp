@@ -8,6 +8,7 @@ import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from '../../utils/designerapi';
 import { Link } from 'react-router-dom';
 import {
+    faRepeat,
     faFolderOpen,
     faSearch,
     faSort,
@@ -30,7 +31,7 @@ export default function Datatable({
 
     // ✅ NEW STATES for multi-select & dropdown
     const [selectedRows, setSelectedRows] = useState([]);
-    const [fileType, setFileType] = useState("finish");
+    const [fileType, setFileType] = useState("stl");
 
     // Filter & Sort
     const filteredData = useMemo(() => {
@@ -174,17 +175,15 @@ export default function Datatable({
 
     const getButtonClass = (isActive = false) => {
         if (theme === 'dark') {
-            return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
-                isActive 
-                    ? 'bg-blue-600 text-white shadow-lg' 
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
-            }`;
+            return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${isActive
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+                }`;
         } else {
-            return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
-                isActive 
-                    ? 'bg-blue-600 text-white shadow-lg' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-            }`;
+            return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${isActive
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`;
         }
     };
 
@@ -215,22 +214,35 @@ export default function Datatable({
     };
 
     const sendRedesign = async (orderId, status) => {
-        if (status === 'Completed') {
-            try {
-                const data = await fetchWithAuth(`send-for-redesign/${orderId}`, {
-                    method: "GET",
-                });
+        // If not completed → direct fail response
+        if (status.toLowerCase() !== "completed") {
+            return {
+                status: "failed",
+                message: "Please contact design team"
+            };
+        }
 
-                if (data.status === 'success') {
-                    alert(data.message);
-                } else {
-                    console.log(data.message);
-                }
-            } catch (error) {
-                console.error("Error fetching cases:", error);
+        try {
+            const data = await fetchWithAuth(`send-for-redesign/${orderId}`, {
+                method: "GET",
+            });
+
+            if (data.status === "success") {
+                return {
+                    status: "success",
+                    message: data.message
+                };
+            } else {
+                return {
+                    status: "failed",
+                    message: data.message || "Unknown error"
+                };
             }
-        } else {
-            alert(`${orderId} is not completed yet! You can't send it for redesign.`);
+        } catch (error) {
+            return {
+                status: "failed",
+                message: "Server error"
+            };
         }
     };
 
@@ -252,7 +264,10 @@ export default function Datatable({
     };
 
     const handleBulkDownload = () => {
-        if (!selectedRows.length) return alert("Please select at least one record!");
+        if (!selectedRows.length) {
+            alert("Please select at least one record to proceed with the download.");
+            return;
+        }
 
         let missingFiles = [];
         let downloadedCount = 0;
@@ -291,10 +306,17 @@ export default function Datatable({
             }
         });
 
+        // Professional Notification Section
         if (missingFiles.length > 0) {
-            alert(`File not available for these record(s): ${missingFiles.join(", ")}`);
-        } else if (downloadedCount === 0) {
-            alert("No files available for the selected type.");
+            alert(
+                `Download Summary\n\n` +
+                `Files Successfully Downloaded: ${downloadedCount}\n` +
+                `Files Not Available: ${missingFiles.length}\n\n` +
+                `File Not found for this IDs: ${missingFiles.join(", ")}`
+            );
+        }
+        else if (downloadedCount === 0) {
+            alert("No files are available for the selected file type.");
         }
     };
 
@@ -302,7 +324,7 @@ export default function Datatable({
         <>
             <Loder status={status} />
             <Chatbox orderid={orderid} />
-            
+
             {status === "hide" && (
                 <section className={`p-4 rounded-xl ${getBackgroundClass()}`}>
                     {(!Array.isArray(columns) || columns.length === 0) && (
@@ -338,18 +360,38 @@ export default function Datatable({
                                     {/* Download Report */}
                                     <button
                                         onClick={() => exportToExcel(data, "Reports")}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm font-medium rounded-lg border border-green-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+                                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm font-medium rounded-lg border border-green-600 transition-all duration-200 shadow-lg hover:shadow-xl cursor-pointer"
                                     >
                                         <FontAwesomeIcon icon={faDownload} className="text-white" />
                                         Download Report
                                     </button>
+
+                                    <div className={`flex items-center gap-3 px-4 py-2 rounded-xl`}>
+
+                                        <select
+                                            value={fileType}
+                                            onChange={(e) => setFileType(e.target.value)}
+                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass()}`}
+                                        >
+                                            <option value="initial">Initial Files</option>
+                                            <option value="stl">STL Files</option>
+                                            <option value="finish">Finished Files</option>
+                                        </select>
+
+                                        <button
+                                            onClick={handleBulkDownload}
+                                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium text-sm cursor-pointer"
+                                        >
+                                            <FontAwesomeIcon icon={faDownload} /> Download All
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Search */}
                                 <div className="relative">
-                                    <FontAwesomeIcon 
-                                        icon={faSearch} 
-                                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
+                                    <FontAwesomeIcon
+                                        icon={faSearch}
+                                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                                     />
                                     <input
                                         type="text"
@@ -385,19 +427,18 @@ export default function Datatable({
                                                     >
                                                         <div className="flex items-center gap-2 font-bold">
                                                             {col.header}
-                                                            <FontAwesomeIcon 
+                                                            <FontAwesomeIcon
                                                                 icon={
-                                                                    sortConfig.key === col.accessor 
-                                                                        ? sortConfig.direction === "asc" 
-                                                                            ? faSortUp 
+                                                                    sortConfig.key === col.accessor
+                                                                        ? sortConfig.direction === "asc"
+                                                                            ? faSortUp
                                                                             : faSortDown
                                                                         : faSort
-                                                                } 
-                                                                className={`text-xs ${
-                                                                    sortConfig.key === col.accessor 
-                                                                        ? 'text-blue-300' 
+                                                                }
+                                                                className={`text-xs ${sortConfig.key === col.accessor
+                                                                        ? 'text-blue-300'
                                                                         : 'text-gray-400'
-                                                                }`} 
+                                                                    }`}
                                                             />
                                                         </div>
                                                     </th>
@@ -425,9 +466,9 @@ export default function Datatable({
                                                             >
                                                                 {col.header === 'Order Id' ? (
                                                                     <div>
-                                                                        <Link 
-                                                                            to={`/designer/orderDeatails/${row.orderid}`} 
-                                                                            className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors" 
+                                                                        <Link
+                                                                            to={`/designer/orderDeatails/${row.orderid}`}
+                                                                            className="text-[14px] text-blue-600 hover:text-blue-800 hover:underline font-bold transition-colors"
                                                                         >
                                                                             {row.orderid}
                                                                         </Link>
@@ -442,7 +483,7 @@ export default function Datatable({
                                                                                 onClick={() => openPopup(`${row.orderid}`)}
                                                                             />
                                                                             {row.totalMessages > 0 && (
-                                                                                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center shadow-lg animate-pulse">
+                                                                                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center shadow-lg animate-pulse border-2 border-white dark:border-gray-800">
                                                                                     {row.totalMessages > 99 ? '99+' : row.totalMessages}
                                                                                 </span>
                                                                             )}
@@ -535,9 +576,9 @@ export default function Datatable({
                                                 className={
                                                     typeof page === "number" && currentPage === page
                                                         ? getButtonClass(true)
-                                                        : page === "..." 
-                                                        ? getDisabledButtonClass()
-                                                        : getButtonClass()
+                                                        : page === "..."
+                                                            ? getDisabledButtonClass()
+                                                            : getButtonClass()
                                                 }
                                                 onClick={() => typeof page === "number" && handlePageChange(page)}
                                                 disabled={page === "..."}
@@ -552,38 +593,6 @@ export default function Datatable({
                                             className={currentPage === totalPages ? getDisabledButtonClass() : getButtonClass()}
                                         >
                                             Next
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Floating Action Toolbar */}
-                            {selectedRows.length > 0 && (
-                                <div className={`w-[35%] fixed justify-center bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border ${
-                                    theme === "dark"
-                                        ? "bg-gradient-to-r from-gray-800 to-gray-700 text-white border-gray-600"
-                                        : "bg-gradient-to-r from-white to-blue-50 border-gray-200 text-gray-800 shadow-xl"
-                                }`}>
-                                    <div className="flex items-center gap-4">
-                                        <span className="font-semibold text-sm bg-blue-600 text-white px-3 py-1 rounded-full">
-                                            ✅ {selectedRows.length} selected
-                                        </span>
-
-                                        <select
-                                            value={fileType}
-                                            onChange={(e) => setFileType(e.target.value)}
-                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass()}`}
-                                        >
-                                            <option value="initial">Initial Files</option>
-                                            <option value="stl">STL Files</option>
-                                            <option value="finish">Finished Files</option>
-                                        </select>
-
-                                        <button
-                                            onClick={handleBulkDownload}
-                                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium"
-                                        >
-                                            <FontAwesomeIcon icon={faDownload} /> Download All
                                         </button>
                                     </div>
                                 </div>
