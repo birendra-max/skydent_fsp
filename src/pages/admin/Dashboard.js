@@ -5,6 +5,13 @@ import {
     faDatabase,
     faMemory,
     faGauge,
+    faUsers,
+    faUserCheck,
+    faUserSlash,
+    faUserPen,
+    faUserXmark,
+    faUserFriends,
+    faArrowRight
 } from "@fortawesome/free-solid-svg-icons";
 import Sidebar from "./Sidebar";
 import Hd from "./Hd";
@@ -148,65 +155,151 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* ✅ Filesystem Table + RAM */}
-                    <div
-                        className={`rounded-2xl shadow overflow-hidden ${theme === "dark" ? "bg-gray-800" : "bg-white"
-                            }`}
-                    >
-                        <table className="min-w-full text-sm">
-                            <thead
-                                className={`uppercase text-xs ${theme === "dark"
-                                    ? "bg-gray-700 text-gray-300"
-                                    : "bg-gray-100 text-gray-700"
-                                    }`}
-                            >
-                                <tr>
-                                    <th className="py-3 px-4 text-left">Type</th>
-                                    <th className="py-3 px-4 text-left">Size</th>
-                                    <th className="py-3 px-4 text-left">Used</th>
-                                    <th className="py-3 px-4 text-left">Available</th>
-                                    <th className="py-3 px-4 text-left">Use%</th>
-                                    <th className="py-3 px-4 text-left">Mounted on</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filesystems.map((item, index) => (
-                                    <tr
-                                        key={index}
-                                        className={`border-b transition ${theme === "dark"
-                                            ? "border-gray-700 hover:bg-gray-700"
-                                            : "border-gray-200 hover:bg-gray-50"
-                                            }`}
-                                    >
-                                        <td className="py-3 px-4 font-medium">{item.fs}</td>
-                                        <td className="py-3 px-4">{item.size}</td>
-                                        <td className="py-3 px-4">{item.used}</td>
-                                        <td className="py-3 px-4">{item.avail}</td>
-                                        <td className="py-3 px-4">{item.use}</td>
-                                        <td className="py-3 px-4">{item.mounted}</td>
-                                    </tr>
-                                ))}
 
-                                {/* ✅ Add RAM Row */}
-                                {memory && (
-                                    <tr
-                                        className={`border-t font-semibold ${theme === "dark" ? "border-gray-700" : "border-gray-200"
-                                            }`}
-                                    >
-                                        <td className="py-3 px-4">Memory (RAM)</td>
-                                        <td className="py-3 px-4">{memory.total}</td>
-                                        <td className="py-3 px-4">{memory.used}</td>
-                                        <td className="py-3 px-4">{memory.free}</td>
-                                        <td className="py-3 px-4">{memory.use}</td>
-                                        <td className="py-3 px-4">System Memory</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                    <div className="space-y-6 mt-12">
+                        {/* First Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Total Clients */}
+                            <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                                <a href="/clients" className="block">
+                                    <div className="p-6 relative">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="text-4xl font-bold text-white">25</h3>
+                                                <p className="text-yellow-100 text-lg mt-1 font-bold">Total Clients</p>
+                                            </div>
+                                            <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+                                                <FontAwesomeIcon icon={faUsers} className="w-8 h-8 text-black" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
+                                        <span className="text-yellow-100 text-sm font-medium">
+                                            More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </a>
+                            </div>
+
+                            {/* Total Designers */}
+                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                                <a href="/designers" className="block">
+                                    <div className="p-6 relative">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="text-4xl font-bold text-white">6</h3>
+                                                <p className="text-blue-100 text-lg mt-1 font-bold">Total Designers</p>
+                                            </div>
+                                            <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+                                                <FontAwesomeIcon icon={faUserFriends} className="w-8 h-8 text-black" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
+                                        <span className="text-blue-100 text-sm font-medium">
+                                            More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </a>
+                            </div>
+
+                            {/* Total Active Clients */}
+                            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                                <a href="/clients?status=active" className="block">
+                                    <div className="p-6 relative">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="text-4xl font-bold text-white">19</h3>
+                                                <p className="text-green-100 text-lg mt-1 font-bold">Active Clients</p>
+                                            </div>
+                                            <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+                                                <FontAwesomeIcon icon={faUserCheck} className="w-8 h-8 text-black" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
+                                        <span className="text-green-100 text-sm font-medium">
+                                            More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* Second Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Total Active Designers */}
+                            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                                <a href="/designers?status=active" className="block">
+                                    <div className="p-6 relative">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="text-4xl font-bold text-white">2</h3>
+                                                <p className="text-green-100 text-lg mt-1 font-bold">Active Designers</p>
+                                            </div>
+                                            <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+                                                <FontAwesomeIcon icon={faUserPen} className="w-8 h-8 text-black" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
+                                        <span className="text-green-100 text-sm font-medium">
+                                            More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </a>
+                            </div>
+
+                            {/* Total Deactive Clients */}
+                            <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                                <a href="/clients?status=inactive" className="block">
+                                    <div className="p-6 relative">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="text-4xl font-bold text-white">6</h3>
+                                                <p className="text-red-100 text-lg mt-1 font-bold">Deactive Clients</p>
+                                            </div>
+                                            <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+                                                <FontAwesomeIcon icon={faUserSlash} className="w-8 h-8 text-black" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
+                                        <span className="text-red-100 text-sm font-medium">
+                                            More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </a>
+                            </div>
+
+                            {/* Total Deactive Designers */}
+                            <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                                <a href="/designers?status=inactive" className="block">
+                                    <div className="p-6 relative">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="text-4xl font-bold text-white">4</h3>
+                                                <p className="text-red-100 text-lg mt-1 font-bold">Deactive Designers</p>
+                                            </div>
+                                            <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+                                                <FontAwesomeIcon icon={faUserXmark} className="w-8 h-8 text-black" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
+                                        <span className="text-red-100 text-sm font-medium">
+                                            More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
                     </div>
+
                 </div>
+
             </main>
-            <Foot/>
+            <Foot />
         </>
     );
 }
