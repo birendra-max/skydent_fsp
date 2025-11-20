@@ -26,6 +26,7 @@ export default function Login() {
     password: "",
     remember: "false"
   })
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, type, value, checked } = e.target;
@@ -37,6 +38,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       const res = await fetch(`${config.API_BASE_URL}/admin/login`, {
@@ -50,6 +52,7 @@ export default function Login() {
 
       if (!res.ok) {
         setStatus({ type: "error", message: "Server error. Try again later." });
+        setIsSubmitting(false);
         return;
       }
 
@@ -62,9 +65,11 @@ export default function Login() {
         navigate('/admin/dashboard');
       } else {
         setStatus({ type: "error", message: data.message || "Invalid login" });
+        setIsSubmitting(false);
       }
     } catch (err) {
       setStatus({ type: "error", message: "Something went wrong!" });
+      setIsSubmitting(false);
     }
 
   }
@@ -187,7 +192,7 @@ export default function Login() {
               type="submit"
               className="w-full py-2.5 rounded-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all"
             >
-              Login
+              {isSubmitting ? "Please wait..." : "Sign In"}
             </motion.button>
           </form>
 
