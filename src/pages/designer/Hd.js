@@ -7,15 +7,13 @@ import {
     faHome,
     faUpload,
     faSearch,
-    faChartBar,
     faUser,
     faSignOutAlt,
     faMoon,
     faSun,
     faTimes,
     faBars,
-    faBell,
-    faCog
+    faChartLine
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Hd() {
@@ -90,9 +88,9 @@ export default function Hd() {
 
     const navItems = [
         { href: "/designer/home", label: "Dashboard", key: "index", icon: faHome },
-        { href: "/designer/new_request", label: "Upload", key: "new_request", icon: faUpload },
-        { href: "/designer/multisearch", label: "Search", key: "multisearch", icon: faSearch },
-        { href: "/designer/reports", label: "Reports", key: "reports", icon: faChartBar }
+        { href: "/designer/new_request", label: "Upload Finish & Stl", key: "new_request", icon: faUpload },
+        { href: "/designer/multisearch", label: "Multi-Search", key: "multisearch", icon: faSearch },
+        { href: "/designer/reports", label: "Reports", key: "reports", icon: faChartLine }
     ];
 
     const applyTheme = (newTheme) => {
@@ -118,45 +116,41 @@ export default function Hd() {
         setSearchQuery("");
     };
 
-
     return (
         <header className="fixed z-50 top-0 left-0 w-full h-16 bg-gray-900 border-b border-gray-700">
             <nav className="w-full h-full">
                 <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 h-full">
                     {/* Main Navigation Bar */}
                     <div className="flex items-center justify-between h-full">
-                        {/* Logo and Navigation - Left Side */}
-                        <div className="flex items-center space-x-8">
-                            {/* Logo */}
+                        {/* Left Side - Logo */}
+                        <div className="flex items-center">
                             <Link
                                 to="/designer/home"
-                                className="flex items-center space-x-3"
+                                className="flex items-center"
                                 onClick={() => {
                                     setIsOpen(false);
                                     setMobileSearchOpen(false);
                                 }}
                             >
-                                <div className="flex items-center space-x-3">
-                                    <div className="h-full w-full rounded-lg flex items-center justify-center">
-                                        <img
-                                            src="/img/logo.png"
-                                            alt="Logo"
-                                            className="h-10 w-auto"
-                                            onError={(e) => {
-                                                e.target.src = '/img/placeholder-logo.png';
-                                            }}
-                                        />
-                                    </div>
+                                <div className="h-full w-full rounded-lg flex items-center justify-center">
+                                    <img 
+                                        src="/img/logo.png" 
+                                        alt="Logo" 
+                                        className="h-10 w-auto" 
+                                        onError={(e) => { e.target.src = '/img/placeholder-logo.png'; }} 
+                                    />
                                 </div>
                             </Link>
+                        </div>
 
-                            {/* Desktop Navigation */}
-                            <div className="hidden lg:flex items-center space-x-1">
+                        {/* Center - Desktop Navigation */}
+                        <div className="hidden lg:flex items-center justify-center flex-1 max-w-2xl mx-8">
+                            <div className="flex items-center space-x-4">
                                 {navItems.map((item) => (
                                     <Link
                                         to={item.href}
                                         key={item.key}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 text-sm ${activePage === item.key
+                                        className={`px-4 py-2 rounded-md font-medium transition-all duration-200 flex items-center space-x-2 text-sm ${activePage === item.key
                                             ? "bg-blue-600 text-white"
                                             : "text-gray-300 hover:text-white hover:bg-gray-800"
                                             }`}
@@ -171,19 +165,18 @@ export default function Hd() {
                             </div>
                         </div>
 
-                        {/* Right Side - Actions and Profile */}
-                        <div className="flex items-center space-x-3">
+                        {/* Right Side - Search, Theme, and Profile */}
+                        <div className="flex items-center space-x-4">
                             {/* Search - Desktop */}
                             <div className="hidden lg:block search-container">
                                 <form className="flex items-center" onSubmit={handleSearchSubmit}>
                                     <div className="relative">
                                         <input
                                             type="text"
-                                            name="orderid"
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            placeholder="Search Order ID..."
-                                            className="pl-10 pr-10 py-2 w-64 bg-gray-800 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 text-sm"
+                                            placeholder="Search orders..."
+                                            className="pl-10 pr-10 py-2 w-74 bg-gray-800 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 text-sm"
                                         />
                                         <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                                             <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
@@ -232,9 +225,12 @@ export default function Hd() {
                             <div className="relative dropdown-container">
                                 <button
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                                    className="flex items-center space-x-3 p-1 cursor-pointer rounded-lg hover:bg-gray-800 transition-colors duration-200"
+                                    className="flex items-center space-x-3 p-2 cursor-pointer rounded-lg hover:bg-gray-800 transition-colors duration-200"
                                 >
                                     <div className="flex items-center space-x-3">
+                                        <div className="text-white font-semibold truncate text-sm sm:text-base">
+                                            {designer?.name || 'Designer'}
+                                        </div>
                                         <div className="relative">
                                             <img
                                                 src={designer?.pic && designer.pic !== '' ? designer.pic : '/img/user.webp'}
@@ -304,10 +300,9 @@ export default function Hd() {
                                 <div className="relative flex-1">
                                     <input
                                         type="text"
-                                        name="orderid"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder="Search Order ID..."
+                                        placeholder="Search orders..."
                                         className="w-full px-4 py-2 bg-gray-700 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 text-sm"
                                         autoFocus
                                     />
