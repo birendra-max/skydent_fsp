@@ -528,7 +528,7 @@ export default function Dashboard() {
                                 </Link>
 
                                 {/* This Week's Cases */}
-                                <Link to="/cases?date=week" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                <Link to="/admin/" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-blue-500 to-blue-600">
                                             <FontAwesomeIcon icon={faCalendarWeek} />
