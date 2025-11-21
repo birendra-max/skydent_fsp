@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faHardDrive,
@@ -11,7 +12,19 @@ import {
     faUserPen,
     faUserXmark,
     faUserFriends,
-    faArrowRight
+    faArrowRight,
+    faShoppingCart,
+    faSpinner,
+    faTimes,
+    faTasks,
+    faBolt,
+    faBell,
+    faPauseCircle,
+    faCogs,
+    faCalendarDay,
+    faCalendarCheck,
+    faCalendarWeek,
+    faRepeat
 } from "@fortawesome/free-solid-svg-icons";
 import Sidebar from "./Sidebar";
 import Hd from "./Hd";
@@ -58,6 +71,7 @@ export default function Dashboard() {
         fetchStorageData();
         fetchClientData();
     }, []);
+
 
     // ✅ Find root drive (C: or /)
     const rootDrive =
@@ -346,6 +360,186 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                             </>
+                        )}
+                    </div>
+
+                    {/* ✅ Cases Section with its own loader */}
+                    <div className="space-y-6 mt-8">
+                        {infoLoading ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((item) => (
+                                    <div
+                                        key={item}
+                                        className={`rounded-xl shadow-md overflow-hidden ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}
+                                    >
+                                        <div className="p-6">
+                                            <div className="animate-pulse">
+                                                <div className={`h-10 w-10 rounded-full ${theme === "dark" ? "bg-gray-700" : "bg-gray-300"} mb-3`}></div>
+                                                <div className={`h-6 rounded ${theme === "dark" ? "bg-gray-700" : "bg-gray-300"} mb-2`}></div>
+                                                <div className={`h-4 rounded ${theme === "dark" ? "bg-gray-700" : "bg-gray-300"} w-3/4`}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {/* Total Cases */}
+                                <Link to="/admin/all-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-purple-600 to-blue-600">
+                                            <FontAwesomeIcon icon={faShoppingCart} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">Total Cases</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.all || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* New Cases */}
+                                <Link to="/admin/new-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-blue-500 to-blue-600">
+                                            <FontAwesomeIcon icon={faBell} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">New Cases</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.new_cases || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* In Progress Cases */}
+                                <Link to="/admin/pending-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-yellow-500 to-amber-600">
+                                            <FontAwesomeIcon icon={faSpinner} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">In Progress</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.progress || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* Completed Cases */}
+                                <Link to="/admin/completed-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-green-500 to-emerald-600">
+                                            <FontAwesomeIcon icon={faTasks} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">Completed</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.completed || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* Cancelled Cases */}
+                                <Link to="/admin/cancelled-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-red-500 to-rose-600">
+                                            <FontAwesomeIcon icon={faTimes} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">Cancelled</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.canceled || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* Rush Cases */}
+                                <Link to="/admin/rush-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-orange-500 to-red-500">
+                                            <FontAwesomeIcon icon={faBolt} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">Rush Cases</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.rush || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* QC Cases */}
+                                <Link to="/admin/qc-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-indigo-500 to-purple-600">
+                                            <FontAwesomeIcon icon={faCogs} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">QC Cases</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.qc || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* Hold Cases */}
+                                <Link to="/admin/hold-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-gray-600 to-gray-700">
+                                            <FontAwesomeIcon icon={faPauseCircle} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">Hold Cases</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.hold || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* Redesign Cases */}
+                                <Link to="/admin/redesign-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-cyan-500 to-blue-500">
+                                            <FontAwesomeIcon icon={faRepeat} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">Redesign Cases</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.redesign || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* Yesterday's Cases */}
+                                <Link to="/admin/yesterday-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-purple-500 to-purple-600">
+                                            <FontAwesomeIcon icon={faCalendarDay} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">Yesterday's Cases</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.yesterday_cases || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* Today's Cases */}
+                                <Link to="/admin/today-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-green-500 to-green-600">
+                                            <FontAwesomeIcon icon={faCalendarCheck} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">Today's Cases</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.today_cases || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                {/* This Week's Cases */}
+                                <Link to="/cases?date=week" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-blue-500 to-blue-600">
+                                            <FontAwesomeIcon icon={faCalendarWeek} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-gray-600 dark:text-gray-300">This Week</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{info.weekly_cases || "0"}</h3>
+                                        </div>
+                                    </div>
+                                </Link>
+                            </div>
                         )}
                     </div>
                 </div>

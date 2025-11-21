@@ -51,7 +51,7 @@ export default function Dashboard() {
             const updatedCards = [
                 { id: "home", href: "/designer/home", title: "New Cases", count: cases.new_cases, color: "from-gray-600 to-gray-800", icon: faShoppingCart },
                 { id: "progress", href: "/designer/in_progress", title: "In Progress", count: cases.progress, color: "from-yellow-500 to-amber-600", icon: faSpinner },
-                { id: "canceled", href: "/designer/canceled_case", title: "Canceled Cases", count: cases.canceled, color: "from-red-500 to-rose-600", icon: faTimes },
+                { id: "canceled", href: "/designer/canceled_case", title: "Cancelled Cases", count: cases.canceled, color: "from-red-500 to-rose-600", icon: faTimes },
                 { id: "completed", href: "/designer/completed_case", title: "Completed Cases", count: cases.completed, color: "from-green-500 to-emerald-600", icon: faTasks },
                 { id: "rush", href: "/designer/rush_cases", title: "Rush Cases", count: cases.rush, color: "from-blue-500 to-indigo-600", icon: faBolt },
                 { id: "qc", href: "/designer/qc_required", title: "QC Required", count: cases.qc, color: "from-orange-500 to-amber-600", icon: faBell },
