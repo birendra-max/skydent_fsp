@@ -226,7 +226,7 @@ export default function Dashboard() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {/* Total Clients */}
                                     <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-                                        <a href="/clients" className="block">
+                                        <Link to="/admin/all-clients/all" className="block">
                                             <div className="p-6 relative">
                                                 <div className="flex justify-between items-start">
                                                     <div>
@@ -240,15 +240,15 @@ export default function Dashboard() {
                                             </div>
                                             <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
                                                 <span className="text-yellow-100 text-sm font-medium">
-                                                    More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                                    See all <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
                                                 </span>
                                             </div>
-                                        </a>
+                                        </Link>
                                     </div>
 
                                     {/* Total Designers */}
                                     <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-                                        <a href="/designers" className="block">
+                                        <Link to="/admin/all-designers/all" className="block">
                                             <div className="p-6 relative">
                                                 <div className="flex justify-between items-start">
                                                     <div>
@@ -262,15 +262,15 @@ export default function Dashboard() {
                                             </div>
                                             <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
                                                 <span className="text-blue-100 text-sm font-medium">
-                                                    More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                                    See all <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
                                                 </span>
                                             </div>
-                                        </a>
+                                        </Link>
                                     </div>
 
                                     {/* Total Active Clients */}
                                     <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-                                        <a href="/clients?status=active" className="block">
+                                        <Link to="/admin/all-clients/active" className="block">
                                             <div className="p-6 relative">
                                                 <div className="flex justify-between items-start">
                                                     <div>
@@ -284,10 +284,10 @@ export default function Dashboard() {
                                             </div>
                                             <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
                                                 <span className="text-green-100 text-sm font-medium">
-                                                    More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                                    See all <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
                                                 </span>
                                             </div>
-                                        </a>
+                                        </Link>
                                     </div>
                                 </div>
 
@@ -295,7 +295,7 @@ export default function Dashboard() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {/* Total Active Designers */}
                                     <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-                                        <a href="/designers?status=active" className="block">
+                                        <Link to="/admin/all-designers/active" className="block">
                                             <div className="p-6 relative">
                                                 <div className="flex justify-between items-start">
                                                     <div>
@@ -309,15 +309,15 @@ export default function Dashboard() {
                                             </div>
                                             <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
                                                 <span className="text-green-100 text-sm font-medium">
-                                                    More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                                    See all <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
                                                 </span>
                                             </div>
-                                        </a>
+                                        </Link>
                                     </div>
 
                                     {/* Total Deactive Clients */}
                                     <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-                                        <a href="/clients?status=inactive" className="block">
+                                        <Link to="/admin/all-clients/inactive" className="block">
                                             <div className="p-6 relative">
                                                 <div className="flex justify-between items-start">
                                                     <div>
@@ -331,15 +331,15 @@ export default function Dashboard() {
                                             </div>
                                             <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
                                                 <span className="text-red-100 text-sm font-medium">
-                                                    More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                                    See all <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
                                                 </span>
                                             </div>
-                                        </a>
+                                        </Link>
                                     </div>
 
                                     {/* Total Deactive Designers */}
                                     <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-                                        <a href="/designers?status=inactive" className="block">
+                                        <Link to="/admin/all-designers/inactive" className="block">
                                             <div className="p-6 relative">
                                                 <div className="flex justify-between items-start">
                                                     <div>
@@ -353,10 +353,10 @@ export default function Dashboard() {
                                             </div>
                                             <div className="bg-black bg-opacity-10 px-6 py-3 text-center">
                                                 <span className="text-red-100 text-sm font-medium">
-                                                    More info <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
+                                                    See all <FontAwesomeIcon icon={faArrowRight} className="ml-1 w-3 h-3" />
                                                 </span>
                                             </div>
-                                        </a>
+                                        </Link>
                                     </div>
                                 </div>
                             </>
@@ -528,7 +528,7 @@ export default function Dashboard() {
                                 </Link>
 
                                 {/* This Week's Cases */}
-                                <Link to="/admin/" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
+                                <Link to="/admin/weekly-cases" className="rounded-lg p-4 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md shadow-lg hover:-translate-y-1">
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg bg-gradient-to-br from-blue-500 to-blue-600">
                                             <FontAwesomeIcon icon={faCalendarWeek} />

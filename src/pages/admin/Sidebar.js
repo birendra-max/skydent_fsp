@@ -86,6 +86,7 @@ export default function Sidebar() {
                 { name: "Hold Cases", link: "/admin/hold-cases" },
                 { name: "Today Cases", link: "/admin/today-cases" },
                 { name: "Yesterday Cases", link: "/admin/yesterday-cases" },
+                { name: "Weekly Cases", link: "/admin/weekly-cases" },
             ],
         },
         {

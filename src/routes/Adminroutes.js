@@ -26,6 +26,9 @@ import YesteardayCases from '../pages/admin/YesteardayCases';
 import TodayCases from '../pages/admin/TodayCases';
 import NewCases from '../pages/admin/NewCases';
 import HoldCases from '../pages/admin/HoldCases';
+import WeeklyCases from '../pages/admin/WeeklyCases';
+import AllClients from '../pages/admin/AllClients';
+import AllDesigners from '../pages/admin/AllDesigner';
 export default function Adminroutes() {
     return (
         <AdminProvider>
@@ -56,6 +59,9 @@ export default function Adminroutes() {
                 <Route path='/redesign-cases' element={<RedesignCases />} />
                 <Route path='/yesterday-cases' element={<YesteardayCases />} />
                 <Route path='/today-cases' element={<TodayCases />} />
+                <Route path='/weekly-cases' element={<WeeklyCases />} />
+                <Route path='/all-clients/:id' element={<AllClients />} />
+                <Route path='/all-designers/:id' element={<AllDesigners />} />
             </Routes>
         </AdminProvider>
     )
