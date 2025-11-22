@@ -96,7 +96,7 @@ export default function Sidebar() {
             type: "dropdown",
             submenus: [
                 { name: "Client Reports", link: "/admin/clients-reports" },
-                { name: "Designer Reports", link: "/admin/designer-reports" },
+                // { name: "Designer Reports", link: "/admin/designer-reports" },
                 { name: "Date-wise Reports", link: "/admin/cases-reports" },
             ],
         },
