@@ -17,9 +17,6 @@ export default function ResetPasswordDesigner() {
     const [message, setMessage] = useState({ text: "", type: "" });
     const [loading, setLoading] = useState(false);
 
-    const token = localStorage.getItem("token");
-    const base_url = localStorage.getItem("base_url");
-
     const columns = [
         { header: "Designer Id", accessor: "desiid" },
         { header: "Name", accessor: "name" },
@@ -55,27 +52,20 @@ export default function ResetPasswordDesigner() {
         setLoading(true);
 
         try {
-            const res = await fetch(`${base_url}/reset-password-designer`, {
+            const res = await fetchWithAuth(`/reset-password-designer`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                    'X-Tenant': 'skydent'
-                },
                 body: JSON.stringify({
                     email: resetEmail,
                     new_password: newPassword,
                 }),
             });
 
-            const data = await res.json();
-
-            if (data.status === "success") {
+            if (res.status === "success") {
                 setMessage({ text: "✅ Password reset successfully!", type: "success" });
                 setResetEmail("");
                 setNewPassword("");
             } else {
-                setMessage({ text: data.message || "Failed to reset password", type: "error" });
+                setMessage({ text: res.message || "Failed to reset password", type: "error" });
             }
         } catch (error) {
             console.error("Error resetting password:", error);

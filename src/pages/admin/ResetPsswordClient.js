@@ -55,27 +55,20 @@ export default function ResetPsswordClient() {
         setLoading(true);
 
         try {
-            const res = await fetch(`${base_url}/reset-password`, {
+            const res = await fetchWithAuth(`/reset-password`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                    'X-Tenant': 'skydent'
-                },
                 body: JSON.stringify({
                     email: resetEmail,
                     new_password: newPassword,
                 }),
             });
 
-            const data = await res.json();
-
-            if (data.status === "success") {
+            if (res.status === "success") {
                 setMessage({ text: "✅ Password reset successfully!", type: "success" });
                 setResetEmail("");
                 setNewPassword("");
             } else {
-                setMessage({ text: data.message || "Failed to reset password", type: "error" });
+                setMessage({ text: res.message || "Failed to reset password", type: "error" });
             }
         } catch (error) {
             console.error("Error resetting password:", error);

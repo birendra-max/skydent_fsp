@@ -5,6 +5,7 @@ import { ThemeContext } from "../../Context/ThemeContext";
 import { exportToExcel } from '../../helper/ExcelGenerate';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faTrashCan, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
+import { fetchWithAuth } from "../../utils/adminapi";
 
 export default function DesignerDatatable({
     columns = [],
@@ -20,10 +21,6 @@ export default function DesignerDatatable({
     const [orderid, setOrderid] = useState(null);
     const [tableData, setTableData] = useState(data); // ✅ Maintain local UI data
 
-    const token = localStorage.getItem('token');
-    const base_url = localStorage.getItem('base_url');
-
-    // ✅ Update local data when parent data changes
     useEffect(() => {
         setTableData(data);
     }, [data]);
@@ -153,7 +150,7 @@ export default function DesignerDatatable({
     const handleStatusToggle = async (desiid, currentStatus) => {
         const newStatus = currentStatus?.toLowerCase() === "active" ? "inactive" : "active";
 
-        // ✅ Instantly update UI
+        // Instant UI update
         setTableData((prev) =>
             prev.map((item) =>
                 item.desiid === desiid ? { ...item, status: newStatus } : item
@@ -161,22 +158,13 @@ export default function DesignerDatatable({
         );
 
         try {
-            const res = await fetch(`${base_url}/update-status-designer/${desiid}`, {
+            const res = await fetchWithAuth(`/update-status-designer/${desiid}`, {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                    'X-Tenant': 'skydent'
-                },
                 body: JSON.stringify({ status: newStatus }),
             });
+            if (res.status !== "success") throw new Error("Update failed"); // ✅ FIX 2: Correct success check
 
-            if (!res.ok) throw new Error("Failed to update");
-
-            const result = await res.json().catch(() => null);
-            if (result?.status !== "success") throw new Error("Update failed");
-        } catch {
-            // ❌ Revert UI on failure
+        } catch (error) {
             setTableData((prev) =>
                 prev.map((item) =>
                     item.desiid === desiid ? { ...item, status: currentStatus } : item
@@ -185,24 +173,16 @@ export default function DesignerDatatable({
         }
     };
 
-
     const deleteUser = async (desiId) => {
-        if (!window.confirm("Are you sure you want to delete this client?")) return;
+        if (!window.confirm("Are you sure you want to delete this designer?")) return;
 
         try {
-            const res = await fetch(`${base_url}/delete-designer/${desiId}`, {
+            const res = await fetchWithAuth(`/delete-designer/${desiId}`, {
                 method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                    'X-Tenant': 'skydent'
-                },
             });
 
-            const data = await res.json();
-
-            if (res.ok && data.status === "success") {
-                setTableData((prev) => prev.filter((item) => item.desiId !== desiId));
+            if (res.status === "success") {
+                setTableData((prev) => prev.filter((item) => item.desiid !== desiId));
                 alert("✅ Designer deleted successfully!");
             } else {
                 alert(data.message || "Failed to delete designer");
@@ -212,8 +192,6 @@ export default function DesignerDatatable({
             alert("⚠️ Something went wrong. Please try again.");
         }
     };
-
-
 
     // ✅ Theme-based styling helpers
     const getBackgroundClass = () =>

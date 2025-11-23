@@ -37,7 +37,6 @@ export default function AddAdmin() {
                 method: "GET",
             });
 
-            console.log(res.admin)
             if (res && res.status === "success") setData(res.admin);
             else setData([]);
         } catch (error) {
@@ -55,36 +54,28 @@ export default function AddAdmin() {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const token = localStorage.getItem("token");
-    const base_url = localStorage.getItem("base_url");
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setMessage({ text: "", type: "" });
 
         try {
-            const resp = await fetch(`${base_url}/add-admin`, {
+            const resp = await fetchWithAuth(`/add-admin`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                    'X-Tenant': 'skydent'
-                },
                 body: JSON.stringify(formData),
             });
 
-            const response = await resp.json();
-            if (response.status === "success") {
-                setMessage({ text: response.message, type: response.status });
+            if (resp.status === "success") {
+                setMessage({ text: resp.message, type: resp.status });
                 setFormData({
                     name: "",
                     email: "",
                     password: "",
+                    mobile: "",
                 });
                 getClients();
             } else {
-                setMessage({ text: response.message, type: "error" });
+                setMessage({ text: resp.message, type: "error" });
             }
         } catch (error) {
             console.error("Error adding client:", error);

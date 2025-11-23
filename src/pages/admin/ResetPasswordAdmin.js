@@ -17,9 +17,6 @@ export default function ResetPasswordAdmin() {
     const [message, setMessage] = useState({ text: "", type: "" });
     const [loading, setLoading] = useState(false);
 
-    const token = localStorage.getItem("token");
-    const base_url = localStorage.getItem("base_url");
-
     const columns = [
         { header: "Admin Id", accessor: "id" },
         { header: "Name", accessor: "name" },
@@ -52,27 +49,20 @@ export default function ResetPasswordAdmin() {
         setLoading(true);
 
         try {
-            const res = await fetch(`${base_url}/reset-password-admin`, {
+            const res = await fetchWithAuth(`/reset-password-admin`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                    'X-Tenant': 'skydent'
-                },
                 body: JSON.stringify({
                     email: resetEmail,
                     new_password: newPassword,
                 }),
             });
 
-            const data = await res.json();
-
-            if (data.status === "success") {
-                setMessage({ text: "✅ Password reset successfully!", type: "success" });
+            if (res.status === "success") {
+                setMessage({ text: res.message, type: res.status });
                 setResetEmail("");
                 setNewPassword("");
             } else {
-                setMessage({ text: data.message || "Failed to reset password", type: "error" });
+                setMessage({ text: res.message || "Failed to reset password", type: "error" });
             }
         } catch (error) {
             console.error("Error resetting password:", error);
