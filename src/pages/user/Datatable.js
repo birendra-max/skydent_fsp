@@ -200,36 +200,6 @@ export default function Datatable({
             : 'bg-white text-gray-600 border border-gray-200';
     };
 
-    const updateDeliveryType = async () => {
-        if (!selectedRows.length)
-            return alert("Please select at least one record!");
-
-        if (!deliveryType)
-            return alert("Please select a delivery type!");
-
-        try {
-            const payload = {
-                order_ids: selectedRows,
-                delivery_type: deliveryType,
-            };
-
-            const response = await fetchWithAuth(`update-delivery-type`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            if (response.status === "success") {
-                alert(`✅ Successfully updated ${selectedRows.length} orders to "${deliveryType}".`);
-            } else {
-                alert(response.message || "❌ Failed to update delivery type.");
-            }
-        } catch (error) {
-            console.error("Error updating delivery type:", error);
-            alert("Something went wrong while updating.");
-        }
-    };
-
     const sendRedesign = async (orderId, status) => {
         // If not completed → direct fail response
         if (status.toLowerCase() !== "completed") {
@@ -262,7 +232,6 @@ export default function Datatable({
             };
         }
     };
-
 
 
     // ✅ Multi-select logic
