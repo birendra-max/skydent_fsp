@@ -5,6 +5,7 @@ import { AdminContext } from '../../Context/AdminContext';
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ThemeContext } from "../../Context/ThemeContext";
+import { fetchWithAuth } from '../../utils/adminapi';
 import {
     faEye,
     faEyeSlash,
@@ -45,20 +46,12 @@ export default function Profile() {
     const fetchUserData = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${base_url}/get-admin-profile`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    'Authorization': `Bearer ${token}`,
-                    'X-Tenant': 'skydent'
-                },
-            });
+            const response = await fetchWithAuth(`/get-admin-profile`);
 
-            const data = await response.json();
-            if (data.status === 'success') {
-                setAdmin(data.admin);
+            if (response.status === 'success') {
+                setAdmin(response.admin);
                 setForm({
-                    email: data.admin.email || "",
+                    email: response.admin.email || "",
                     password: "",
                 });
             }
@@ -77,21 +70,16 @@ export default function Profile() {
 
             try {
                 setProfileLoading(true);
-                const profileresp = await fetch(`${base_url}/update-profile`, {
+                const profileresp = await fetchWithAuth(`/update-profile`, {
                     method: "POST",
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'X-Tenant': 'skydent'
-                    },
                     body: formData,
                 });
 
-                const data = await profileresp.json();
                 const statusEl = document.getElementById('profilestatus');
-                if (data.status === 'success') {
+                if (profileresp.status === 'success') {
                     statusEl.className = `w-full px-2 py-2 text-xs font-medium text-center rounded-lg mb-2 ${theme === 'light' ? 'bg-green-100 text-green-800' : 'bg-green-900 text-green-300'
                         }`;
-                    statusEl.innerText = data.message;
+                    statusEl.innerText = profileresp.message;
                     await fetchUserData();
                     setTimeout(() => {
                         statusEl.innerText = '';
@@ -100,7 +88,7 @@ export default function Profile() {
                 } else {
                     statusEl.className = `w-full px-2 py-2 text-xs font-medium text-center rounded-lg mb-2 ${theme === 'light' ? 'bg-red-100 text-red-800' : 'bg-red-900 text-red-300'
                         }`;
-                    statusEl.innerText = data.message;
+                    statusEl.innerText = profileresp.message;
                 }
             } catch (err) {
                 const statusEl = document.getElementById('profilestatus');
@@ -122,22 +110,16 @@ export default function Profile() {
         e.preventDefault();
         try {
             setLoading(true);
-            const response = await fetch(`${base_url}/update-user`, {
+            const response = await fetchWithAuth(`/update-user`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    'Authorization': `Bearer ${token}`,
-                    'X-Tenant': 'skydent'
-                },
                 body: JSON.stringify(form),
             });
 
-            const resp = await response.json();
             const statusEl = document.getElementById('status');
-            if (resp.status === 'success') {
+            if (response.status === 'success') {
                 statusEl.className = `w-full px-3 py-2 text-sm font-medium text-center rounded-lg mb-2 ${theme === 'light' ? 'bg-green-100 text-green-800' : 'bg-green-900 text-green-300'
                     }`;
-                statusEl.innerText = resp.message;
+                statusEl.innerText = response.message;
                 await fetchUserData();
                 setTimeout(() => {
                     statusEl.innerText = '';
@@ -146,7 +128,7 @@ export default function Profile() {
             } else {
                 statusEl.className = `w-full px-3 py-2 text-sm font-medium text-center rounded-lg mb-2 ${theme === 'light' ? 'bg-red-100 text-red-800' : 'bg-red-900 text-red-300'
                     }`;
-                statusEl.innerText = resp.message;
+                statusEl.innerText = response.message;
             }
         } catch (error) {
             const statusEl = document.getElementById('status');
@@ -226,7 +208,7 @@ export default function Profile() {
                 {/* Full Screen Container */}
                 <div className="w-full min-h-[calc(100vh-4rem)] py-6 px-4">
                     <div className="max-w-8xl mx-auto">
-                        
+
                         {/* Header Section */}
                         <div className="mb-8">
                             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
@@ -239,8 +221,8 @@ export default function Profile() {
                                     </p>
                                 </div>
                                 <nav className="flex items-center space-x-2 text-sm">
-                                    <Link 
-                                        to="/admin/dashboard" 
+                                    <Link
+                                        to="/admin/dashboard"
                                         className={`flex items-center transition-colors duration-200 ${theme === 'light' ? 'text-blue-600 hover:text-blue-800' : 'text-blue-400 hover:text-blue-300'}`}
                                     >
                                         <FontAwesomeIcon icon={faHome} className="w-4 h-4 mr-2" />
@@ -256,7 +238,7 @@ export default function Profile() {
 
                         {/* Main Content Grid */}
                         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 lg:gap-8">
-                            
+
                             {/* Profile Sidebar */}
                             <div className="xl:col-span-1">
                                 <div className={`rounded-2xl p-6 ${getCardClass()} sticky top-6`}>
@@ -354,27 +336,27 @@ export default function Profile() {
                             {/* Main Content Area */}
                             <div className="xl:col-span-3">
                                 <div className={`rounded-2xl overflow-hidden ${getCardClass()}`}>
-                                    
+
                                     {/* Tab Navigation */}
                                     <div className={`border-b ${theme === 'light' ? 'border-gray-200' : 'border-gray-700'}`}>
                                         <div className="px-6 sm:px-8">
                                             <nav className="flex space-x-8 overflow-x-auto">
                                                 <button
                                                     onClick={() => setActiveTab('personal')}
-                                                    className={`font-semibold py-4 border-b-2 transition-all duration-300 flex items-center whitespace-nowrap ${activeTab === 'personal' 
+                                                    className={`font-semibold py-4 border-b-2 transition-all duration-300 flex items-center whitespace-nowrap ${activeTab === 'personal'
                                                         ? (theme === 'light' ? 'text-blue-600 border-blue-600' : 'text-blue-400 border-blue-400')
                                                         : (theme === 'light' ? 'text-gray-500 border-transparent hover:text-blue-500' : 'text-gray-400 border-transparent hover:text-blue-400')
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <FontAwesomeIcon icon={faUser} className="w-4 h-4 mr-3" />
                                                     Personal Information
                                                 </button>
                                                 <button
                                                     onClick={() => setActiveTab('security')}
-                                                    className={`font-semibold py-4 border-b-2 transition-all duration-300 flex items-center whitespace-nowrap ${activeTab === 'security' 
+                                                    className={`font-semibold py-4 border-b-2 transition-all duration-300 flex items-center whitespace-nowrap ${activeTab === 'security'
                                                         ? (theme === 'light' ? 'text-blue-600 border-blue-600' : 'text-blue-400 border-blue-400')
                                                         : (theme === 'light' ? 'text-gray-500 border-transparent hover:text-blue-500' : 'text-gray-400 border-transparent hover:text-blue-400')
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <FontAwesomeIcon icon={faShieldAlt} className="w-4 h-4 mr-3" />
                                                     Security Settings

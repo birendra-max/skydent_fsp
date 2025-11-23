@@ -69,11 +69,12 @@ export default function NewRequest() {
       )
     );
 
+    // Smooth progress simulation
     const progressInterval = setInterval(() => {
       setFiles((prev) =>
         prev.map((f) => {
-          if (f.fileName === file.name && f.progress < 80) {
-            const newProgress = f.progress + 5;
+          if (f.fileName === file.name && f.progress < 90) {
+            const newProgress = Math.min(f.progress + 2, 90); // Slower increment, cap at 90%
             return {
               ...f,
               progress: newProgress,
@@ -83,7 +84,7 @@ export default function NewRequest() {
           return f;
         })
       );
-    }, 300);
+    }, 150); // Faster interval for smoother progress
 
     const formData = new FormData();
     formData.append("file", file);
@@ -103,28 +104,44 @@ export default function NewRequest() {
       const result = await response.json();
 
       if (result.status === "success") {
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.fileName === file.name
-              ? {
-                ...f,
-                uploadStatus: "Success",
-                progress: 100,
-                orderId: result.id || "ORD-001",
-                productType: result.product_type || "Crown",
-                unit: result.unit || "1",
-                tooth: result.tooth || "15",
-                message: result.message || "",
-              }
-              : f
-          )
-        );
+        // Smooth transition to 100%
+        let currentProgress = 90;
+        const finalProgressInterval = setInterval(() => {
+          currentProgress += 2;
+          if (currentProgress >= 100) {
+            clearInterval(finalProgressInterval);
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.fileName === file.name
+                  ? {
+                      ...f,
+                      uploadStatus: "Success",
+                      progress: 100,
+                      orderId: result.id || "ORD-001",
+                      productType: result.product_type || "Crown",
+                      unit: result.unit || "1",
+                      tooth: result.tooth || "15",
+                      message: result.message || "",
+                    }
+                  : f
+              )
+            );
+          } else {
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.fileName === file.name
+                  ? {
+                      ...f,
+                      progress: currentProgress,
+                      uploadStatus: `Uploading... ${currentProgress}%`
+                    }
+                  : f
+              )
+            );
+          }
+        }, 50);
       } else {
         throw new Error(result.message || "Upload failed");
-        if (result.error === 'Invalid or expired token') {
-          alert('Invalid or expired token. Please log in again.')
-          navigate(logout);
-        }
       }
     } catch (error) {
       clearInterval(progressInterval);
@@ -132,14 +149,19 @@ export default function NewRequest() {
         prev.map((f) =>
           f.fileName === file.name
             ? {
-              ...f,
-              uploadStatus: "Failed",
-              progress: 100,
-              message: error.message || "Error uploading file",
-            }
+                ...f,
+                uploadStatus: "Failed",
+                progress: 100,
+                message: error.message || "Error uploading file",
+              }
             : f
         )
       );
+      
+      if (error.message.includes('token')) {
+        alert('Invalid or expired token. Please log in again.');
+        navigate(logout);
+      }
     }
   };
 
