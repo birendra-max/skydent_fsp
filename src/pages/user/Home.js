@@ -5,7 +5,6 @@ import Datatable from "./Datatable";
 import Dashboard from "./Dashboard";
 import { ThemeContext } from "../../Context/ThemeContext";
 import { fetchWithAuth } from '../../utils/userapi';
-import { motion } from 'framer-motion';
 
 export default function Home() {
     const { theme } = useContext(ThemeContext);
@@ -33,6 +32,7 @@ export default function Home() {
                 // data is already the parsed JSON response
                 if (data && data.status === 'success') {
                     setData(data.new_cases);
+                    console.log(data.new_cases);
                 } else {
                     setData([]);
                 }

@@ -436,8 +436,8 @@ export default function Datatable({
                                                                         : faSort
                                                                 }
                                                                 className={`text-xs ${sortConfig.key === col.accessor
-                                                                        ? 'text-blue-300'
-                                                                        : 'text-gray-400'
+                                                                    ? 'text-blue-300'
+                                                                    : 'text-gray-400'
                                                                     }`}
                                                             />
                                                         </div>
@@ -479,14 +479,12 @@ export default function Datatable({
                                                                             <img
                                                                                 src="/img/messages.png"
                                                                                 alt="Message"
-                                                                                className="w-8 h-8 cursor-pointer transition-all duration-200 group-hover:scale-110 group-hover:rotate-12"
+                                                                                className="w-9 h-9 cursor-pointer transition-all duration-200 group-hover:scale-110 group-hover:rotate-12"
                                                                                 onClick={() => openPopup(`${row.orderid}`)}
                                                                             />
-                                                                            {row.totalMessages > 0 && (
-                                                                                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center shadow-lg animate-pulse border-2 border-white dark:border-gray-800">
-                                                                                    {row.totalMessages > 99 ? '99+' : row.totalMessages}
-                                                                                </span>
-                                                                            )}
+                                                                            <span className=" absolute -top-2 -right-2  bg-gradient-to-br from-red-500 via-red-600 to-red-700  text-white text-[12px] font-semibold  rounded-full min-w-[18px] h-[18px]  flex items-center justify-center  shadow-[0_0_8px_rgba(255,0,0,0.6)]ring-2 ring-white/60 backdrop-blur-sm">
+                                                                                {row.totalMessages > 99 ? '99+' : row.totalMessages}
+                                                                            </span>
                                                                         </div>
                                                                     </div>
                                                                 ) : col.header === 'Status' ? (

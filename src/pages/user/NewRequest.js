@@ -60,32 +60,34 @@ export default function NewRequest() {
   const token = localStorage.getItem('token');
 
   const uploadFile = async (file) => {
-    // Start with 0% progress
-    setFiles((prev) =>
-      prev.map((f) =>
-        f.fileName === file.name
-          ? { ...f, uploadStatus: "Uploading... 0%", progress: 0 }
-          : f
-      )
-    );
+    // Create a unique key for this file
+    const fileKey = file.name + "_" + Date.now();
 
-    // Smooth progress simulation
-    const progressInterval = setInterval(() => {
-      setFiles((prev) =>
-        prev.map((f) => {
-          if (f.fileName === file.name && f.progress < 90) {
-            const newProgress = Math.min(f.progress + 2, 90); // Slower increment, cap at 90%
-            return {
-              ...f,
-              progress: newProgress,
-              uploadStatus: `Uploading... ${newProgress}%`
-            };
-          }
-          return f;
-        })
-      );
-    }, 150); // Faster interval for smoother progress
+    // Add progress tracking variables for THIS file only
+    let completed = false;
+    let progressValue = 0;
 
+    // Start smooth progress loop (independent per file)
+    const intervalId = setInterval(() => {
+      if (!completed && progressValue < 99) {
+        progressValue += Math.random() * 1.8 + 0.4; // slow, natural growth
+        if (progressValue > 99) progressValue = 99;
+
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.fileName === file.name
+              ? {
+                ...f,
+                progress: progressValue,
+                uploadStatus: `Uploading... ${Math.floor(progressValue)}%`
+              }
+              : f
+          )
+        );
+      }
+    }, 120);
+
+    // FORM DATA
     const formData = new FormData();
     formData.append("file", file);
 
@@ -93,75 +95,76 @@ export default function NewRequest() {
       const response = await fetch(`${base_url}/new-orders`, {
         method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-Tenant': 'skydent'
+          "Authorization": `Bearer ${token}`,
+          "X-Tenant": "skydent",
         },
         body: formData,
       });
 
-      clearInterval(progressInterval);
-
       const result = await response.json();
 
-      if (result.status === "success") {
-        // Smooth transition to 100%
-        let currentProgress = 90;
-        const finalProgressInterval = setInterval(() => {
-          currentProgress += 2;
-          if (currentProgress >= 100) {
-            clearInterval(finalProgressInterval);
-            setFiles((prev) =>
-              prev.map((f) =>
-                f.fileName === file.name
-                  ? {
-                      ...f,
-                      uploadStatus: "Success",
-                      progress: 100,
-                      orderId: result.id || "ORD-001",
-                      productType: result.product_type || "Crown",
-                      unit: result.unit || "1",
-                      tooth: result.tooth || "15",
-                      message: result.message || "",
-                    }
-                  : f
-              )
-            );
-          } else {
-            setFiles((prev) =>
-              prev.map((f) =>
-                f.fileName === file.name
-                  ? {
-                      ...f,
-                      progress: currentProgress,
-                      uploadStatus: `Uploading... ${currentProgress}%`
-                    }
-                  : f
-              )
-            );
-          }
-        }, 50);
-      } else {
-        throw new Error(result.message || "Upload failed");
-      }
+      // Mark this file's progress as complete
+      completed = true;
+
+      // Final smooth finish to 100%
+      const finishInterval = setInterval(() => {
+        progressValue += 2;
+
+        if (progressValue >= 100) {
+          progressValue = 100;
+          clearInterval(finishInterval);
+          clearInterval(intervalId);
+
+          // Save final success data
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.fileName === file.name
+                ? {
+                  ...f,
+                  progress: 100,
+                  uploadStatus: "Success",
+                  orderId: result.id,
+                  productType: result.product_type,
+                  unit: result.unit,
+                  tooth: result.tooth,
+                  message: result.message
+                }
+                : f
+            )
+          );
+        } else {
+          // Continue animating smoothly
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.fileName === file.name
+                ? {
+                  ...f,
+                  progress: progressValue,
+                  uploadStatus: `Uploading... ${Math.floor(progressValue)}%`
+                }
+                : f
+            )
+          );
+        }
+      }, 40);
+
     } catch (error) {
-      clearInterval(progressInterval);
+      completed = true;
+      clearInterval(intervalId);
+
+      // Mark as failed
       setFiles((prev) =>
         prev.map((f) =>
           f.fileName === file.name
             ? {
-                ...f,
-                uploadStatus: "Failed",
-                progress: 100,
-                message: error.message || "Error uploading file",
-              }
+              ...f,
+              progress: 100,
+              uploadStatus: "Failed",
+              message: error.message
+            }
             : f
         )
       );
-      
-      if (error.message.includes('token')) {
-        alert('Invalid or expired token. Please log in again.');
-        navigate(logout);
-      }
     }
   };
 
@@ -602,18 +605,18 @@ export default function NewRequest() {
                           <label
                             key={option.value}
                             className={`
-              relative flex p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group
-              ${selectedDuration === option.value
-                                ? option.color === 'red'
-                                  ? 'border-red-500 bg-red-50 dark:bg-red-900/20 shadow-md ring-2 ring-red-200 dark:ring-red-800'
-                                  : option.color === 'yellow'
-                                    ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 shadow-md ring-2 ring-yellow-200 dark:ring-yellow-800'
-                                    : 'border-green-500 bg-green-50 dark:bg-green-900/20 shadow-md ring-2 ring-green-200 dark:ring-green-800'
-                                : theme === 'light'
-                                  ? 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md hover:bg-gray-50'
-                                  : 'border-gray-600 bg-gray-800 hover:border-gray-500 hover:bg-gray-700'
+    relative flex p-5 rounded-xl border cursor-pointer transition-all duration-200 group
+    ${selectedDuration === option.value
+                                ? option.color === "red"
+                                  ? "border-red-500 bg-white shadow-md"
+                                  : option.color === "yellow"
+                                    ? "border-yellow-500 bg-white shadow-md"
+                                    : "border-green-500 bg-white shadow-md"
+                                : theme === "light"
+                                  ? "border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50"
+                                  : "border-gray-600 bg-gray-800 hover:border-gray-500 hover:bg-gray-700"
                               }
-            `}
+  `}
                           >
                             <input
                               type="radio"
@@ -624,21 +627,21 @@ export default function NewRequest() {
                               className="sr-only"
                             />
 
-                            {/* Traditional Radio Button on Left */}
+                            {/* Radio Button */}
                             <div className="flex-shrink-0 mr-4 mt-1">
                               <div className={`
-                w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200
-                ${selectedDuration === option.value
-                                  ? option.color === 'red'
-                                    ? 'border-red-500 bg-red-500'
-                                    : option.color === 'yellow'
-                                      ? 'border-yellow-500 bg-yellow-500'
-                                      : 'border-green-500 bg-green-500'
-                                  : theme === 'light'
-                                    ? 'border-gray-400 bg-white group-hover:border-gray-500'
-                                    : 'border-gray-500 bg-gray-700 group-hover:border-gray-400'
+      w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
+      ${selectedDuration === option.value
+                                  ? option.color === "red"
+                                    ? "border-red-500 bg-red-500"
+                                    : option.color === "yellow"
+                                      ? "border-yellow-500 bg-yellow-500"
+                                      : "border-green-500 bg-green-500"
+                                  : theme === "light"
+                                    ? "border-gray-400 bg-white"
+                                    : "border-gray-500 bg-gray-700"
                                 }
-              `}>
+    `}>
                                 {selectedDuration === option.value && (
                                   <div className="w-2 h-2 bg-white rounded-full"></div>
                                 )}
@@ -647,68 +650,62 @@ export default function NewRequest() {
 
                             {/* Content */}
                             <div className="flex-1">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-start space-x-3 flex-1">
-                                  <div className={`
-                    flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center
-                    ${selectedDuration === option.value
-                                      ? option.color === 'red'
-                                        ? 'bg-red-100 text-red-600 dark:bg-red-800 dark:text-red-200'
-                                        : option.color === 'yellow'
-                                          ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-800 dark:text-yellow-200'
-                                          : 'bg-green-100 text-green-600 dark:bg-green-800 dark:text-green-200'
-                                      : theme === 'light'
-                                        ? 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
-                                        : 'bg-gray-700 text-gray-400 group-hover:bg-gray-600'
-                                    }
-                  `}>
-                                    {option.icon}
-                                  </div>
+                              <div className="flex items-start space-x-3">
 
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between">
-                                      <span className={`font-bold text-sm ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-                                        {option.label}
-                                      </span>
-                                      {option.price && (
-                                        <span className={`
-                          text-sm font-semibold
-                          ${option.color === 'red' ? 'text-red-600' :
-                                            option.color === 'yellow' ? 'text-yellow-600' : 'text-green-600'
-                                          }
-                        `}>
-                                          {option.price}
-                                        </span>
-                                      )}
-                                    </div>
+                                {/* Icon Box (always white when selected) */}
+                                <div className={`
+        flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all
+        ${selectedDuration === option.value
+                                    ? "bg-white text-black border border-gray-300"
+                                    : theme === "light"
+                                      ? "bg-gray-100 text-gray-500"
+                                      : "bg-gray-700 text-gray-400"
+                                  }
+      `}>
+                                  {option.icon}
+                                </div>
 
-                                    <div className={`
-                      text-sm font-semibold mt-1
-                      ${theme === 'light' ? 'text-gray-700' : 'text-gray-200'}
-                    `}>
-                                      {option.description}
-                                    </div>
+                                {/* Text Area */}
+                                <div className="flex-1 min-w-0">
+                                  <span
+                                    className={`font-bold text-base block 
+            ${selectedDuration === option.value ? "text-black" : theme === 'light' ? "text-gray-900" : "text-white"}
+          `}
+                                  >
+                                    {option.label}
+                                  </span>
 
-                                    <div className={`
-                      text-xs mt-1
-                      ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}
-                    `}>
-                                      {option.tagline}
-                                    </div>
-                                  </div>
+                                  <span
+                                    className={`text-sm font-medium block mt-1
+            ${selectedDuration === option.value ? "text-black" : theme === 'light' ? "text-gray-700" : "text-gray-300"}
+          `}
+                                  >
+                                    {option.description}
+                                  </span>
+
+                                  <span
+                                    className={`text-xs block mt-1
+            ${selectedDuration === option.value ? "text-black/70" : theme === 'light' ? "text-gray-500" : "text-gray-400"}
+          `}
+                                  >
+                                    {option.tagline}
+                                  </span>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Selection indicator for better UX */}
+                            {/* Selection Tick */}
                             {selectedDuration === option.value && (
                               <div className="absolute -top-2 -right-2">
                                 <div className={`
-                  w-6 h-6 rounded-full flex items-center justify-center shadow-md
-                  ${option.color === 'red' ? 'bg-red-500' :
-                                    option.color === 'yellow' ? 'bg-yellow-500' : 'bg-green-500'
+        w-6 h-6 rounded-full flex items-center justify-center shadow-md
+        ${option.color === "red"
+                                    ? "bg-red-500"
+                                    : option.color === "yellow"
+                                      ? "bg-yellow-500"
+                                      : "bg-green-500"
                                   }
-                `}>
+      `}>
                                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
