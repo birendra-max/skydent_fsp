@@ -4,6 +4,7 @@ import Foot from "./Foot";
 import { useNavigate } from "react-router-dom";
 import { ThemeContext } from "../../Context/ThemeContext";
 import { UserContext } from "../../Context/UserContext";
+import { fetchWithAuth } from '../../utils/userapi'
 
 export default function NewRequest() {
   let base_url = localStorage.getItem('base_url');
@@ -56,38 +57,54 @@ export default function NewRequest() {
       uploadFile(file);
     });
   };
-
   const token = localStorage.getItem('token');
 
   const uploadFile = async (file) => {
-    // Create a unique key for this file
-    const fileKey = file.name + "_" + Date.now();
+    // 1️⃣ Check if file already exists before upload
+    try {
+      const checkResponse = await fetchWithAuth(`check-file-exists?file=${encodeURIComponent(file.name)}`);
 
-    // Add progress tracking variables for THIS file only
+      if (checkResponse.message === 'File already exists') {
+        const confirmUpload = window.confirm(
+          `The file "${file.name}" already exists.\nDo you want to proceed with uploading?`
+        );
+
+        if (!confirmUpload) {
+          // User selected CANCEL → Do not upload
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.fileName === file.name
+                ? { ...f, uploadStatus: "Cancelled", progress: 0 }
+                : f
+            )
+          );
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("File check error:", err);
+    }
+
+    // 2️⃣ Existing code continues...
+    const fileKey = file.name + "_" + Date.now();
     let completed = false;
     let progressValue = 0;
 
-    // Start smooth progress loop (independent per file)
     const intervalId = setInterval(() => {
       if (!completed && progressValue < 99) {
-        progressValue += Math.random() * 1.8 + 0.4; // slow, natural growth
+        progressValue += Math.random() * 1.8 + 0.4;
         if (progressValue > 99) progressValue = 99;
 
         setFiles((prev) =>
           prev.map((f) =>
             f.fileName === file.name
-              ? {
-                ...f,
-                progress: progressValue,
-                uploadStatus: `Uploading... ${Math.floor(progressValue)}%`
-              }
+              ? { ...f, progress: progressValue, uploadStatus: `Uploading... ${Math.floor(progressValue)}%` }
               : f
           )
         );
       }
     }, 120);
 
-    // FORM DATA
     const formData = new FormData();
     formData.append("file", file);
 
@@ -102,11 +119,8 @@ export default function NewRequest() {
       });
 
       const result = await response.json();
-
-      // Mark this file's progress as complete
       completed = true;
 
-      // Final smooth finish to 100%
       const finishInterval = setInterval(() => {
         progressValue += 2;
 
@@ -115,7 +129,6 @@ export default function NewRequest() {
           clearInterval(finishInterval);
           clearInterval(intervalId);
 
-          // Save final success data
           setFiles((prev) =>
             prev.map((f) =>
               f.fileName === file.name
@@ -133,7 +146,6 @@ export default function NewRequest() {
             )
           );
         } else {
-          // Continue animating smoothly
           setFiles((prev) =>
             prev.map((f) =>
               f.fileName === file.name
@@ -152,7 +164,6 @@ export default function NewRequest() {
       completed = true;
       clearInterval(intervalId);
 
-      // Mark as failed
       setFiles((prev) =>
         prev.map((f) =>
           f.fileName === file.name
@@ -167,6 +178,7 @@ export default function NewRequest() {
       );
     }
   };
+
 
   const handleDrop = (e) => {
     e.preventDefault();

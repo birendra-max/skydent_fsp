@@ -20,6 +20,7 @@ import { UserProvider } from "../Context/UserContext";
 import SearchOrder from '../pages/user/SearchOrder';
 
 export default function UserRoutes() {
+    document.title = 'Clients Login | Portal'
     return (
         <UserProvider>
             <Routes>

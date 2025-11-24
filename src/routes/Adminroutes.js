@@ -30,6 +30,9 @@ import WeeklyCases from '../pages/admin/WeeklyCases';
 import AllClients from '../pages/admin/AllClients';
 import AllDesigners from '../pages/admin/AllDesigner';
 export default function Adminroutes() {
+
+    document.title='Admin Login | Portal'
+
     return (
         <AdminProvider>
             <Routes>
