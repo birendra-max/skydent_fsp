@@ -66,7 +66,7 @@ export default function MultiSearch() {
     const themeClasses = getThemeClasses();
 
     const columns = [
-        { header: "Order ID", accessor: "orderid" },
+        { header: "Order Id", accessor: "orderid" },
         { header: "File Name", accessor: "fname" },
         { header: "TAT", accessor: "tduration" },
         { header: "Status", accessor: "status" },
