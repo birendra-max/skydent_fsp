@@ -199,53 +199,6 @@ export default function Datatable({
             : 'bg-white text-gray-600 border border-gray-200';
     };
 
-    const downloadFile = (filename, path) => {
-        const parts = path.split('/');
-        const encodedFile = encodeURIComponent(parts.pop());
-        const encodedUrl = parts.join('/') + '/' + encodedFile;
-
-        const link = document.createElement('a');
-        link.href = encodedUrl;
-        link.download = filename;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const sendRedesign = async (orderId, status) => {
-        // If not completed → direct fail response
-        if (status.toLowerCase() !== "completed") {
-            return {
-                status: "failed",
-                message: "Please contact design team"
-            };
-        }
-
-        try {
-            const data = await fetchWithAuth(`send-for-redesign/${orderId}`, {
-                method: "GET",
-            });
-
-            if (data.status === "success") {
-                return {
-                    status: "success",
-                    message: data.message
-                };
-            } else {
-                return {
-                    status: "failed",
-                    message: data.message || "Unknown error"
-                };
-            }
-        } catch (error) {
-            return {
-                status: "failed",
-                message: "Server error"
-            };
-        }
-    };
-
     // ✅ Multi-select logic
     const toggleSelectRow = (id) =>
         setSelectedRows((prev) =>
