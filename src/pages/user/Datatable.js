@@ -367,6 +367,7 @@ export default function Datatable({
                                                 }
 
                                                 let redesignIds = [];
+                                                let newOrderIds = [];
                                                 let successIds = [];
                                                 let failMessages = [];
 
@@ -375,6 +376,11 @@ export default function Datatable({
 
                                                     if (!r) {
                                                         failMessages.push(`Order ${id}: Record not found`);
+                                                        continue;
+                                                    }
+
+                                                    if (r.status === "New") {
+                                                        newOrderIds.push(id);
                                                         continue;
                                                     }
 
@@ -394,11 +400,29 @@ export default function Datatable({
 
                                                 let finalMsg = "";
 
-                                                if (redesignIds.length === selectedRows.length) {
-                                                    if (redesignIds.length === 1) {
-                                                        finalMsg = `Order ${redesignIds[0]} already in redesign process.`;
+                                                if (newOrderIds.length === selectedRows.length) {
+                                                    if (newOrderIds.length === 1) {
+                                                        finalMsg = `Order ${newOrderIds[0]} cannot be sent for redesign because it is a new order.`;
                                                     } else {
-                                                        finalMsg = `All selected orders are already in redesign process.`;
+                                                        finalMsg = `All selected orders cannot be sent for redesign because they are new orders.`;
+                                                    }
+                                                    alert(finalMsg);
+                                                    return;
+                                                }
+
+                                                if (newOrderIds.length === 1) {
+                                                    finalMsg += `Order ${newOrderIds[0]} cannot be sent for redesign because it is a new order.\n\n`;
+                                                }
+
+                                                if (newOrderIds.length > 1) {
+                                                    finalMsg += newOrderIds.map(id => `Order ${id} cannot be sent for redesign because it is a new order.`).join("\n") + "\n\n";
+                                                }
+
+                                                if (redesignIds.length === selectedRows.length - newOrderIds.length) {
+                                                    if (redesignIds.length === 1) {
+                                                        finalMsg += `Order ${redesignIds[0]} already in redesign process.`;
+                                                    } else {
+                                                        finalMsg += `All selected orders are already in redesign process.`;
                                                     }
                                                     alert(finalMsg);
                                                     return;
@@ -430,6 +454,7 @@ export default function Datatable({
                                         >
                                             <FontAwesomeIcon icon={faRepeat} /> Send for Redesign
                                         </button>
+
                                     </div>
                                 </div>
 
