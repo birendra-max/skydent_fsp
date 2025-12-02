@@ -200,39 +200,23 @@ export default function Datatable({
             : 'bg-white text-gray-600 border border-gray-200';
     };
 
-    const sendRedesign = async (orderId, status) => {
-        // If not completed → direct fail response
-        if (status.toLowerCase() !== "completed") {
-            return {
-                status: "failed",
-                message: "Please wait for order complete"
-            };
-        }
-
+    const sendRedesign = async (orderId) => {
         try {
-            const data = await fetchWithAuth(`send-for-redesign/${orderId}`, {
+            const res = await fetchWithAuth(`send-for-redesign/${orderId}`, {
                 method: "GET",
             });
 
-            if (data.status === "success") {
-                return {
-                    status: "success",
-                    message: data.message
-                };
-            } else {
-                return {
-                    status: "failed",
-                    message: data.message || "Unknown error"
-                };
-            }
+            return {
+                status: res.status,
+                message: res.message || "Unknown response"
+            };
         } catch (error) {
             return {
-                status: "failed",
-                message: "Server error"
+                status: "error",
+                message: "Server error. Please try again later."
             };
         }
     };
-
 
     // ✅ Multi-select logic
     const toggleSelectRow = (id) =>
@@ -382,35 +366,65 @@ export default function Datatable({
                                                     return;
                                                 }
 
-                                                let successCount = 0;
-                                                let failCount = 0;
+                                                let redesignIds = [];
+                                                let successIds = [];
                                                 let failMessages = [];
 
                                                 for (let id of selectedRows) {
-                                                    const row = data.find((r) => r.orderid === id);
-                                                    if (!row) {
-                                                        failCount++;
-                                                        failMessages.push(`${id}: Order record not found`);
+                                                    const r = data.find((x) => x.orderid === id);
+
+                                                    if (!r) {
+                                                        failMessages.push(`Order ${id}: Record not found`);
                                                         continue;
                                                     }
 
-                                                    const res = await sendRedesign(id, row.status);
+                                                    if (r.status === "Redesign") {
+                                                        redesignIds.push(id);
+                                                        continue;
+                                                    }
+
+                                                    const res = await sendRedesign(id);
 
                                                     if (res.status === "success") {
-                                                        successCount++;
+                                                        successIds.push(id);
                                                     } else {
-                                                        failCount++;
-                                                        failMessages.push(`${id}: ${res.message}`);
+                                                        failMessages.push(`Order ${id}: ${res.message}`);
                                                     }
                                                 }
 
-                                                // Professional summary message
-                                                let message='';
-                                                if (failMessages.length) {
-                                                    message += `Details for Failed Requests:\n` + failMessages.join("\n");
+                                                let finalMsg = "";
+
+                                                if (redesignIds.length === selectedRows.length) {
+                                                    if (redesignIds.length === 1) {
+                                                        finalMsg = `Order ${redesignIds[0]} already in redesign process.`;
+                                                    } else {
+                                                        finalMsg = `All selected orders are already in redesign process.`;
+                                                    }
+                                                    alert(finalMsg);
+                                                    return;
                                                 }
 
-                                                alert(message);
+                                                if (redesignIds.length === 1) {
+                                                    finalMsg += `Order ${redesignIds[0]} already in redesign process.\n\n`;
+                                                }
+
+                                                if (redesignIds.length > 1) {
+                                                    finalMsg += redesignIds.map(id => `Order ${id} already in redesign process.`).join("\n") + "\n\n";
+                                                }
+
+                                                if (successIds.length === 1) {
+                                                    finalMsg += `Order ${successIds[0]} has been forwarded to the design team for redesign.\n\n`;
+                                                }
+
+                                                if (successIds.length > 1) {
+                                                    finalMsg += `All selected orders have been forwarded to the design team for redesign.\n\n`;
+                                                }
+
+                                                if (failMessages.length) {
+                                                    finalMsg += "Failed Requests:\n" + failMessages.join("\n");
+                                                }
+
+                                                alert(finalMsg.trim());
                                             }}
                                             className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium text-sm cursor-pointer"
                                         >
