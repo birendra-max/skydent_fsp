@@ -200,28 +200,6 @@ export default function CommanDatatable({
             : 'bg-gray-100 text-gray-600';
     };
 
-
-    const sendRedesign = async (orderId, status) => {
-        if (status.toLowerCase() === 'completed') {
-            try {
-                const data = await fetchWithAuth(`send-for-redesign/${orderId}`, {
-                    method: "GET",
-                });
-
-                // data is already the parsed JSON response
-                if (data.status === 'success') {
-                    alert(data.message);
-                } else {
-                    console.log(data.message);
-                }
-            } catch (error) {
-                console.error("Error fetching cases:", error);
-            }
-        } else {
-            alert(`${orderId} is not completed yet! You can't send it for redesign.`);
-        }
-    };
-
     // ✅ Multi-select logic
     const toggleSelectRow = (id) =>
         setSelectedRows((prev) =>
@@ -241,8 +219,13 @@ export default function CommanDatatable({
     };
 
 
+    const base_url = localStorage.getItem('base_url');
+
     const handleBulkDownload = () => {
-        if (!selectedRows.length) return alert("Please select at least one record!");
+        if (!selectedRows.length) {
+            alert("Please select at least one record to proceed with the download.");
+            return;
+        }
 
         let missingFiles = [];
         let downloadedCount = 0;
@@ -251,20 +234,23 @@ export default function CommanDatatable({
             const row = data.find((r) => r.orderid === id);
             if (!row) return;
 
-            let path = row.file_path;
+            let path = null;
 
-            // ✅ Check if valid path exists
+            if (fileType === "initial") path = row.file_path;
+            else if (fileType === "stl") path = row.stl_file_path;
+            else if (fileType === "finish") path = row.finish_file_path;
+
             if (path && path.trim() !== "") {
                 try {
-                    // ✅ Use your symbol-safe download logic
-                    const parts = path.split("/");
-                    const encodedFile = encodeURIComponent(parts.pop());
-                    const encodedUrl = parts.join("/") + "/" + encodedFile;
+                    const encodedPath = encodeURIComponent(path);
+
+                    // Backend handles download safely
+                    const finalUrl = `${base_url}/download?path=` + encodedPath;
 
                     const link = document.createElement("a");
-                    link.href = encodedUrl;
-                    link.download = `${fileType}_${id}`;
+                    link.href = finalUrl;
                     link.target = "_blank";
+                    link.download = `${fileType}_${id}`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -278,10 +264,11 @@ export default function CommanDatatable({
                 missingFiles.push(id);
             }
         });
+
         if (missingFiles.length > 0) {
-            alert(`File not available for these record(s): ${missingFiles.join(", ")}`);
-        } else if (downloadedCount === 0) {
-            alert("No files available for the selected type.");
+            alert(
+                `File Not found`
+            );
         }
     };
 

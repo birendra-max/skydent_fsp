@@ -214,9 +214,13 @@ export default function CasesDatatable({
         }
     };
 
+    const base_url = localStorage.getItem('base_url');
 
     const handleBulkDownload = () => {
-        if (!selectedRows.length) return alert("Please select at least one record!");
+        if (!selectedRows.length) {
+            alert("Please select at least one record to proceed with the download.");
+            return;
+        }
 
         let missingFiles = [];
         let downloadedCount = 0;
@@ -231,18 +235,17 @@ export default function CasesDatatable({
             else if (fileType === "stl") path = row.stl_file_path;
             else if (fileType === "finish") path = row.finish_file_path;
 
-            // ✅ Check if valid path exists
             if (path && path.trim() !== "") {
                 try {
-                    // ✅ Use your symbol-safe download logic
-                    const parts = path.split("/");
-                    const encodedFile = encodeURIComponent(parts.pop());
-                    const encodedUrl = parts.join("/") + "/" + encodedFile;
+                    const encodedPath = encodeURIComponent(path);
+
+                    // Backend handles download safely
+                    const finalUrl = `${base_url}/download?path=` + encodedPath;
 
                     const link = document.createElement("a");
-                    link.href = encodedUrl;
-                    link.download = `${fileType}_${id}`;
+                    link.href = finalUrl;
                     link.target = "_blank";
+                    link.download = `${fileType}_${id}`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -257,15 +260,12 @@ export default function CasesDatatable({
             }
         });
 
-        // ✅ Final alert summary
         if (missingFiles.length > 0) {
-            alert(`File not available for these record(s): ${missingFiles.join(", ")}`);
-        } else if (downloadedCount === 0) {
-            alert("No files available for the selected type.");
+            alert(
+                `File Not found`
+            );
         }
     };
-
-
 
     return (
         <>
