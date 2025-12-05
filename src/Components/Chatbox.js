@@ -311,23 +311,26 @@ export default function Chatbox({ orderid }) {
 
     const downloadFile = (url, name) => {
         if (!url) {
-            alert('File Not Found!');
+            alert("File Not Found!");
             return;
         }
 
         try {
-            const parts = url.split('/');
-            const encodedFile = encodeURIComponent(parts.pop());
-            const encodedUrl = parts.join('/') + '/' + encodedFile;
-            const link = document.createElement('a');
-            link.href = encodedUrl;
-            link.download = name || 'download';
-            link.target = '_blank';
+            const base_url = localStorage.getItem("base_url");
+            const encodedPath = encodeURIComponent(url);
+            const finalUrl = `${base_url}/download?path=${encodedPath}`;
+
+            // Create download link
+            const link = document.createElement("a");
+            link.href = finalUrl;
+            link.target = "_blank";
+            link.download = name || "download";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         } catch (error) {
-            alert('⚠️ Error while downloading file:', error);
+            alert("⚠️ Error while downloading file");
+            console.error("Download error:", error);
         }
     };
 

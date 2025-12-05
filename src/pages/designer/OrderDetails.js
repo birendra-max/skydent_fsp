@@ -230,13 +230,14 @@ export default function OrderDetails() {
 
     const downloadFile = (filename, path) => {
         if (!path) return;
-        const parts = path.split("/");
-        const encodedFile = encodeURIComponent(parts.pop());
-        const encodedUrl = parts.join("/") + "/" + encodedFile;
+        const encodedPath = encodeURIComponent(path);
+        const finalUrl = `${base_url}/download?path=${encodedPath}`;
+
+        // Create download link
         const link = document.createElement("a");
-        link.href = encodedUrl;
-        link.download = filename;
+        link.href = finalUrl;
         link.target = "_blank";
+        link.download = filename; // optional filename
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
