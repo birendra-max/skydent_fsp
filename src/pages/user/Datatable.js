@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useContext } from "react";
+import { useState, useMemo, useEffect, useContext, useRef, useCallback } from "react";
 import Loder from "../../Components/Loder";
 import Chatbox from "../../Components/Chatbox";
 import { ThemeContext } from "../../Context/ThemeContext";
@@ -9,12 +9,132 @@ import { fetchWithAuth } from '../../utils/userapi';
 import {
     faRepeat,
     faFolderOpen,
-    faArrowsRotate,
     faSearch,
     faSort,
     faSortUp,
-    faSortDown
+    faSortDown,
+    faTimes
 } from '@fortawesome/free-solid-svg-icons';
+
+// ✅ Create a separate component for the popup
+const RedesignPopup = ({
+    theme,
+    showRedesignPopup,
+    pendingRedesignOrders,
+    redesignMessage,
+    setRedesignMessage,
+    isSubmitting,
+    handleRedesignSubmit,
+    setShowRedesignPopup
+}) => {
+    const textareaRef = useRef(null);
+
+    // Auto-focus when popup opens
+    useEffect(() => {
+        if (showRedesignPopup && textareaRef.current) {
+            const timer = setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.focus();
+                }
+            }, 10);
+            return () => clearTimeout(timer);
+        }
+    }, [showRedesignPopup]);
+
+    const handleClosePopup = useCallback(() => {
+        if (!isSubmitting) {
+            setShowRedesignPopup(false);
+            setRedesignMessage("");
+        }
+    }, [isSubmitting, setShowRedesignPopup, setRedesignMessage]);
+
+    if (!showRedesignPopup) return null;
+
+    return (
+        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={`rounded-xl shadow-2xl w-full max-w-md ${theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
+                {/* Header */}
+                <div className={`flex justify-between items-center p-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <h2 className="text-lg font-bold">
+                        Send for Redesign
+                    </h2>
+                    <button
+                        onClick={handleClosePopup}
+                        disabled={isSubmitting}
+                        className={`p-1 rounded ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        <FontAwesomeIcon icon={faTimes} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="p-4">
+                    <div className="mb-4">
+                        <p className="mb-2">
+                            Order{pendingRedesignOrders.length > 1 ? 's' : ''} to send for redesign:
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                            {pendingRedesignOrders.map((id) => (
+                                <span
+                                    key={id}
+                                    className={`px-2 py-1 rounded text-xs ${theme === 'dark' ? 'bg-gray-700' : 'bg-blue-100'}`}
+                                >
+                                    Order #{id}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mb-4">
+                        <label className="block mb-1">
+                            Message for Design Team <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                            ref={textareaRef}
+                            value={redesignMessage}
+                            onChange={(e) => setRedesignMessage(e.target.value)}
+                            placeholder="Enter reason for redesign or instructions..."
+                            className={`w-full p-3 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500'}`}
+                            rows="4"
+                            disabled={isSubmitting}
+                        />
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className={`p-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} flex justify-end gap-2`}>
+                    <button
+                        onClick={handleClosePopup}
+                        disabled={isSubmitting}
+                        className={`px-4 py-2 rounded font-medium ${theme === 'dark' ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleRedesignSubmit}
+                        disabled={isSubmitting || !redesignMessage.trim()}
+                        className={`px-4 py-2 rounded font-medium flex items-center gap-2 ${isSubmitting || !redesignMessage.trim()
+                            ? theme === 'dark' ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700'
+                            }`}
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                <FontAwesomeIcon icon={faRepeat} />
+                                Send{pendingRedesignOrders.length > 1 ? ` (${pendingRedesignOrders.length})` : ''}
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default function Datatable({
     columns = [],
@@ -33,6 +153,12 @@ export default function Datatable({
     // ✅ NEW STATES for multi-select & dropdown
     const [selectedRows, setSelectedRows] = useState([]);
     const [fileType, setFileType] = useState("stl");
+
+    // ✅ NEW STATES for redesign popup
+    const [showRedesignPopup, setShowRedesignPopup] = useState(false);
+    const [redesignMessage, setRedesignMessage] = useState("");
+    const [pendingRedesignOrders, setPendingRedesignOrders] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Filter & Sort
     const filteredData = useMemo(() => {
@@ -141,6 +267,212 @@ export default function Datatable({
         document.getElementById('chatbox').style.display = "block"
     }
 
+    const sendRedesign = async (orderId, message = "") => {
+        try {
+            const res = await fetchWithAuth(`send-for-redesign/${orderId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ message }),
+            });
+
+            // Backend returns JSON → res contains {status, message}
+            return res;
+
+        } catch (error) {
+            return {
+                status: "error",
+                message: "Server error. Please try again later."
+            };
+        }
+    };
+
+    // ✅ Multi-select logic
+    const toggleSelectRow = (id) =>
+        setSelectedRows((prev) =>
+            prev.includes(id)
+                ? prev.filter((x) => x !== id)
+                : [...prev, id]
+        );
+
+    const toggleSelectAll = () => {
+        const visibleIds = paginatedData.map((r) => r.orderid);
+        if (paginatedData.every((r) => selectedRows.includes(r.orderid))) {
+            setSelectedRows(selectedRows.filter((id) => !visibleIds.includes(id)));
+        } else {
+            setSelectedRows([...new Set([...selectedRows, ...visibleIds])]);
+        }
+    };
+
+    // ✅ Open redesign popup
+    const openRedesignPopup = () => {
+        if (!selectedRows.length) {
+            alert("Please select at least one case to proceed with the redesign request.");
+            return;
+        }
+
+        // Filter valid orders
+        const validOrders = selectedRows.filter(id => {
+            const row = data.find((x) => x.orderid === id);
+            return row && row.status !== "New" && row.status !== "Redesign";
+        });
+
+        if (validOrders.length === 0) {
+            alert("Orders with 'New' status or already in 'Redesign' cannot be sent for redesign.");
+            return;
+        }
+
+        setPendingRedesignOrders(validOrders);
+        setRedesignMessage("");
+        setShowRedesignPopup(true);
+    };
+
+    // ✅ Submit redesign with message
+    const handleRedesignSubmit = async () => {
+        if (!redesignMessage.trim()) {
+            alert("Please enter a message for the redesign request.");
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        let redesignIds = [];
+        let newOrderIds = [];
+        let successIds = [];
+        let failMessages = [];
+
+        for (let id of pendingRedesignOrders) {
+            const r = data.find((x) => x.orderid === id);
+
+            if (!r) {
+                failMessages.push(`Order ${id}: Record not found`);
+                continue;
+            }
+
+            if (r.status === "New") {
+                newOrderIds.push(id);
+                continue;
+            }
+
+            if (r.status === "Redesign") {
+                redesignIds.push(id);
+                continue;
+            }
+
+            // 🚀 Call backend
+            const res = await sendRedesign(id, redesignMessage);
+
+            if (res.status === "success") {
+                successIds.push(id);
+            } else {
+                failMessages.push(`Order ${id}: ${res.message}`);
+            }
+        }
+
+        setIsSubmitting(false);
+        setShowRedesignPopup(false);
+        setRedesignMessage("");
+        setSelectedRows([]);
+
+        let finalMsg = "";
+
+        if (newOrderIds.length === pendingRedesignOrders.length) {
+            finalMsg = newOrderIds.length === 1
+                ? `Order ${newOrderIds[0]} cannot be sent for redesign because it is a new order.`
+                : `All selected orders cannot be sent for redesign because they are new orders.`;
+            alert(finalMsg);
+            return;
+        }
+
+        if (newOrderIds.length) {
+            finalMsg += newOrderIds.map(id =>
+                `Order ${id} cannot be sent for redesign because it is a new order.`
+            ).join("\n") + "\n\n";
+        }
+
+        if (redesignIds.length === pendingRedesignOrders.length - newOrderIds.length) {
+            finalMsg += redesignIds.length === 1
+                ? `Order ${redesignIds[0]} is already in redesign process.`
+                : `All selected orders are already in redesign process.`;
+            alert(finalMsg);
+            return;
+        }
+
+        if (redesignIds.length) {
+            finalMsg += redesignIds.map(id =>
+                `Order ${id} is already in redesign process.`
+            ).join("\n") + "\n\n";
+        }
+
+        if (successIds.length) {
+            finalMsg += successIds.length === 1
+                ? `Order ${successIds[0]} has been forwarded to the design team for redesign.\n\n`
+                : `All selected orders have been forwarded to the design team for redesign.\n\n`;
+        }
+
+        if (failMessages.length) {
+            finalMsg += "Failed Requests:\n" + failMessages.join("\n");
+        }
+
+        alert(finalMsg.trim());
+        window.location.reload();
+    };
+
+
+    const base_url = localStorage.getItem('base_url');
+
+    const handleBulkDownload = () => {
+        if (!selectedRows.length) {
+            alert("Please select at least one record to proceed with the download.");
+            return;
+        }
+
+        let missingFiles = [];
+        let downloadedCount = 0;
+
+        selectedRows.forEach((id) => {
+            const row = data.find((r) => r.orderid === id);
+            if (!row) return;
+
+            let path = null;
+
+            if (fileType === "initial") path = row.file_path;
+            else if (fileType === "stl") path = row.stl_file_path;
+            else if (fileType === "finish") path = row.finish_file_path;
+
+            if (path && path.trim() !== "") {
+                try {
+                    const encodedPath = encodeURIComponent(path);
+
+                    // Backend handles download safely
+                    const finalUrl = `${base_url}/download?path=` + encodedPath;
+
+                    const link = document.createElement("a");
+                    link.href = finalUrl;
+                    link.target = "_blank";
+                    link.download = `${fileType}_${id}`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    downloadedCount++;
+                } catch (err) {
+                    console.error("Download error:", err);
+                    missingFiles.push(id);
+                }
+            } else {
+                missingFiles.push(id);
+            }
+        });
+
+        if (missingFiles.length > 0) {
+            alert(
+                `File Not found`
+            );
+        }
+    };
+
     // Theme-based styling functions
     const getBackgroundClass = () => {
         return theme === 'dark'
@@ -200,98 +532,22 @@ export default function Datatable({
             : 'bg-white text-gray-600 border border-gray-200';
     };
 
-    const sendRedesign = async (orderId) => {
-        try {
-            const res = await fetchWithAuth(`send-for-redesign/${orderId}`, {
-                method: "GET",
-            });
-
-            return {
-                status: res.status,
-                message: res.message || "Unknown response"
-            };
-        } catch (error) {
-            return {
-                status: "error",
-                message: "Server error. Please try again later."
-            };
-        }
-    };
-
-    // ✅ Multi-select logic
-    const toggleSelectRow = (id) =>
-        setSelectedRows((prev) =>
-            prev.includes(id)
-                ? prev.filter((x) => x !== id)
-                : [...prev, id]
-        );
-
-    const toggleSelectAll = () => {
-        const visibleIds = paginatedData.map((r) => r.orderid);
-        if (paginatedData.every((r) => selectedRows.includes(r.orderid))) {
-            setSelectedRows(selectedRows.filter((id) => !visibleIds.includes(id)));
-        } else {
-            setSelectedRows([...new Set([...selectedRows, ...visibleIds])]);
-        }
-    };
-
-    const base_url = localStorage.getItem('base_url');
-
-    const handleBulkDownload = () => {
-        if (!selectedRows.length) {
-            alert("Please select at least one record to proceed with the download.");
-            return;
-        }
-
-        let missingFiles = [];
-        let downloadedCount = 0;
-
-        selectedRows.forEach((id) => {
-            const row = data.find((r) => r.orderid === id);
-            if (!row) return;
-
-            let path = null;
-
-            if (fileType === "initial") path = row.file_path;
-            else if (fileType === "stl") path = row.stl_file_path;
-            else if (fileType === "finish") path = row.finish_file_path;
-
-            if (path && path.trim() !== "") {
-                try {
-                    const encodedPath = encodeURIComponent(path);
-
-                    // Backend handles download safely
-                    const finalUrl = `${base_url}/download?path=` + encodedPath;
-
-                    const link = document.createElement("a");
-                    link.href = finalUrl;
-                    link.target = "_blank";
-                    link.download = `${fileType}_${id}`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-
-                    downloadedCount++;
-                } catch (err) {
-                    console.error("Download error:", err);
-                    missingFiles.push(id);
-                }
-            } else {
-                missingFiles.push(id);
-            }
-        });
-
-        if (missingFiles.length > 0) {
-            alert(
-                `File Not found`
-            );
-        }
-    };
-
     return (
         <>
             <Loder status={status} />
             <Chatbox orderid={orderid} />
+
+            {/* ✅ Use the separate popup component */}
+            <RedesignPopup
+                theme={theme}
+                showRedesignPopup={showRedesignPopup}
+                pendingRedesignOrders={pendingRedesignOrders}
+                redesignMessage={redesignMessage}
+                setRedesignMessage={setRedesignMessage}
+                isSubmitting={isSubmitting}
+                handleRedesignSubmit={handleRedesignSubmit}
+                setShowRedesignPopup={setShowRedesignPopup}
+            />
 
             {status === "hide" && (
                 <section className={`p-4 rounded-xl ${getBackgroundClass()}`}>
@@ -354,96 +610,7 @@ export default function Datatable({
                                         </button>
 
                                         <button
-                                            onClick={async () => {
-                                                if (!selectedRows.length) {
-                                                    alert("Please select at least one case to proceed with the redesign request.");
-                                                    return;
-                                                }
-
-                                                let redesignIds = [];
-                                                let newOrderIds = [];
-                                                let successIds = [];
-                                                let failMessages = [];
-
-                                                for (let id of selectedRows) {
-                                                    const r = data.find((x) => x.orderid === id);
-
-                                                    if (!r) {
-                                                        failMessages.push(`Order ${id}: Record not found`);
-                                                        continue;
-                                                    }
-
-                                                    if (r.status === "New") {
-                                                        newOrderIds.push(id);
-                                                        continue;
-                                                    }
-
-                                                    if (r.status === "Redesign") {
-                                                        redesignIds.push(id);
-                                                        continue;
-                                                    }
-
-                                                    const res = await sendRedesign(id);
-
-                                                    if (res.status === "success") {
-                                                        successIds.push(id);
-                                                    } else {
-                                                        failMessages.push(`Order ${id}: ${res.message}`);
-                                                    }
-                                                }
-
-                                                let finalMsg = "";
-
-                                                if (newOrderIds.length === selectedRows.length) {
-                                                    if (newOrderIds.length === 1) {
-                                                        finalMsg = `Order ${newOrderIds[0]} cannot be sent for redesign because it is a new order.`;
-                                                    } else {
-                                                        finalMsg = `All selected orders cannot be sent for redesign because they are new orders.`;
-                                                    }
-                                                    alert(finalMsg);
-                                                    return;
-                                                }
-
-                                                if (newOrderIds.length === 1) {
-                                                    finalMsg += `Order ${newOrderIds[0]} cannot be sent for redesign because it is a new order.\n\n`;
-                                                }
-
-                                                if (newOrderIds.length > 1) {
-                                                    finalMsg += newOrderIds.map(id => `Order ${id} cannot be sent for redesign because it is a new order.`).join("\n") + "\n\n";
-                                                }
-
-                                                if (redesignIds.length === selectedRows.length - newOrderIds.length) {
-                                                    if (redesignIds.length === 1) {
-                                                        finalMsg += `Order ${redesignIds[0]} already in redesign process.`;
-                                                    } else {
-                                                        finalMsg += `All selected orders are already in redesign process.`;
-                                                    }
-                                                    alert(finalMsg);
-                                                    return;
-                                                }
-
-                                                if (redesignIds.length === 1) {
-                                                    finalMsg += `Order ${redesignIds[0]} already in redesign process.\n\n`;
-                                                }
-
-                                                if (redesignIds.length > 1) {
-                                                    finalMsg += redesignIds.map(id => `Order ${id} already in redesign process.`).join("\n") + "\n\n";
-                                                }
-
-                                                if (successIds.length === 1) {
-                                                    finalMsg += `Order ${successIds[0]} has been forwarded to the design team for redesign.\n\n`;
-                                                }
-
-                                                if (successIds.length > 1) {
-                                                    finalMsg += `All selected orders have been forwarded to the design team for redesign.\n\n`;
-                                                }
-
-                                                if (failMessages.length) {
-                                                    finalMsg += "Failed Requests:\n" + failMessages.join("\n");
-                                                }
-
-                                                alert(finalMsg.trim());
-                                            }}
+                                            onClick={openRedesignPopup}
                                             className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all duration-200 font-medium text-sm cursor-pointer"
                                         >
                                             <FontAwesomeIcon icon={faRepeat} /> Send for Redesign
