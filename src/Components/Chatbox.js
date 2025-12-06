@@ -84,7 +84,7 @@ export default function Chatbox({ orderid }) {
                         id: msg.id,
                         orderid: msg.orderid,
                         text: msg.message,
-                        timestamp: formatTimestamp(msg.message_date),
+                        timestamp: msg.message_date,
                         user_type: msg.user_type,
                         alignment: showRight ? 'right' : 'left',
                         file_path: msg.file_path || null,
