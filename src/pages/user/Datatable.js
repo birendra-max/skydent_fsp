@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useContext, useRef, useCallback } from "r
 import Loder from "../../Components/Loder";
 import Chatbox from "../../Components/Chatbox";
 import { ThemeContext } from "../../Context/ThemeContext";
-import { exportToExcel } from '../../helper/ExcelGenerate';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from '../../utils/userapi';
@@ -580,15 +579,6 @@ export default function Datatable({
                                             ))}
                                         </select>
                                     </div>
-
-                                    {/* Download Report */}
-                                    <button
-                                        onClick={() => exportToExcel(data, "Reports")}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm font-medium rounded-lg border border-green-600 transition-all duration-200 shadow-lg hover:shadow-xl cursor-pointer"
-                                    >
-                                        <FontAwesomeIcon icon={faDownload} className="text-white" />
-                                        Download Report
-                                    </button>
 
                                     {/* Bulk Actions Toolbar - Moved to top */}
                                     <div className={`flex items-center gap-3 px-4 py-2`}>
