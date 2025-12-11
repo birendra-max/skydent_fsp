@@ -23,9 +23,8 @@ export default function ResetPsswordClient() {
     const columns = [
         { header: "Client Id", accessor: "userid" },
         { header: "Name", accessor: "name" },
-        { header: "Designation", accessor: "designation" },
         { header: "Email", accessor: "email" },
-        { header: "Occlusion", accessor: "occlusion" },
+        { header: "Password", accessor: "password" },
         { header: "Lab Name", accessor: "labname" },
         { header: "Mobile", accessor: "mobile" },
         { header: "Status", accessor: "status" },

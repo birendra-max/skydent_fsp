@@ -20,13 +20,7 @@ export default function AddDesigner() {
         designation: "",
         email: "",
         password: "",
-        occlusion: "",
-        labname: "",
         mobile: "",
-        anatomy: "",
-        remark: "",
-        contact: "",
-        pontic: "",
     });
 
     const columns = [
@@ -34,8 +28,7 @@ export default function AddDesigner() {
         { header: "Name", accessor: "name" },
         { header: "Designation", accessor: "designation" },
         { header: "Email", accessor: "email" },
-        { header: "Occlusion", accessor: "occlusion" },
-        { header: "Lab Name", accessor: "labname" },
+        { header: "Password", accessor: "password" },
         { header: "Mobile", accessor: "mobile" },
         { header: "Status", accessor: "status" },
         { header: "Delete", accessor: "delete" },
@@ -146,12 +139,7 @@ export default function AddDesigner() {
                                 { label: "Full Name", name: "name", placeholder: "Enter designer's name" },
                                 { label: "Designation", name: "designation", placeholder: "e.g., Dentist, Technician" },
                                 { label: "Email Address", name: "email", type: "email", placeholder: "Enter email" },
-                                { label: "Occlusion", name: "occlusion", placeholder: "Enter occlusion" },
-                                { label: "Lab Name", name: "labname", placeholder: "Enter lab name" },
                                 { label: "Mobile Number", name: "mobile", placeholder: "Enter mobile number" },
-                                { label: "Anatomy", name: "anatomy", placeholder: "Enter anatomy details" },
-                                { label: "Contact", name: "contact", placeholder: "Enter contact info" },
-                                { label: "Pontic", name: "pontic", placeholder: "Enter pontic info" },
                             ].map((field) => (
                                 <div key={field.name}>
                                     <label className="font-semibold block mb-2">{field.label}</label>
@@ -194,23 +182,6 @@ export default function AddDesigner() {
                                         <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
                                     </button>
                                 </div>
-                            </div>
-
-                            {/* Remark full width */}
-                            <div className="md:col-span-2">
-                                <label className="font-semibold block mb-2">Remark</label>
-                                <textarea
-                                    name="remark"
-                                    value={formData.remark}
-                                    onChange={handleChange}
-                                    required
-                                    placeholder="Enter remarks"
-                                    rows={3}
-                                    className={`w-full p-3 rounded-md border focus:ring-2 focus:ring-blue-500 ${theme === "dark"
-                                        ? "bg-gray-800 border-gray-700"
-                                        : "bg-gray-50 border-gray-300"
-                                        }`}
-                                ></textarea>
                             </div>
 
                             {/* Submit Section */}
