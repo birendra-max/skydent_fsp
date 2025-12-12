@@ -73,7 +73,6 @@ export default function AdminDatatable({
         if (tableData && tableData.length > 0) {
             setStatus("hide");
         }
-        setTimeout(() => setStatus("hide"), 1000);
     }, [tableData]);
 
     const handleSearch = (e) => {
