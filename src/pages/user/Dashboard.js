@@ -100,6 +100,7 @@ export default function Dashboard() {
 
                 if (data.status === 'success') {
                     setCases(data);
+                    console.log(data);
                 } else {
                     setCases(null);
                 }

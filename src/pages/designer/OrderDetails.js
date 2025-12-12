@@ -7,6 +7,7 @@ import { ThemeContext } from "../../Context/ThemeContext";
 import Hd from "./Hd";
 import Foot from "./Foot";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Chatbox from "../../Components/Chatbox";
 import {
     faDownload,
     faUpload,
@@ -17,7 +18,14 @@ import {
     faClock,
     faBackward,
     faPlus,
-    faFileCircleCheck
+    faFileCircleCheck,
+    faEdit,
+    faSave,
+    faTimes,
+    faPaperPlane,
+    faUser,
+    faRobot,
+    faComments
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function OrderDetails() {
@@ -32,12 +40,15 @@ export default function OrderDetails() {
         finished_files: []
     });
     const [uploading, setUploading] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedOrder, setEditedOrder] = useState({});
+    const [showChat, setShowChat] = useState(false);
     const navigate = useNavigate();
 
     const base_url = localStorage.getItem("base_url");
     const token = localStorage.getItem("token");
-    const stlFileInputRef = useRef(null);
-    const finishedFileInputRef = useRef(null);
+    const fileInputRef = useRef(null);
+    const chatContainerRef = useRef(null);
 
     // Fetch order details
     useEffect(() => {
@@ -57,6 +68,7 @@ export default function OrderDetails() {
                 const resp = await response.json();
                 if (resp.status === "success") {
                     setOrder(resp.order);
+                    setEditedOrder(resp.order);
                     setSelectedStatus(resp.order.status);
                     await fetchFileHistory();
                 } else {
@@ -114,6 +126,7 @@ export default function OrderDetails() {
             toast.dismiss();
             if (resp.status === "success") {
                 setOrder((prev) => ({ ...prev, status: selectedStatus }));
+                setEditedOrder((prev) => ({ ...prev, status: selectedStatus }));
                 toast.success("Order status updated successfully!");
             } else toast.error("Failed to update order status");
         } catch (error) {
@@ -178,18 +191,21 @@ export default function OrderDetails() {
         }
     };
 
-    const handleFileUpload = async (event, fileType) => {
+    const handleFileUpload = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
-        // Validate file type for finished files
-        if (fileType === "finished") {
-            const allowedExtensions = ['.zip', '.rar', '.7z'];
-            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-            if (!allowedExtensions.includes(fileExtension)) {
-                toast.error("Please upload only .zip, .rar, or .7z files for finished files!");
-                return;
-            }
+        // Determine file type based on extension
+        const fileName = file.name.toLowerCase();
+        let fileType = '';
+        
+        if (fileName.endsWith('.stl')) {
+            fileType = 'stl';
+        } else if (fileName.endsWith('.zip') || fileName.endsWith('.rar') || fileName.endsWith('.7z')) {
+            fileType = 'finished';
+        } else {
+            toast.error("Please upload only .stl, .zip, .rar, or .7z files!");
+            return;
         }
 
         setUploading(true);
@@ -233,14 +249,67 @@ export default function OrderDetails() {
         const encodedPath = encodeURIComponent(path);
         const finalUrl = `${base_url}/download?path=${encodedPath}`;
 
-        // Create download link
         const link = document.createElement("a");
         link.href = finalUrl;
         link.target = "_blank";
-        link.download = filename; // optional filename
+        link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    const handleEditToggle = () => {
+        if (isEditing) {
+            // Cancel editing
+            setEditedOrder(order);
+        }
+        setIsEditing(!isEditing);
+    };
+
+    const handleSaveOrder = async () => {
+        toast.loading("Saving order details...");
+        try {
+            const response = await fetch(`${base_url}/update-order-details`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                    'X-Tenant': 'skydent'
+                },
+                body: JSON.stringify({
+                    orderid: id,
+                    updates: editedOrder
+                }),
+            });
+
+            const resp = await response.json();
+            toast.dismiss();
+            if (resp.status === "success") {
+                setOrder(editedOrder);
+                setIsEditing(false);
+                toast.success("Order details updated successfully!");
+            } else {
+                toast.error("Failed to update order details");
+            }
+        } catch (error) {
+            console.error("Error updating order:", error);
+            toast.error("Error updating order details");
+        }
+    };
+
+    const handleInputChange = (field, value) => {
+        setEditedOrder(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    // Function to show the floating chatbox
+    const showFloatingChat = () => {
+        const chatbox = document.getElementById('chatbox');
+        if (chatbox) {
+            chatbox.style.display = 'block';
+        }
     };
 
     if (loading)
@@ -273,11 +342,14 @@ export default function OrderDetails() {
         <>
             <Toaster position="top-right" />
             <Hd />
+            
+            {/* Chatbox Component - Floating/Draggable */}
+            <Chatbox orderid={id} />
+            
             <main className={`min-h-screen py-12 ${theme === "light" ? "bg-gray-100 text-gray-900" : "bg-gray-900 text-white"}`}>
-                {/* Main Content */}
                 <section className="py-8">
                     <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-                        {/* Order Summary - Full Width */}
+                        {/* Order Summary & Status */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -390,390 +462,509 @@ export default function OrderDetails() {
                             </div>
                         </motion.div>
 
-                        {/* File Sections - Equal Height */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-                            {/* Left Column - STL Files */}
+                        {/* File Upload & Table Section - 50/50 Layout */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            {/* File Upload - 50% width */}
                             <motion.div
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className={`rounded-xl shadow-lg flex flex-col ${theme === "light" ? "bg-white" : "bg-gray-800"}`}
+                                className={`rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}
                             >
-                                <div className="p-6 flex-1 flex flex-col">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                <div className="p-6 h-full">
+                                    <div className="flex items-center justify-between mb-6">
                                         <div className="flex items-center gap-3">
                                             <div className={`p-3 rounded-xl ${theme === "light" ? "bg-blue-100 text-blue-600" : "bg-blue-900 text-blue-300"}`}>
-                                                <FontAwesomeIcon icon={faCube} className="text-xl" />
+                                                <FontAwesomeIcon icon={faUpload} className="text-xl" />
                                             </div>
                                             <div>
-                                                <h3 className="text-xl font-bold">STL Files</h3>
+                                                <h3 className="text-xl font-bold">File Upload</h3>
                                                 <p className={`text-sm ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-                                                    {fileHistory.stl_files.length} file{fileHistory.stl_files.length !== 1 ? 's' : ''} uploaded
+                                                    Upload STL or Finished files
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Upload STL Section */}
-                                    <div className="mb-6">
-                                        <label className="font-bold block mb-3">Upload STL Files</label>
-                                        <div className={`card rounded-lg border-2 border-dashed ${theme === "light" ? "bg-gray-50 border-gray-300" : "bg-gray-700 border-gray-600"}`}>
-                                            <div className="card-body p-6">
-                                                <div className="text-center">
-                                                    <input
-                                                        type="file"
-                                                        ref={stlFileInputRef}
-                                                        accept=".stl"
-                                                        onChange={(e) => handleFileUpload(e, 'stl')}
-                                                        className="hidden"
-                                                    />
-                                                    <button
-                                                        onClick={() => stlFileInputRef.current?.click()}
-                                                        disabled={uploading}
-                                                        className={`inline-flex items-center gap-2 px-6 py-4 rounded-lg font-bold text-lg transition-all hover:scale-105 ${uploading
-                                                            ? 'bg-gray-400 cursor-not-allowed'
-                                                            : theme === "light"
-                                                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
-                                                                : 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg'
-                                                            }`}
-                                                    >
-                                                        <FontAwesomeIcon icon={faPlus} />
-                                                        <FontAwesomeIcon icon={faUpload} />
-                                                        Upload STL Files
-                                                    </button>
-                                                    <p className={`text-sm mt-3 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-                                                        Click to upload .STL files
-                                                    </p>
-                                                </div>
-                                            </div>
+                                    {/* File Upload Card */}
+                                    <div className={`rounded-lg border-2 border-dashed p-8 flex flex-col items-center justify-center h-[calc(100%-100px)] ${theme === "light" ? "bg-gray-50 border-gray-300" : "bg-gray-700 border-gray-600"}`}>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            accept=".stl,.zip,.rar,.7z"
+                                            onChange={handleFileUpload}
+                                            className="hidden"
+                                        />
+                                        <div className="text-center">
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={uploading}
+                                                className={`w-full flex flex-col items-center gap-3 px-8 py-8 rounded-lg font-bold text-lg transition-all hover:scale-105 ${uploading
+                                                    ? 'bg-gray-400 cursor-not-allowed'
+                                                    : theme === "light"
+                                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg'
+                                                        : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 shadow-lg'
+                                                    }`}
+                                            >
+                                                <FontAwesomeIcon icon={faUpload} className="text-3xl mb-2" />
+                                                Upload Files
+                                            </button>
+                                            <p className={`text-sm mt-4 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
+                                                Drag & drop or click to upload
+                                            </p>
+                                            <p className={`text-xs mt-2 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>
+                                                Supported: .STL, .ZIP, .RAR, .7Z
+                                            </p>
                                         </div>
-                                    </div>
-
-                                    {/* STL Files List */}
-                                    <div className="flex-1">
-                                        {fileHistory.stl_files.length > 0 ? (
-                                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                                                {fileHistory.stl_files.map((file, index) => (
-                                                    <div
-                                                        key={file.id}
-                                                        className={`flex items-center justify-between p-4 rounded-lg border ${theme === "light" ? "bg-gray-50 border-gray-200 hover:bg-gray-100" : "bg-gray-700 border-gray-600 hover:bg-gray-600"}`}
-                                                    >
-                                                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold ${theme === "light" ? "bg-blue-600" : "bg-blue-500"}`}>
-                                                                {index + 1}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className={`font-semibold truncate ${theme === "light" ? "text-gray-900" : "text-white"}`}>
-                                                                    {file.fname}
-                                                                </p>
-                                                                <p className={`text-sm ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-                                                                    Uploaded: {file.upload_date || 'N/A'}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => downloadFile(file.fname, file.url || file.path)}
-                                                                className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all hover:scale-105"
-                                                            >
-                                                                <FontAwesomeIcon icon={faDownload} />
-                                                                Download
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteFile(file.id, 'stl')}
-                                                                className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all hover:scale-105"
-                                                            >
-                                                                <FontAwesomeIcon icon={faTrash} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className={`text-center py-8 rounded-lg flex-1 flex items-center justify-center ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
-                                                <div>
-                                                    <FontAwesomeIcon icon={faCube} className="text-4xl mb-3 opacity-50" />
-                                                    <p className={`text-lg ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>No STL files uploaded yet</p>
-                                                    <p className={`text-sm mt-1 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>
-                                                        Upload your first STL file to get started
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </motion.div>
 
-                            {/* Right Column - Finished Files */}
+                            {/* Files Table - 50% width */}
                             <motion.div
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className={`rounded-xl shadow-lg flex flex-col ${theme === "light" ? "bg-white" : "bg-gray-800"}`}
+                                className={`rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}
                             >
-                                <div className="p-6 flex-1 flex flex-col">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                <div className="p-6 h-full">
+                                    <div className="flex items-center justify-between mb-6">
                                         <div className="flex items-center gap-3">
                                             <div className={`p-3 rounded-xl ${theme === "light" ? "bg-green-100 text-green-600" : "bg-green-900 text-green-300"}`}>
-                                                <FontAwesomeIcon icon={faArchive} className="text-xl" />
+                                                <FontAwesomeIcon icon={faFileAlt} className="text-xl" />
                                             </div>
                                             <div>
-                                                <h3 className="text-xl font-bold">Finished Files</h3>
+                                                <h3 className="text-xl font-bold">Uploaded Files</h3>
                                                 <p className={`text-sm ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-                                                    {fileHistory.finished_files.length} file{fileHistory.finished_files.length !== 1 ? 's' : ''} uploaded
+                                                    {fileHistory.stl_files.length + fileHistory.finished_files.length} total files
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Upload Finished Section */}
-                                    <div className="mb-6">
-                                        <label className="font-bold block mb-3">Upload Finished Files</label>
-                                        <div className={`card rounded-lg border-2 border-dashed ${theme === "light" ? "bg-gray-50 border-gray-300" : "bg-gray-700 border-gray-600"}`}>
-                                            <div className="card-body p-6">
-                                                <div className="text-center">
-                                                    <input
-                                                        type="file"
-                                                        ref={finishedFileInputRef}
-                                                        accept=".zip,.rar,.7z"
-                                                        onChange={(e) => handleFileUpload(e, 'finished')}
-                                                        className="hidden"
-                                                    />
-                                                    <button
-                                                        onClick={() => finishedFileInputRef.current?.click()}
-                                                        disabled={uploading}
-                                                        className={`inline-flex items-center gap-2 px-6 py-4 rounded-lg font-bold text-lg transition-all hover:scale-105 ${uploading
-                                                            ? 'bg-gray-400 cursor-not-allowed'
-                                                            : theme === "light"
-                                                                ? 'bg-green-600 text-white hover:bg-green-700 shadow-lg'
-                                                                : 'bg-green-500 text-white hover:bg-green-600 shadow-lg'
-                                                            }`}
-                                                    >
-                                                        <FontAwesomeIcon icon={faPlus} />
-                                                        <FontAwesomeIcon icon={faUpload} />
-                                                        Upload Finished Files
-                                                    </button>
-                                                    <p className={`text-sm mt-3 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-                                                        Accepted: .zip, .rar, .7z files only
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Finished Files List */}
-                                    <div className="flex-1">
-                                        {fileHistory.finished_files.length > 0 ? (
-                                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                                                {fileHistory.finished_files.map((file, index) => (
-                                                    <div
-                                                        key={file.id}
-                                                        className={`flex items-center justify-between p-4 rounded-lg border ${theme === "light" ? "bg-gray-50 border-gray-200 hover:bg-gray-100" : "bg-gray-700 border-gray-600 hover:bg-gray-600"}`}
-                                                    >
-                                                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold ${theme === "light" ? "bg-green-600" : "bg-green-500"}`}>
-                                                                {index + 1}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className={`font-semibold truncate ${theme === "light" ? "text-gray-900" : "text-white"}`}>
+                                    {/* Files Table */}
+                                    <div className="overflow-x-auto h-[calc(100%-100px)]">
+                                        <table className="w-full">
+                                            <thead>
+                                                <tr className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"}`}>
+                                                    <th className="py-3 px-4 text-left font-bold text-sm">Type</th>
+                                                    <th className="py-3 px-4 text-left font-bold text-sm">File Name</th>
+                                                    <th className="py-3 px-4 text-left font-bold text-sm">Upload Date</th>
+                                                    <th className="py-3 px-4 text-left font-bold text-sm">Size</th>
+                                                    <th className="py-3 px-4 text-left font-bold text-sm">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {[...fileHistory.stl_files, ...fileHistory.finished_files].map((file, index) => (
+                                                    <tr key={file.id} className={`border-b ${theme === "light" ? "border-gray-100 hover:bg-gray-50" : "border-gray-700 hover:bg-gray-700"}`}>
+                                                        <td className="py-3 px-4">
+                                                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${file.type === 'stl' || file.file_type === 'stl'
+                                                                ? 'bg-blue-100 text-blue-700'
+                                                                : 'bg-green-100 text-green-700'
+                                                                }`}>
+                                                                <FontAwesomeIcon icon={file.type === 'stl' || file.file_type === 'stl' ? faCube : faArchive} />
+                                                                {file.type === 'stl' || file.file_type === 'stl' ? 'STL' : 'Finished'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-3 px-4">
+                                                            <div className="flex items-center gap-2 max-w-[150px]">
+                                                                <FontAwesomeIcon icon={faFileAlt} className="text-gray-400 flex-shrink-0" />
+                                                                <span className="font-medium truncate" title={file.fname}>
                                                                     {file.fname}
-                                                                </p>
-                                                                <p className={`text-sm ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-                                                                    Uploaded: {file.upload_date || 'N/A'}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-3 px-4 text-sm">
+                                                            {file.upload_date || 'N/A'}
+                                                        </td>
+                                                        <td className="py-3 px-4 text-sm">
+                                                            {file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'N/A'}
+                                                        </td>
+                                                        <td className="py-3 px-4">
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => downloadFile(file.fname, file.url || file.path)}
+                                                                    className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-all"
+                                                                >
+                                                                    <FontAwesomeIcon icon={faDownload} />
+                                                                    Download
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteFile(file.id, file.type || file.file_type)}
+                                                                    className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition-all"
+                                                                >
+                                                                    <FontAwesomeIcon icon={faTrash} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {fileHistory.stl_files.length === 0 && fileHistory.finished_files.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan="5" className="py-8 text-center">
+                                                            <div className="flex flex-col items-center justify-center py-4">
+                                                                <FontAwesomeIcon icon={faFileAlt} className="text-3xl mb-3 opacity-50" />
+                                                                <p className={`text-lg ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>No files uploaded yet</p>
+                                                                <p className={`text-sm mt-1 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>
+                                                                    Upload your first file to get started
                                                                 </p>
                                                             </div>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => downloadFile(file.fname, file.url || file.path)}
-                                                                className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all hover:scale-105"
-                                                            >
-                                                                <FontAwesomeIcon icon={faDownload} />
-                                                                Download
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteFile(file.id, 'finished')}
-                                                                className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all hover:scale-105"
-                                                            >
-                                                                <FontAwesomeIcon icon={faTrash} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className={`text-center py-8 rounded-lg flex-1 flex items-center justify-center ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
-                                                <div>
-                                                    <FontAwesomeIcon icon={faArchive} className="text-4xl mb-3 opacity-50" />
-                                                    <p className={`text-lg ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>No finished files uploaded yet</p>
-                                                    <p className={`text-sm mt-1 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>
-                                                        Upload your first finished file (.zip, .rar, .7z)
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </motion.div>
                         </div>
 
-                        {/* ORDER SUMMARY */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="mt-8"
-                        >
-                            <div
-                                className={`rounded-xl shadow-md p-6 border
-            ${theme === "light"
-                                        ? "bg-white border-gray-200"
-                                        : "bg-gray-800 border-gray-700"
-                                    }`}
+                        {/* Order Summary & Chat Section */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Order Summary - Editable */}
+                            <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className={`rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}
                             >
-                                {/* Header */}
-                                <div className="flex items-center justify-between mb-6">
-                                    <h3
-                                        className={`text-xl font-bold flex items-center gap-2
-                    ${theme === "light" ? "text-gray-900" : "text-white"}
-                `}
-                                    >
-                                        <FontAwesomeIcon
-                                            icon={faFileCircleCheck}
-                                            className={theme === "light" ? "text-blue-600" : "text-blue-400"}
-                                        />
-                                        Order Summary
-                                    </h3>
+                                <div className="p-6">
+                                    {/* Header with Edit Button */}
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className={`text-xl font-bold flex items-center gap-2 ${theme === "light" ? "text-gray-900" : "text-white"}`}>
+                                            <FontAwesomeIcon icon={faFileCircleCheck} className="text-blue-600" />
+                                            Order Summary
+                                        </h3>
+                                        <div className="flex gap-2">
+                                            {isEditing ? (
+                                                <>
+                                                    <button
+                                                        onClick={handleSaveOrder}
+                                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all"
+                                                    >
+                                                        <FontAwesomeIcon icon={faSave} />
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        onClick={handleEditToggle}
+                                                        className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-all"
+                                                    >
+                                                        <FontAwesomeIcon icon={faTimes} />
+                                                        Cancel
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    onClick={handleEditToggle}
+                                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all"
+                                                >
+                                                    <FontAwesomeIcon icon={faEdit} />
+                                                    Edit
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
 
-                                    {/* Order ID Badge */}
-                                    <span
-                                        className={`
-                    px-3 py-1.5 rounded-full text-xs font-semibold
-                    ${theme === "light"
-                                                ? "bg-gray-100 text-gray-700"
-                                                : "bg-gray-700 text-gray-300"
-                                            }
-                `}
-                                    >
-                                        #{order?.orderid}
-                                    </span>
+                                    {/* Order Details Form */}
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                    User Order No
+                                                </label>
+                                                {isEditing ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editedOrder.user_order_no || ''}
+                                                        onChange={(e) => handleInputChange('user_order_no', e.target.value)}
+                                                        className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
+                                                            ? "bg-white border-gray-300 text-gray-900"
+                                                            : "bg-gray-700 border-gray-600 text-white"
+                                                            }`}
+                                                    />
+                                                ) : (
+                                                    <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
+                                                        {order?.user_order_no || "N/A"}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                    User ID
+                                                </label>
+                                                {isEditing ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editedOrder.userid || ''}
+                                                        onChange={(e) => handleInputChange('userid', e.target.value)}
+                                                        className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
+                                                            ? "bg-white border-gray-300 text-gray-900"
+                                                            : "bg-gray-700 border-gray-600 text-white"
+                                                            }`}
+                                                    />
+                                                ) : (
+                                                    <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
+                                                        {order?.userid || "N/A"}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                Lab Name
+                                            </label>
+                                            {isEditing ? (
+                                                <input
+                                                    type="text"
+                                                    value={editedOrder.labname || ''}
+                                                    onChange={(e) => handleInputChange('labname', e.target.value)}
+                                                    className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
+                                                        ? "bg-white border-gray-300 text-gray-900"
+                                                        : "bg-gray-700 border-gray-600 text-white"
+                                                        }`}
+                                                />
+                                            ) : (
+                                                <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
+                                                    {order?.labname || "N/A"}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                    Tooth
+                                                </label>
+                                                {isEditing ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editedOrder.tooth || ''}
+                                                        onChange={(e) => handleInputChange('tooth', e.target.value)}
+                                                        className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
+                                                            ? "bg-white border-gray-300 text-gray-900"
+                                                            : "bg-gray-700 border-gray-600 text-white"
+                                                            }`}
+                                                    />
+                                                ) : (
+                                                    <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
+                                                        {order?.tooth || "N/A"}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                    Unit
+                                                </label>
+                                                {isEditing ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editedOrder.unit || ''}
+                                                        onChange={(e) => handleInputChange('unit', e.target.value)}
+                                                        className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
+                                                            ? "bg-white border-gray-300 text-gray-900"
+                                                            : "bg-gray-700 border-gray-600 text-white"
+                                                            }`}
+                                                    />
+                                                ) : (
+                                                    <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
+                                                        {order?.unit || "N/A"}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                Product Type
+                                            </label>
+                                            {isEditing ? (
+                                                <select
+                                                    value={editedOrder.product_type || ''}
+                                                    onChange={(e) => handleInputChange('product_type', e.target.value)}
+                                                    className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
+                                                        ? "bg-white border-gray-300 text-gray-900"
+                                                        : "bg-gray-700 border-gray-600 text-white"
+                                                        }`}
+                                                >
+                                                    <option value="">Select Product Type</option>
+                                                    <option value="Crown">Crown</option>
+                                                    <option value="Bridge">Bridge</option>
+                                                    <option value="Veneer">Veneer</option>
+                                                    <option value="Denture">Denture</option>
+                                                    <option value="Implant">Implant</option>
+                                                </select>
+                                            ) : (
+                                                <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
+                                                    {order?.product_type || "N/A"}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                Turnaround Time
+                                            </label>
+                                            {isEditing ? (
+                                                <select
+                                                    value={editedOrder.tduration || ''}
+                                                    onChange={(e) => handleInputChange('tduration', e.target.value)}
+                                                    className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
+                                                        ? "bg-white border-gray-300 text-gray-900"
+                                                        : "bg-gray-700 border-gray-600 text-white"
+                                                        }`}
+                                                >
+                                                    <option value="">Select TAT</option>
+                                                    <option value="Rush">Rush (1-2 Hours)</option>
+                                                    <option value="Same Day">Same Day (6 Hours)</option>
+                                                    <option value="Next Day">Next Day (12 Hours)</option>
+                                                    <option value="Standard">Standard</option>
+                                                </select>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <p className={`p-2 rounded-lg text-sm flex-1 ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
+                                                        {order?.tduration === "Rush"
+                                                            ? "1–2 Hours"
+                                                            : order?.tduration === "Same Day"
+                                                                ? "6 Hours"
+                                                                : order?.tduration === "Next Day"
+                                                                    ? "12 Hours"
+                                                                    : "Standard"}
+                                                    </p>
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${theme === "light"
+                                                        ? "bg-blue-100 text-blue-700"
+                                                        : "bg-blue-900 text-blue-300"
+                                                        }`}>
+                                                        {order?.tduration || "N/A"}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                Order Date
+                                            </label>
+                                            {isEditing ? (
+                                                <input
+                                                    type="date"
+                                                    value={editedOrder.order_date || ''}
+                                                    onChange={(e) => handleInputChange('order_date', e.target.value)}
+                                                    className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
+                                                        ? "bg-white border-gray-300 text-gray-900"
+                                                        : "bg-gray-700 border-gray-600 text-white"
+                                                        }`}
+                                                />
+                                            ) : (
+                                                <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
+                                                    {order?.order_date || "N/A"}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
+                            </motion.div>
 
-                                {/* GRID */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6">
-
-                                    {/* Order ID */}
-                                    <div>
-                                        <p className={`${theme === "light" ? "text-gray-500" : "text-gray-400"} text-xs uppercase tracking-wide`}>
-                                            Order ID
-                                        </p>
-                                        <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-base font-medium mt-1`}>
-                                            {order?.orderid || "N/A"}
-                                        </p>
-                                    </div>
-
-                                    {/* User Order No */}
-                                    <div>
-                                        <p className={`${theme === "light" ? "text-gray-500" : "text-gray-400"} text-xs uppercase tracking-wide`}>
-                                            User Order No
-                                        </p>
-                                        <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-base font-medium mt-1`}>
-                                            {order?.user_order_no || "N/A"}
-                                        </p>
-                                    </div>
-
-                                    {/* User ID */}
-                                    <div>
-                                        <p className={`${theme === "light" ? "text-gray-500" : "text-gray-400"} text-xs uppercase tracking-wide`}>
-                                            User ID
-                                        </p>
-                                        <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-base font-medium mt-1`}>
-                                            {order?.userid || "N/A"}
-                                        </p>
-                                    </div>
-
-                                    {/* Lab Name */}
-                                    <div>
-                                        <p className={`${theme === "light" ? "text-gray-500" : "text-gray-400"} text-xs uppercase tracking-wide`}>
-                                            Lab Name
-                                        </p>
-                                        <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-base font-medium mt-1`}>
-                                            {order?.labname || "N/A"}
-                                        </p>
-                                    </div>
-
-                                    {/* Order Date */}
-                                    <div>
-                                        <p className={`${theme === "light" ? "text-gray-500" : "text-gray-400"} text-xs uppercase tracking-wide`}>
-                                            Order Date
-                                        </p>
-                                        <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-base font-medium mt-1`}>
-                                            {order?.order_date || "N/A"}
-                                        </p>
-                                    </div>
-
-                                    {/* Tooth */}
-                                    <div>
-                                        <p className={`${theme === "light" ? "text-gray-500" : "text-gray-400"} text-xs uppercase tracking-wide`}>
-                                            Tooth
-                                        </p>
-                                        <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-base font-medium mt-1`}>
-                                            {order?.tooth || "N/A"}
-                                        </p>
-                                    </div>
-
-                                    {/* Unit */}
-                                    <div>
-                                        <p className={`${theme === "light" ? "text-gray-500" : "text-gray-400"} text-xs uppercase tracking-wide`}>
-                                            Unit
-                                        </p>
-                                        <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-base font-medium mt-1`}>
-                                            {order?.unit || "N/A"}
-                                        </p>
-                                    </div>
-
-                                    {/* Product Type */}
-                                    <div className="sm:col-span-2 lg:col-span-1">
-                                        <p className={`${theme === "light" ? "text-gray-500" : "text-gray-400"} text-xs uppercase tracking-wide`}>
-                                            Product Type
-                                        </p>
-                                        <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-base font-medium mt-1`}>
-                                            {order?.product_type || "N/A"}
-                                        </p>
-                                    </div>
-
-                                    {/* TAT */}
-                                    <div>
-                                        <p className={`${theme === "light" ? "text-gray-500" : "text-gray-400"} text-xs uppercase tracking-wide`}>
-                                            Turnaround Time
-                                        </p>
-
-                                        <p className={`${theme === "light" ? "text-gray-900" : "text-white"} text-base font-medium mt-1`}>
-                                            {order?.tduration === "Rush"
-                                                ? "1–2 Hours"
-                                                : order?.tduration === "Same Day"
-                                                    ? "6 Hours"
-                                                    : order?.tduration === "Next Day"
-                                                        ? "12 Hours"
-                                                        : "Standard"}
-                                        </p>
-
-                                        <span
-                                            className={`
-                        inline-block mt-2 text-[10px] px-2 py-1 rounded-full font-semibold
-                        ${theme === "light"
-                                                    ? "bg-blue-100 text-blue-700"
-                                                    : "bg-blue-900 text-blue-300"
-                                                }
-                    `}
+                            {/* Chat Section - Show Chatbox Instructions */}
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className={`rounded-xl shadow-lg flex flex-col ${theme === "light" ? "bg-white" : "bg-gray-800"}`}
+                            >
+                                <div className="p-6 flex-1 flex flex-col h-full">
+                                    {/* Chat Header with Open Chat Button */}
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-lg ${theme === "light" ? "bg-blue-100 text-blue-600" : "bg-blue-900 text-blue-300"}`}>
+                                                <FontAwesomeIcon icon={faComments} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-bold">Order Chat</h3>
+                                                <p className={`text-sm ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
+                                                    Real-time communication for order #{order?.orderid}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={showFloatingChat}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${theme === "light"
+                                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                            }`}
                                         >
-                                            {order?.tduration || "N/A"}
-                                        </span>
+                                            <FontAwesomeIcon icon={faPaperPlane} />
+                                            Open Chat
+                                        </button>
                                     </div>
 
+                                    {/* Chat Instructions */}
+                                    <div className={`flex-1 rounded-lg border-2 border-dashed p-8 flex flex-col items-center justify-center ${theme === "light" ? "bg-gray-50 border-gray-300" : "bg-gray-700 border-gray-600"}`}>
+                                        <div className="text-center">
+                                            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${theme === "light" ? "bg-blue-100 text-blue-600" : "bg-blue-900 text-blue-300"}`}>
+                                                <FontAwesomeIcon icon={faComments} className="text-2xl" />
+                                            </div>
+                                            <h4 className={`text-lg font-bold mb-2 ${theme === "light" ? "text-gray-800" : "text-white"}`}>
+                                                Chat with Support Team
+                                            </h4>
+                                            <p className={`mb-6 ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>
+                                                Click "Open Chat" to start a conversation about this order.
+                                            </p>
+                                            
+                                            <div className="space-y-3 text-left max-w-md mx-auto">
+                                                <div className={`flex items-start gap-3 p-3 rounded-lg ${theme === "light" ? "bg-blue-50" : "bg-blue-900/30"}`}>
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${theme === "light" ? "bg-green-100 text-green-600" : "bg-green-900 text-green-300"}`}>
+                                                        <FontAwesomeIcon icon={faUser} className="text-sm" />
+                                                    </div>
+                                                    <div>
+                                                        <p className={`font-semibold text-sm ${theme === "light" ? "text-gray-800" : "text-white"}`}>Your Messages</p>
+                                                        <p className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>Will appear on the right side</p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className={`flex items-start gap-3 p-3 rounded-lg ${theme === "light" ? "bg-gray-100" : "bg-gray-700"}`}>
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${theme === "light" ? "bg-blue-100 text-blue-600" : "bg-blue-900 text-blue-300"}`}>
+                                                        <FontAwesomeIcon icon={faRobot} className="text-sm" />
+                                                    </div>
+                                                    <div>
+                                                        <p className={`font-semibold text-sm ${theme === "light" ? "text-gray-800" : "text-white"}`}>Support Team</p>
+                                                        <p className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>Will appear on the left side</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="mt-6">
+                                                <button
+                                                    onClick={showFloatingChat}
+                                                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all hover:scale-105 ${theme === "light"
+                                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg'
+                                                        : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 shadow-lg'
+                                                    }`}
+                                                >
+                                                    <FontAwesomeIcon icon={faPaperPlane} />
+                                                    Launch Chat Window
+                                                </button>
+                                                <p className={`text-xs mt-3 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
+                                                    Drag the chat window anywhere on your screen
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Chat Features */}
+                                    <div className="mt-6 grid grid-cols-2 gap-3">
+                                        <div className={`text-center p-3 rounded-lg ${theme === "light" ? "bg-green-50" : "bg-green-900/20"}`}>
+                                            <FontAwesomeIcon icon={faFileAlt} className={`text-sm mb-1 ${theme === "light" ? "text-green-600" : "text-green-400"}`} />
+                                            <p className={`text-xs font-semibold ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>File Sharing</p>
+                                            <p className={`text-xs ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>Share files directly</p>
+                                        </div>
+                                        <div className={`text-center p-3 rounded-lg ${theme === "light" ? "bg-blue-50" : "bg-blue-900/20"}`}>
+                                            <FontAwesomeIcon icon={faDownload} className={`text-sm mb-1 ${theme === "light" ? "text-blue-600" : "text-blue-400"}`} />
+                                            <p className={`text-xs font-semibold ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>Real-time</p>
+                                            <p className={`text-xs ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>Instant messaging</p>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
-
-
+                            </motion.div>
+                        </div>
                     </div>
                 </section>
             </main>

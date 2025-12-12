@@ -9,6 +9,8 @@ import { fetchWithAuth } from '../../utils/userapi';
 export default function Completed() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     const columns = [
         { header: "Order Id", accessor: "orderid" },
@@ -25,6 +27,9 @@ export default function Completed() {
     useEffect(() => {
         async function fetchCompletedCases() {
             try {
+                setLoading(true);
+                setError(null);
+
                 const data = await fetchWithAuth('get-completed', {
                     method: "GET",
                 });
@@ -33,10 +38,14 @@ export default function Completed() {
                     setData(data.new_cases || []);
                 } else {
                     setData([]);
+                    setError("No data found ! in the server");
                 }
             } catch (error) {
                 console.error("Error fetching cases:", error);
                 setData([]);
+                setError("Network error. Please check your connection.");
+            } finally {
+                setLoading(false);
             }
         }
 
@@ -49,7 +58,7 @@ export default function Completed() {
             <Hd />
             <main id="main" className={`flex-grow px-4 transition-colors duration-300 ${theme === 'light' ? 'bg-white text-black' : 'bg-black text-white'} pt-16 sm:pt-22`}>
                 <Dashboard />
-                <Datatable columns={columns} data={data} rowsPerPage={50} />
+                <Datatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
             </main>
             <Foot />
         </>

@@ -19,6 +19,8 @@ export default function Datatable({
     columns = [],
     data = [],
     rowsPerPageOptions = [50, 100, 200, 500],
+    loading = false,
+    error = null
 }) {
     const { theme } = useContext(ThemeContext);
     const [status, setStatus] = useState("show");
@@ -31,6 +33,15 @@ export default function Datatable({
     // ✅ NEW STATES for multi-select & dropdown
     const [selectedRows, setSelectedRows] = useState([]);
     const [fileType, setFileType] = useState("initial");
+
+    // ✅ Control loader based on parent's loading prop
+    useEffect(() => {
+        if (!loading) {
+            setStatus("hide");
+        } else {
+            setStatus("show");
+        }
+    }, [loading]);
 
     // Filter & Sort
     const filteredData = useMemo(() => {
@@ -77,13 +88,6 @@ export default function Datatable({
         const start = (currentPage - 1) * rowsPerPage;
         return filteredData.slice(start, start + rowsPerPage);
     }, [currentPage, filteredData, rowsPerPage]);
-
-    // ✅ Spinner control: hide loader once data is ready
-    useEffect(() => {
-        if (data && data.length > 0) {
-            setStatus("hide");
-        }
-    }, [data]);
 
     const handleSearch = (e) => {
         setSearch(e.target.value);
@@ -390,7 +394,22 @@ export default function Datatable({
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {paginatedData.length > 0 ? (
+                                            {/* SHOW ERROR OR NO DATA IN TABLE BODY */}
+                                            {error || paginatedData.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={columns.length + 1} className="p-8 text-center">
+                                                        <div className={`flex flex-col items-center justify-center p-8 rounded-lg ${getNoDataClass()}`}>
+                                                            <FontAwesomeIcon icon={faFolderOpen} size="3x" className="mb-4 text-blue-500 opacity-60" />
+                                                            <p className="text-lg font-medium mb-2">
+                                                                {error ? "Error Loading Data" : "No records found"}
+                                                            </p>
+                                                            <p className="text-sm opacity-75">
+                                                                {error || (data.length === 0 ? "No data available" : "Try adjusting your search criteria")}
+                                                            </p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
                                                 paginatedData.map((row, idx) => (
                                                     <tr key={idx} className={`${getTableRowClass(idx)} transition-colors duration-200`}>
                                                         {/* Checkbox Cell */}
@@ -480,24 +499,14 @@ export default function Datatable({
                                                         ))}
                                                     </tr>
                                                 ))
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={columns.length + 1} className="p-8 text-center">
-                                                        <div className={`flex flex-col items-center justify-center p-8 rounded-lg ${getNoDataClass()}`}>
-                                                            <FontAwesomeIcon icon={faFolderOpen} size="3x" className="mb-4 text-blue-500 opacity-60" />
-                                                            <p className="text-lg font-medium mb-2">No records found</p>
-                                                            <p className="text-sm opacity-75">Try adjusting your search criteria</p>
-                                                        </div>
-                                                    </td>
-                                                </tr>
                                             )}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
 
-                            {/* Pagination */}
-                            {paginatedData.length > 0 && (
+                            {/* Pagination - Only show when we have data and no error */}
+                            {!error && paginatedData.length > 0 && (
                                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
                                     <div className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
                                         Showing <span className="font-bold">{paginatedData.length}</span> of <span className="font-bold">{filteredData.length}</span> entries
