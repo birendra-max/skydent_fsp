@@ -401,7 +401,7 @@ export default function Datatable({
                                                         <div className={`flex flex-col items-center justify-center p-8 rounded-lg ${getNoDataClass()}`}>
                                                             <FontAwesomeIcon icon={faFolderOpen} size="3x" className="mb-4 text-blue-500 opacity-60" />
                                                             <p className="text-lg font-medium mb-2">
-                                                                {error ? "Error Loading Data" : "No records found"}
+                                                                {error ? "No data found" : "No records found"}
                                                             </p>
                                                             <p className="text-sm opacity-75">
                                                                 {error || (data.length === 0 ? "No data available" : "Try adjusting your search criteria")}

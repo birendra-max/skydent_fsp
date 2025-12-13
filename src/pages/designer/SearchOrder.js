@@ -11,6 +11,9 @@ export default function SearchOrder() {
     const { id } = useParams();
     const token = localStorage.getItem('token');
     const base_url = localStorage.getItem('base_url');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
     const columns = [
         { header: "Order Id", accessor: "orderid" },
         { header: "File Name", accessor: "fname" },
@@ -26,6 +29,8 @@ export default function SearchOrder() {
     useEffect(() => {
         async function fetchNewCases() {
             try {
+                setLoading(true);
+                setError(null);
                 const data = await fetch(`${base_url}/get-order/${id}`, {
                     method: "GET",
                     headers: {
@@ -40,10 +45,13 @@ export default function SearchOrder() {
                     setData(resp.order);
                 } else {
                     setData([]);
+                    setError("No data found ! in the server");
                 }
             } catch (error) {
-                console.error("Error fetching cases:", error);
                 setData([]);
+                setError("Network error. Please check your connection.");
+            } finally {
+                setLoading(false);
             }
         }
 
@@ -54,7 +62,7 @@ export default function SearchOrder() {
         <>
             <Hd />
             <main id="main" className={`flex-grow px-4 transition-colors duration-300 ${theme === 'light' ? 'bg-white text-black' : 'bg-black text-white'} pt-16 sm:pt-22`}>
-                <Datatable columns={columns} data={data} rowsPerPage={50} />
+                <Datatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
             </main>
             <Foot />
         </>

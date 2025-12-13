@@ -198,7 +198,7 @@ export default function OrderDetails() {
         // Determine file type based on extension
         const fileName = file.name.toLowerCase();
         let fileType = '';
-        
+
         if (fileName.endsWith('.stl')) {
             fileType = 'stl';
         } else if (fileName.endsWith('.zip') || fileName.endsWith('.rar') || fileName.endsWith('.7z')) {
@@ -342,10 +342,10 @@ export default function OrderDetails() {
         <>
             <Toaster position="top-right" />
             <Hd />
-            
+
             {/* Chatbox Component - Floating/Draggable */}
             <Chatbox orderid={id} />
-            
+
             <main className={`min-h-screen py-12 ${theme === "light" ? "bg-gray-100 text-gray-900" : "bg-gray-900 text-white"}`}>
                 <section className="py-8">
                     <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -545,61 +545,81 @@ export default function OrderDetails() {
                                         <table className="w-full">
                                             <thead>
                                                 <tr className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"}`}>
-                                                    <th className="py-3 px-4 text-left font-bold text-sm">Type</th>
                                                     <th className="py-3 px-4 text-left font-bold text-sm">File Name</th>
-                                                    <th className="py-3 px-4 text-left font-bold text-sm">Upload Date</th>
-                                                    <th className="py-3 px-4 text-left font-bold text-sm">Size</th>
                                                     <th className="py-3 px-4 text-left font-bold text-sm">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {[...fileHistory.stl_files, ...fileHistory.finished_files].map((file, index) => (
-                                                    <tr key={file.id} className={`border-b ${theme === "light" ? "border-gray-100 hover:bg-gray-50" : "border-gray-700 hover:bg-gray-700"}`}>
-                                                        <td className="py-3 px-4">
-                                                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${file.type === 'stl' || file.file_type === 'stl'
-                                                                ? 'bg-blue-100 text-blue-700'
-                                                                : 'bg-green-100 text-green-700'
-                                                                }`}>
-                                                                <FontAwesomeIcon icon={file.type === 'stl' || file.file_type === 'stl' ? faCube : faArchive} />
-                                                                {file.type === 'stl' || file.file_type === 'stl' ? 'STL' : 'Finished'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="py-3 px-4">
-                                                            <div className="flex items-center gap-2 max-w-[150px]">
-                                                                <FontAwesomeIcon icon={faFileAlt} className="text-gray-400 flex-shrink-0" />
-                                                                <span className="font-medium truncate" title={file.fname}>
-                                                                    {file.fname}
-                                                                </span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="py-3 px-4 text-sm">
-                                                            {file.upload_date || 'N/A'}
-                                                        </td>
-                                                        <td className="py-3 px-4 text-sm">
-                                                            {file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'N/A'}
-                                                        </td>
-                                                        <td className="py-3 px-4">
-                                                            <div className="flex gap-2">
-                                                                <button
-                                                                    onClick={() => downloadFile(file.fname, file.url || file.path)}
-                                                                    className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-all"
-                                                                >
-                                                                    <FontAwesomeIcon icon={faDownload} />
-                                                                    Download
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteFile(file.id, file.type || file.file_type)}
-                                                                    className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition-all"
-                                                                >
-                                                                    <FontAwesomeIcon icon={faTrash} />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                {[...fileHistory.stl_files, ...fileHistory.finished_files].map((file, index) => {
+                                                    // Determine file type and icon
+                                                    const isStlFile = file.type === 'stl' || file.file_type === 'stl' ||
+                                                        (file.fname && file.fname.toLowerCase().endsWith('.stl'));
+                                                    const fileIcon = isStlFile ? faCube : faArchive;
+
+                                                    return (
+                                                        <tr key={file.id || index} className={`border-b ${theme === "light" ? "border-gray-100 hover:bg-gray-50" : "border-gray-700 hover:bg-gray-700"}`}>
+                                                            <td className="py-3 px-4">
+                                                                <div className="flex items-start gap-3">
+                                                                    {/* File Icon */}
+                                                                    <div className="mt-1">
+                                                                        <FontAwesomeIcon
+                                                                            icon={fileIcon}
+                                                                            className={`text-lg ${isStlFile ? 'text-blue-500' : 'text-green-500'}`}
+                                                                        />
+                                                                    </div>
+
+                                                                    {/* File Name and Upload Date */}
+                                                                    <div>
+                                                                        <p className={`font-semibold ${theme === "light" ? "text-gray-900" : "text-white"}`} title={file.fname}>
+                                                                            {file.fname}
+                                                                        </p>
+                                                                        <p className={`text-xs mt-1 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
+                                                                            <FontAwesomeIcon icon={faClock} className="mr-1 text-xs" />
+                                                                            Uploaded: {file.upload_date || 'N/A'}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-3 px-4">
+                                                                <div className="flex gap-2">
+                                                                    {/* EXACT SAME DOWNLOAD BUTTON AS WORKING COMPONENT */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            // Try the same properties as your working component
+                                                                            const filePath = file.url || file.path || file.file_path;
+                                                                            if (filePath) {
+                                                                                downloadFile(file.fname, filePath);
+                                                                            } else {
+                                                                                toast.error("File path not found!");
+                                                                                console.log("File object:", file);
+                                                                            }
+                                                                        }}
+                                                                        className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-all"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faDownload} />
+                                                                        Download
+                                                                    </button>
+
+                                                                    {/* EXACT SAME DELETE BUTTON AS WORKING COMPONENT */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            // Determine file type for delete
+                                                                            const fileType = file.type || file.file_type ||
+                                                                                (isStlFile ? 'stl' : 'finished');
+                                                                            handleDeleteFile(file.id, fileType);
+                                                                        }}
+                                                                        className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition-all"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faTrash} />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
                                                 {fileHistory.stl_files.length === 0 && fileHistory.finished_files.length === 0 && (
                                                     <tr>
-                                                        <td colSpan="5" className="py-8 text-center">
+                                                        <td colSpan="2" className="py-8 text-center">
                                                             <div className="flex flex-col items-center justify-center py-4">
                                                                 <FontAwesomeIcon icon={faFileAlt} className="text-3xl mb-3 opacity-50" />
                                                                 <p className={`text-lg ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>No files uploaded yet</p>
@@ -889,7 +909,7 @@ export default function OrderDetails() {
                                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${theme === "light"
                                                 ? 'bg-blue-600 hover:bg-blue-700 text-white'
                                                 : 'bg-blue-500 hover:bg-blue-600 text-white'
-                                            }`}
+                                                }`}
                                         >
                                             <FontAwesomeIcon icon={faPaperPlane} />
                                             Open Chat
@@ -908,7 +928,7 @@ export default function OrderDetails() {
                                             <p className={`mb-6 ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>
                                                 Click "Open Chat" to start a conversation about this order.
                                             </p>
-                                            
+
                                             <div className="space-y-3 text-left max-w-md mx-auto">
                                                 <div className={`flex items-start gap-3 p-3 rounded-lg ${theme === "light" ? "bg-blue-50" : "bg-blue-900/30"}`}>
                                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${theme === "light" ? "bg-green-100 text-green-600" : "bg-green-900 text-green-300"}`}>
@@ -919,7 +939,7 @@ export default function OrderDetails() {
                                                         <p className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>Will appear on the right side</p>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className={`flex items-start gap-3 p-3 rounded-lg ${theme === "light" ? "bg-gray-100" : "bg-gray-700"}`}>
                                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${theme === "light" ? "bg-blue-100 text-blue-600" : "bg-blue-900 text-blue-300"}`}>
                                                         <FontAwesomeIcon icon={faRobot} className="text-sm" />
@@ -930,14 +950,14 @@ export default function OrderDetails() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="mt-6">
                                                 <button
                                                     onClick={showFloatingChat}
                                                     className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all hover:scale-105 ${theme === "light"
                                                         ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg'
                                                         : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 shadow-lg'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <FontAwesomeIcon icon={faPaperPlane} />
                                                     Launch Chat Window
@@ -948,7 +968,7 @@ export default function OrderDetails() {
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Chat Features */}
                                     <div className="mt-6 grid grid-cols-2 gap-3">
                                         <div className={`text-center p-3 rounded-lg ${theme === "light" ? "bg-green-50" : "bg-green-900/20"}`}>
