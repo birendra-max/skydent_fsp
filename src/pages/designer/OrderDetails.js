@@ -1,4 +1,4 @@
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useContext, useRef } from "react";
 import { motion } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
@@ -17,7 +17,6 @@ import {
     faArchive,
     faClock,
     faBackward,
-    faPlus,
     faFileCircleCheck,
     faEdit,
     faSave,
@@ -42,13 +41,11 @@ export default function OrderDetails() {
     const [uploading, setUploading] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedOrder, setEditedOrder] = useState({});
-    const [showChat, setShowChat] = useState(false);
     const navigate = useNavigate();
 
     const base_url = localStorage.getItem("base_url");
     const token = localStorage.getItem("token");
     const fileInputRef = useRef(null);
-    const chatContainerRef = useRef(null);
 
     // Fetch order details
     useEffect(() => {
@@ -109,7 +106,36 @@ export default function OrderDetails() {
         if (id) fetchOrderDetails();
     }, [id]);
 
+    // Helper to convert database date to YYYY-MM-DD for input
+    const parseDateForInput = (dateString) => {
+        if (!dateString) return '';
+
+        try {
+            // Format: 13-Dec-2025 02:03:38pm
+            const datePart = dateString.split(' ')[0]; // Get "13-Dec-2025"
+            const [day, monthStr, year] = datePart.split('-');
+
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthIndex = monthNames.indexOf(monthStr);
+
+            if (monthIndex !== -1) {
+                const month = (monthIndex + 1).toString().padStart(2, '0');
+                return `${year}-${month}-${day.padStart(2, '0')}`;
+            }
+        } catch (e) {
+            console.error("Date parsing error:", e);
+        }
+
+        return '';
+    };
+
     const handleStatusUpdate = async () => {
+        if (!selectedStatus) {
+            toast.error("Please select a status");
+            return;
+        }
+
         toast.loading("Updating order status...");
         try {
             const response = await fetch(`${base_url}/update-order-status`, {
@@ -128,7 +154,9 @@ export default function OrderDetails() {
                 setOrder((prev) => ({ ...prev, status: selectedStatus }));
                 setEditedOrder((prev) => ({ ...prev, status: selectedStatus }));
                 toast.success("Order status updated successfully!");
-            } else toast.error("Failed to update order status");
+            } else {
+                toast.error(resp.message || "Failed to update order status");
+            }
         } catch (error) {
             console.error("Error updating status:", error);
             toast.error("Error updating order status");
@@ -159,7 +187,7 @@ export default function OrderDetails() {
                 toast.success("File deleted successfully!");
                 await fetchFileHistory();
             } else {
-                toast.error("Failed to delete file");
+                toast.error(resp.message || "Failed to delete file");
             }
         } catch (error) {
             console.error("Error deleting file:", error);
@@ -195,7 +223,6 @@ export default function OrderDetails() {
         const file = event.target.files[0];
         if (!file) return;
 
-        // Determine file type based on extension
         const fileName = file.name.toLowerCase();
         let fileType = '';
 
@@ -245,14 +272,23 @@ export default function OrderDetails() {
     };
 
     const downloadFile = (filename, path) => {
-        if (!path) return;
+        if (!path) {
+            toast.error("File path not found!");
+            return;
+        }
+
+        if (path.startsWith('http')) {
+            window.open(path, '_blank');
+            return;
+        }
+
         const encodedPath = encodeURIComponent(path);
         const finalUrl = `${base_url}/download?path=${encodedPath}`;
 
         const link = document.createElement("a");
         link.href = finalUrl;
         link.target = "_blank";
-        link.download = filename;
+        link.download = filename || "download";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -269,6 +305,44 @@ export default function OrderDetails() {
     const handleSaveOrder = async () => {
         toast.loading("Saving order details...");
         try {
+            const updates = {};
+            const editableFields = [
+                'user_order_no',
+                'labname',
+                'tooth',
+                'unit',
+                'product_type',
+                'tduration',
+                'message',
+                'status',
+                'fname',
+                'file_path',
+                'stl_file_path',
+                'finish_file_path'
+            ];
+
+            // Check for changes
+            editableFields.forEach(field => {
+                const originalValue = order?.[field];
+                const editedValue = editedOrder[field];
+
+                if (editedValue !== undefined && editedValue !== originalValue) {
+                    updates[field] = editedValue;
+                }
+            });
+
+            if (Object.keys(updates).length === 0) {
+                toast.dismiss();
+                toast.error("No changes to save");
+                return;
+            }
+
+            console.log("Sending to backend:", {
+                orderid: id,
+                userid: order?.userid,
+                updates: updates
+            });
+
             const response = await fetch(`${base_url}/update-order-details`, {
                 method: "POST",
                 headers: {
@@ -278,22 +352,30 @@ export default function OrderDetails() {
                 },
                 body: JSON.stringify({
                     orderid: id,
-                    updates: editedOrder
+                    userid: order?.userid,
+                    updates: updates
                 }),
             });
 
             const resp = await response.json();
+            console.log("Backend response:", resp);
+
             toast.dismiss();
+
             if (resp.status === "success") {
-                setOrder(editedOrder);
+                toast.success(resp.message || "Order details updated successfully!");
+                if (resp.order) {
+                    setOrder(resp.order);
+                    setEditedOrder(resp.order);
+                }
                 setIsEditing(false);
-                toast.success("Order details updated successfully!");
             } else {
-                toast.error("Failed to update order details");
+                toast.error(resp.message || "Failed to update order details");
             }
         } catch (error) {
             console.error("Error updating order:", error);
-            toast.error("Error updating order details");
+            toast.dismiss();
+            toast.error("Error updating order details: " + error.message);
         }
     };
 
@@ -304,7 +386,6 @@ export default function OrderDetails() {
         }));
     };
 
-    // Function to show the floating chatbox
     const showFloatingChat = () => {
         const chatbox = document.getElementById('chatbox');
         if (chatbox) {
@@ -343,7 +424,6 @@ export default function OrderDetails() {
             <Toaster position="top-right" />
             <Hd />
 
-            {/* Chatbox Component - Floating/Draggable */}
             <Chatbox orderid={id} />
 
             <main className={`min-h-screen py-12 ${theme === "light" ? "bg-gray-100 text-gray-900" : "bg-gray-900 text-white"}`}>
@@ -353,7 +433,7 @@ export default function OrderDetails() {
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className={`rounded-xl shadow-lg mb-8 ${theme === "light" ? "bg-white" : "bg-gray-800"}`}
+                            className={`rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}
                         >
                             <div className="p-6">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -368,7 +448,7 @@ export default function OrderDetails() {
                                         </label>
                                         <span className={`ml-2 px-4 py-2 rounded-full text-sm font-bold ${order?.status === 'Completed'
                                             ? 'bg-green-500 text-white'
-                                            : order?.status === 'Cancel'
+                                            : order?.status === 'Cancel' || order?.status === 'Cancelled'
                                                 ? 'bg-red-500 text-white'
                                                 : 'bg-yellow-500 text-gray-900'
                                             }`}>
@@ -376,15 +456,17 @@ export default function OrderDetails() {
                                         </span>
                                     </div>
                                     <div className="text-right">
-                                        <button onClick={() => navigate(-1)} className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg cursor-pointer">
+                                        <button
+                                            onClick={() => navigate(-1)}
+                                            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg cursor-pointer"
+                                        >
                                             <FontAwesomeIcon icon={faBackward} className="mr-2" />
                                             Back to Orders
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* Status Update Form */}
-                                <form className="border-t pt-6">
+                                <div className="border-t pt-6">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
                                         <div className="lg:col-span-7">
                                             <label className="font-bold block mb-3 text-lg">Initial Scan: </label>
@@ -393,9 +475,7 @@ export default function OrderDetails() {
                                                     <FontAwesomeIcon icon={faFileAlt} className="text-blue-500 text-xl" />
                                                     <div className="flex-1">
                                                         <a
-                                                            href={order.file_path}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
+                                                            href="#"
                                                             className="text-blue-600 hover:text-blue-800 hover:underline font-semibold text-lg"
                                                             onClick={(e) => {
                                                                 e.preventDefault();
@@ -405,7 +485,7 @@ export default function OrderDetails() {
                                                             {order?.fname}
                                                         </a>
                                                         <p className={`text-sm ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-                                                            Uploaded: {order?.order_date ? new Date(order.order_date).toLocaleDateString() : 'N/A'}
+                                                            Uploaded: {order?.order_date || 'N/A'}
                                                         </p>
                                                     </div>
                                                     <button
@@ -448,8 +528,8 @@ export default function OrderDetails() {
                                             <button
                                                 type="button"
                                                 onClick={handleStatusUpdate}
-                                                disabled={uploading}
-                                                className={`w-full py-3 rounded-lg font-bold transition-all cursor-pointer ${uploading
+                                                disabled={uploading || !selectedStatus}
+                                                className={`w-full py-3 rounded-lg font-bold transition-all cursor-pointer ${uploading || !selectedStatus
                                                     ? 'bg-gray-400 cursor-not-allowed'
                                                     : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg'
                                                     }`}
@@ -458,13 +538,13 @@ export default function OrderDetails() {
                                             </button>
                                         </div>
                                     </div>
-                                </form>
+                                </div>
                             </div>
                         </motion.div>
 
-                        {/* File Upload & Table Section - 50/50 Layout */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                            {/* File Upload - 50% width */}
+                        {/* File Upload & Table Section */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 mt-8">
+                            {/* File Upload */}
                             <motion.div
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -485,7 +565,6 @@ export default function OrderDetails() {
                                         </div>
                                     </div>
 
-                                    {/* File Upload Card */}
                                     <div className={`rounded-lg border-2 border-dashed p-8 flex flex-col items-center justify-center h-[calc(100%-100px)] ${theme === "light" ? "bg-gray-50 border-gray-300" : "bg-gray-700 border-gray-600"}`}>
                                         <input
                                             type="file"
@@ -493,6 +572,7 @@ export default function OrderDetails() {
                                             accept=".stl,.zip,.rar,.7z"
                                             onChange={handleFileUpload}
                                             className="hidden"
+                                            disabled={uploading}
                                         />
                                         <div className="text-center">
                                             <button
@@ -506,7 +586,7 @@ export default function OrderDetails() {
                                                     }`}
                                             >
                                                 <FontAwesomeIcon icon={faUpload} className="text-3xl mb-2" />
-                                                Upload Files
+                                                {uploading ? 'Uploading...' : 'Upload Files'}
                                             </button>
                                             <p className={`text-sm mt-4 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
                                                 Drag & drop or click to upload
@@ -519,7 +599,7 @@ export default function OrderDetails() {
                                 </div>
                             </motion.div>
 
-                            {/* Files Table - 50% width */}
+                            {/* Files Table */}
                             <motion.div
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -540,35 +620,32 @@ export default function OrderDetails() {
                                         </div>
                                     </div>
 
-                                    {/* Files Table */}
                                     <div className="overflow-x-auto h-[calc(100%-100px)]">
                                         <table className="w-full">
                                             <thead>
                                                 <tr className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"}`}>
                                                     <th className="py-3 px-4 text-left font-bold text-sm">File Name</th>
+                                                    <th className="py-3 px-4 text-left font-bold text-sm">Type</th>
                                                     <th className="py-3 px-4 text-left font-bold text-sm">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {[...fileHistory.stl_files, ...fileHistory.finished_files].map((file, index) => {
-                                                    // Determine file type and icon
                                                     const isStlFile = file.type === 'stl' || file.file_type === 'stl' ||
                                                         (file.fname && file.fname.toLowerCase().endsWith('.stl'));
                                                     const fileIcon = isStlFile ? faCube : faArchive;
+                                                    const fileType = isStlFile ? 'STL' : 'Finished';
 
                                                     return (
                                                         <tr key={file.id || index} className={`border-b ${theme === "light" ? "border-gray-100 hover:bg-gray-50" : "border-gray-700 hover:bg-gray-700"}`}>
                                                             <td className="py-3 px-4">
                                                                 <div className="flex items-start gap-3">
-                                                                    {/* File Icon */}
                                                                     <div className="mt-1">
                                                                         <FontAwesomeIcon
                                                                             icon={fileIcon}
                                                                             className={`text-lg ${isStlFile ? 'text-blue-500' : 'text-green-500'}`}
                                                                         />
                                                                     </div>
-
-                                                                    {/* File Name and Upload Date */}
                                                                     <div>
                                                                         <p className={`font-semibold ${theme === "light" ? "text-gray-900" : "text-white"}`} title={file.fname}>
                                                                             {file.fname}
@@ -581,17 +658,19 @@ export default function OrderDetails() {
                                                                 </div>
                                                             </td>
                                                             <td className="py-3 px-4">
+                                                                <span className={`px-2 py-1 rounded text-xs font-bold ${isStlFile ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                                                                    {fileType}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 px-4">
                                                                 <div className="flex gap-2">
-                                                                    {/* EXACT SAME DOWNLOAD BUTTON AS WORKING COMPONENT */}
                                                                     <button
                                                                         onClick={() => {
-                                                                            // Try the same properties as your working component
                                                                             const filePath = file.url || file.path || file.file_path;
                                                                             if (filePath) {
                                                                                 downloadFile(file.fname, filePath);
                                                                             } else {
                                                                                 toast.error("File path not found!");
-                                                                                console.log("File object:", file);
                                                                             }
                                                                         }}
                                                                         className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-all"
@@ -599,18 +678,16 @@ export default function OrderDetails() {
                                                                         <FontAwesomeIcon icon={faDownload} />
                                                                         Download
                                                                     </button>
-
-                                                                    {/* EXACT SAME DELETE BUTTON AS WORKING COMPONENT */}
                                                                     <button
                                                                         onClick={() => {
-                                                                            // Determine file type for delete
                                                                             const fileType = file.type || file.file_type ||
                                                                                 (isStlFile ? 'stl' : 'finished');
                                                                             handleDeleteFile(file.id, fileType);
                                                                         }}
-                                                                        className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition-all"
+                                                                        className="flex items-center gap-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition-all"
                                                                     >
                                                                         <FontAwesomeIcon icon={faTrash} />
+                                                                        Delete
                                                                     </button>
                                                                 </div>
                                                             </td>
@@ -619,7 +696,7 @@ export default function OrderDetails() {
                                                 })}
                                                 {fileHistory.stl_files.length === 0 && fileHistory.finished_files.length === 0 && (
                                                     <tr>
-                                                        <td colSpan="2" className="py-8 text-center">
+                                                        <td colSpan="3" className="py-8 text-center">
                                                             <div className="flex flex-col items-center justify-center py-4">
                                                                 <FontAwesomeIcon icon={faFileAlt} className="text-3xl mb-3 opacity-50" />
                                                                 <p className={`text-lg ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>No files uploaded yet</p>
@@ -646,7 +723,6 @@ export default function OrderDetails() {
                                 className={`rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}
                             >
                                 <div className="p-6">
-                                    {/* Header with Edit Button */}
                                     <div className="flex items-center justify-between mb-6">
                                         <h3 className={`text-xl font-bold flex items-center gap-2 ${theme === "light" ? "text-gray-900" : "text-white"}`}>
                                             <FontAwesomeIcon icon={faFileCircleCheck} className="text-blue-600" />
@@ -682,7 +758,6 @@ export default function OrderDetails() {
                                         </div>
                                     </div>
 
-                                    {/* Order Details Form */}
                                     <div className="space-y-4">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
@@ -710,21 +785,9 @@ export default function OrderDetails() {
                                                 <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
                                                     User ID
                                                 </label>
-                                                {isEditing ? (
-                                                    <input
-                                                        type="text"
-                                                        value={editedOrder.userid || ''}
-                                                        onChange={(e) => handleInputChange('userid', e.target.value)}
-                                                        className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
-                                                            ? "bg-white border-gray-300 text-gray-900"
-                                                            : "bg-gray-700 border-gray-600 text-white"
-                                                            }`}
-                                                    />
-                                                ) : (
-                                                    <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
-                                                        {order?.userid || "N/A"}
-                                                    </p>
-                                                )}
+                                                <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
+                                                    {order?.userid || "N/A"}
+                                                </p>
                                             </div>
                                         </div>
 
@@ -798,21 +861,15 @@ export default function OrderDetails() {
                                                 Product Type
                                             </label>
                                             {isEditing ? (
-                                                <select
+                                                <input
+                                                    type="text"
                                                     value={editedOrder.product_type || ''}
                                                     onChange={(e) => handleInputChange('product_type', e.target.value)}
                                                     className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
                                                         ? "bg-white border-gray-300 text-gray-900"
                                                         : "bg-gray-700 border-gray-600 text-white"
                                                         }`}
-                                                >
-                                                    <option value="">Select Product Type</option>
-                                                    <option value="Crown">Crown</option>
-                                                    <option value="Bridge">Bridge</option>
-                                                    <option value="Veneer">Veneer</option>
-                                                    <option value="Denture">Denture</option>
-                                                    <option value="Implant">Implant</option>
-                                                </select>
+                                                />
                                             ) : (
                                                 <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
                                                     {order?.product_type || "N/A"}
@@ -837,7 +894,6 @@ export default function OrderDetails() {
                                                     <option value="Rush">Rush (1-2 Hours)</option>
                                                     <option value="Same Day">Same Day (6 Hours)</option>
                                                     <option value="Next Day">Next Day (12 Hours)</option>
-                                                    <option value="Standard">Standard</option>
                                                 </select>
                                             ) : (
                                                 <div className="flex items-center gap-2">
@@ -848,7 +904,7 @@ export default function OrderDetails() {
                                                                 ? "6 Hours"
                                                                 : order?.tduration === "Next Day"
                                                                     ? "12 Hours"
-                                                                    : "Standard"}
+                                                                    : "N/A"}
                                                     </p>
                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${theme === "light"
                                                         ? "bg-blue-100 text-blue-700"
@@ -865,33 +921,61 @@ export default function OrderDetails() {
                                                 Order Date
                                             </label>
                                             {isEditing ? (
-                                                <input
-                                                    type="date"
-                                                    value={editedOrder.order_date || ''}
-                                                    onChange={(e) => handleInputChange('order_date', e.target.value)}
-                                                    className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
-                                                        ? "bg-white border-gray-300 text-gray-900"
-                                                        : "bg-gray-700 border-gray-600 text-white"
-                                                        }`}
-                                                />
+                                                <div>
+                                                    <input
+                                                        type="text"
+                                                        disabled
+                                                        value={parseDateForInput(editedOrder.order_date || '')}
+                                                        onChange={(e) => handleInputChange('order_date', e.target.value)}
+                                                        className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
+                                                            ? "bg-white border-gray-300 text-gray-900"
+                                                            : "bg-gray-700 border-gray-600 text-white"
+                                                            }`}
+                                                    />
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        Current: {order?.order_date || 'N/A'}
+                                                    </p>
+                                                </div>
                                             ) : (
                                                 <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
                                                     {order?.order_date || "N/A"}
                                                 </p>
                                             )}
                                         </div>
+
+                                        {order?.message && (
+                                            <div>
+                                                <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                    Message
+                                                </label>
+                                                {isEditing ? (
+                                                    <textarea
+                                                        value={editedOrder.message || ''}
+                                                        onChange={(e) => handleInputChange('message', e.target.value)}
+                                                        className={`w-full p-2 rounded-lg border text-sm ${theme === "light"
+                                                            ? "bg-white border-gray-300 text-gray-900"
+                                                            : "bg-gray-700 border-gray-600 text-white"
+                                                            }`}
+                                                        rows="3"
+                                                    />
+                                                ) : (
+                                                    <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>
+                                                        {order?.message || "N/A"}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </motion.div>
 
-                            {/* Chat Section - Show Chatbox Instructions */}
+                            {/* Chat Section */}
                             <motion.div
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 className={`rounded-xl shadow-lg flex flex-col ${theme === "light" ? "bg-white" : "bg-gray-800"}`}
                             >
                                 <div className="p-6 flex-1 flex flex-col h-full">
-                                    {/* Chat Header with Open Chat Button */}
                                     <div className="flex items-center justify-between mb-6">
                                         <div className="flex items-center gap-3">
                                             <div className={`p-2 rounded-lg ${theme === "light" ? "bg-blue-100 text-blue-600" : "bg-blue-900 text-blue-300"}`}>
@@ -916,7 +1000,6 @@ export default function OrderDetails() {
                                         </button>
                                     </div>
 
-                                    {/* Chat Instructions */}
                                     <div className={`flex-1 rounded-lg border-2 border-dashed p-8 flex flex-col items-center justify-center ${theme === "light" ? "bg-gray-50 border-gray-300" : "bg-gray-700 border-gray-600"}`}>
                                         <div className="text-center">
                                             <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${theme === "light" ? "bg-blue-100 text-blue-600" : "bg-blue-900 text-blue-300"}`}>
@@ -929,28 +1012,6 @@ export default function OrderDetails() {
                                                 Click "Open Chat" to start a conversation about this order.
                                             </p>
 
-                                            <div className="space-y-3 text-left max-w-md mx-auto">
-                                                <div className={`flex items-start gap-3 p-3 rounded-lg ${theme === "light" ? "bg-blue-50" : "bg-blue-900/30"}`}>
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${theme === "light" ? "bg-green-100 text-green-600" : "bg-green-900 text-green-300"}`}>
-                                                        <FontAwesomeIcon icon={faUser} className="text-sm" />
-                                                    </div>
-                                                    <div>
-                                                        <p className={`font-semibold text-sm ${theme === "light" ? "text-gray-800" : "text-white"}`}>Your Messages</p>
-                                                        <p className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>Will appear on the right side</p>
-                                                    </div>
-                                                </div>
-
-                                                <div className={`flex items-start gap-3 p-3 rounded-lg ${theme === "light" ? "bg-gray-100" : "bg-gray-700"}`}>
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${theme === "light" ? "bg-blue-100 text-blue-600" : "bg-blue-900 text-blue-300"}`}>
-                                                        <FontAwesomeIcon icon={faRobot} className="text-sm" />
-                                                    </div>
-                                                    <div>
-                                                        <p className={`font-semibold text-sm ${theme === "light" ? "text-gray-800" : "text-white"}`}>Support Team</p>
-                                                        <p className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>Will appear on the left side</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
                                             <div className="mt-6">
                                                 <button
                                                     onClick={showFloatingChat}
@@ -960,26 +1021,12 @@ export default function OrderDetails() {
                                                         }`}
                                                 >
                                                     <FontAwesomeIcon icon={faPaperPlane} />
-                                                    Launch Chat Window
+                                                    Click to Open Chat box
                                                 </button>
                                                 <p className={`text-xs mt-3 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
                                                     Drag the chat window anywhere on your screen
                                                 </p>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Chat Features */}
-                                    <div className="mt-6 grid grid-cols-2 gap-3">
-                                        <div className={`text-center p-3 rounded-lg ${theme === "light" ? "bg-green-50" : "bg-green-900/20"}`}>
-                                            <FontAwesomeIcon icon={faFileAlt} className={`text-sm mb-1 ${theme === "light" ? "text-green-600" : "text-green-400"}`} />
-                                            <p className={`text-xs font-semibold ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>File Sharing</p>
-                                            <p className={`text-xs ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>Share files directly</p>
-                                        </div>
-                                        <div className={`text-center p-3 rounded-lg ${theme === "light" ? "bg-blue-50" : "bg-blue-900/20"}`}>
-                                            <FontAwesomeIcon icon={faDownload} className={`text-sm mb-1 ${theme === "light" ? "text-blue-600" : "text-blue-400"}`} />
-                                            <p className={`text-xs font-semibold ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>Real-time</p>
-                                            <p className={`text-xs ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>Instant messaging</p>
                                         </div>
                                     </div>
                                 </div>
