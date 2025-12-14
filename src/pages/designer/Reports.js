@@ -107,89 +107,117 @@ export default function Reports() {
         setReportStats(stats);
     };
 
-    // Filter data based on all criteria
+    const parseOrderDateOnly = (dateStr) => {
+        if (!dateStr) return null;
+
+        // Example: "14-Mar-2023 07:32:31am"
+        const [datePart] = dateStr.split(' '); // ignore time
+
+        const [day, monthStr, year] = datePart.split('-');
+
+        const months = {
+            Jan: 0, Feb: 1, Mar: 2, Apr: 3,
+            May: 4, Jun: 5, Jul: 6, Aug: 7,
+            Sep: 8, Oct: 9, Nov: 10, Dec: 11
+        };
+
+        return new Date(
+            Number(year),
+            months[monthStr],
+            Number(day),
+            0, 0, 0, 0 // force date-only
+        );
+    };
+
+
     const applyFilters = () => {
         if (!allData.length) {
             setFilteredData([]);
-            calculateStats([]);
             return;
         }
 
         let filtered = [...allData];
 
-        // Apply time period filter
-        const now = new Date();
-        switch (selectedFilter) {
-            case '1': // Today
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                filtered = filtered.filter(item => {
-                    const itemDate = new Date(item.order_date);
-                    return itemDate >= today;
-                });
-                break;
-            case '2': // Weekly
-                const weekAgo = new Date();
-                weekAgo.setDate(weekAgo.getDate() - 7);
-                weekAgo.setHours(0, 0, 0, 0);
-                filtered = filtered.filter(item => {
-                    const itemDate = new Date(item.order_date);
-                    return itemDate >= weekAgo;
-                });
-                break;
-            case '3': // Monthly
-                const monthAgo = new Date();
-                monthAgo.setMonth(monthAgo.getMonth() - 1);
-                monthAgo.setHours(0, 0, 0, 0);
-                filtered = filtered.filter(item => {
-                    const itemDate = new Date(item.order_date);
-                    return itemDate >= monthAgo;
-                });
-                break;
-            case '4': // All Time - no date filtering
-                break;
-            default:
-                break;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const isOrderIdActive = orderIdFrom || orderIdTo;
+        const isCustomDateActive = startDate || endDate;
+
+        // ===== TIME PERIOD FILTER (only if no custom date & no order ID) =====
+        if (!isOrderIdActive && !isCustomDateActive) {
+            switch (selectedFilter) {
+                case '1': { // Today
+                    filtered = filtered.filter(item => {
+                        const itemDate = parseOrderDateOnly(item.order_date);
+                        return itemDate &&
+                            itemDate >= today &&
+                            itemDate < new Date(today.getTime() + 86400000);
+                    });
+                    break;
+                }
+
+                case '2': { // Last 7 days
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(today.getDate() - 7);
+
+                    filtered = filtered.filter(item => {
+                        const itemDate = parseOrderDateOnly(item.order_date);
+                        return itemDate && itemDate >= weekAgo;
+                    });
+                    break;
+                }
+
+                case '3': { // Last 30 days
+                    const monthAgo = new Date(today);
+                    monthAgo.setDate(today.getDate() - 30);
+
+                    filtered = filtered.filter(item => {
+                        const itemDate = parseOrderDateOnly(item.order_date);
+                        return itemDate && itemDate >= monthAgo;
+                    });
+                    break;
+                }
+
+                case '4': // All Time
+                default:
+                    break;
+            }
         }
 
-        // Apply order ID range filter
+        // Order ID filter
         if (orderIdFrom) {
-            filtered = filtered.filter(item => {
-                const orderId = parseInt(item.orderid);
-                const fromId = parseInt(orderIdFrom);
-                return orderId >= fromId;
-            });
+            filtered = filtered.filter(item => parseInt(item.orderid) >= parseInt(orderIdFrom));
         }
-
         if (orderIdTo) {
-            filtered = filtered.filter(item => {
-                const orderId = parseInt(item.orderid);
-                const toId = parseInt(orderIdTo);
-                return orderId <= toId;
-            });
+            filtered = filtered.filter(item => parseInt(item.orderid) <= parseInt(orderIdTo));
         }
 
-        // Apply custom date range filter
+        // Date range filter (always applies)
         if (startDate) {
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+
             filtered = filtered.filter(item => {
-                const itemDate = new Date(item.order_date);
-                const start = new Date(startDate);
-                return itemDate >= start;
+                const itemDate = parseOrderDateOnly(item.order_date);
+                return itemDate && itemDate >= start;
             });
         }
 
         if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(0, 0, 0, 0);
+
             filtered = filtered.filter(item => {
-                const itemDate = new Date(item.order_date);
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999); // Include entire end day
-                return itemDate <= end;
+                const itemDate = parseOrderDateOnly(item.order_date);
+                return itemDate && itemDate <= end;
             });
         }
 
+
         setFilteredData(filtered);
-        calculateStats(filtered);
     };
+
 
     // Handle search button click
     const handleSearchClick = () => {
@@ -207,15 +235,15 @@ export default function Reports() {
             alert('No data available to download');
             return;
         }
-        
+
         // Create CSV content
         const headers = columns.map(col => col.header).join(',');
-        const rows = filteredData.map(item => 
+        const rows = filteredData.map(item =>
             columns.map(col => `"${item[col.accessor] || ''}"`).join(',')
         ).join('\n');
-        
+
         const csvContent = `${headers}\n${rows}`;
-        
+
         // Create and download file
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
@@ -385,9 +413,10 @@ export default function Reports() {
                                 </div>
 
                                 <div className="max-w-6xl mx-auto">
-                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+                                    <div className="flex items-end gap-4 flex-nowrap overflow-x-auto">
+
                                         {/* Order ID From */}
-                                        <div className="lg:col-span-2">
+                                        <div className="min-w-[160px]">
                                             <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
                                                 <FontAwesomeIcon icon={faHashtag} className="w-4 h-4 mr-2 text-blue-500" />
                                                 Order ID From
@@ -397,12 +426,12 @@ export default function Reports() {
                                                 value={orderIdFrom}
                                                 onChange={handleOrderIdFromChange}
                                                 placeholder="e.g., 1001"
-                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
+                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${themeClasses.input}`}
                                             />
                                         </div>
 
                                         {/* Order ID To */}
-                                        <div className="lg:col-span-2">
+                                        <div className="min-w-[160px]">
                                             <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
                                                 <FontAwesomeIcon icon={faHashtag} className="w-4 h-4 mr-2 text-blue-500" />
                                                 Order ID To
@@ -412,12 +441,17 @@ export default function Reports() {
                                                 value={orderIdTo}
                                                 onChange={handleOrderIdToChange}
                                                 placeholder="e.g., 2000"
-                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
+                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${themeClasses.input}`}
                                             />
                                         </div>
 
+                                        {/* OR */}
+                                        <div className="pb-3 px-2 font-bold text-lg text-gray-500 whitespace-nowrap">
+                                            OR
+                                        </div>
+
                                         {/* Start Date */}
-                                        <div className="lg:col-span-2">
+                                        <div className="min-w-[160px]">
                                             <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
                                                 <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4 mr-2 text-blue-500" />
                                                 Start Date
@@ -426,12 +460,12 @@ export default function Reports() {
                                                 type="date"
                                                 value={startDate}
                                                 onChange={(e) => setStartDate(e.target.value)}
-                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
+                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${themeClasses.input}`}
                                             />
                                         </div>
 
                                         {/* End Date */}
-                                        <div className="lg:col-span-2">
+                                        <div className="min-w-[160px]">
                                             <label className={`block text-sm font-semibold ${themeClasses.text.primary} mb-2 flex items-center`}>
                                                 <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4 mr-2 text-blue-500" />
                                                 End Date
@@ -440,19 +474,16 @@ export default function Reports() {
                                                 type="date"
                                                 value={endDate}
                                                 onChange={(e) => setEndDate(e.target.value)}
-                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-200 ${themeClasses.input}`}
+                                                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${themeClasses.input}`}
                                             />
                                         </div>
 
-                                        {/* Search Button */}
-                                        <div className="lg:col-span-4">
+                                        {/* Apply Filters Button */}
+                                        <div className="min-w-[190px] pb-1">
                                             <button
                                                 onClick={handleSearchClick}
                                                 disabled={isLoading}
-                                                className={`w-44 h-12 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer ${isLoading
-                                                    ? 'bg-gray-400 cursor-not-allowed'
-                                                    : themeClasses.button.success
-                                                    }`}
+                                                className={`w-full h-12 text-white font-semibold rounded-lg flex items-center justify-center space-x-2 transition-all ${isLoading ? 'bg-gray-400 cursor-not-allowed' : themeClasses.button.success}`}
                                             >
                                                 {isLoading ? (
                                                     <>
@@ -467,15 +498,18 @@ export default function Reports() {
                                                 )}
                                             </button>
                                         </div>
+
                                     </div>
 
                                     {/* Search Tips */}
                                     <div className="mt-4 text-center">
                                         <p className={`text-xs ${themeClasses.text.muted}`}>
-                                            Tip: Use Order ID range and date filters to refine your report. Showing {filteredData.length} of {allData.length} records.
+                                            Tip: Use <b>Order ID range OR Date filters</b> to refine your report.
+                                            Showing {filteredData.length} of {allData.length} records.
                                         </p>
                                     </div>
                                 </div>
+
                             </div>
 
                             {/* Enhanced Filter Section */}
