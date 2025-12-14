@@ -9,7 +9,7 @@ import { fetchWithAuth } from '../../utils/userapi'
 export default function NewRequest() {
   let base_url = localStorage.getItem('base_url');
   const { theme } = useContext(ThemeContext);
-  const { logout } = useContext(UserContext);
+  const { user, logout } = useContext(UserContext);
   const navigate = useNavigate();
   const [files, setFiles] = useState([]);
   const [drag, setDragActive] = useState(false);
@@ -85,98 +85,122 @@ export default function NewRequest() {
       console.error("File check error:", err);
     }
 
-    // 2️⃣ Existing code continues...
-    const fileKey = file.name + "_" + Date.now();
-    let completed = false;
-    let progressValue = 0;
+    // 2️⃣ Upload with real progress tracking using XMLHttpRequest
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("userid", user.userid);
+      formData.append("labname", user.labname);
 
-    const intervalId = setInterval(() => {
-      if (!completed && progressValue < 99) {
-        progressValue += Math.random() * 1.8 + 0.4;
-        if (progressValue > 99) progressValue = 99;
+      const xhr = new XMLHttpRequest();
 
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.fileName === file.name
-              ? { ...f, progress: progressValue, uploadStatus: `Uploading... ${Math.floor(progressValue)}%` }
-              : f
-          )
-        );
-      }
-    }, 120);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const response = await fetch(`${base_url}/new-orders`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "X-Tenant": "skydent",
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-      completed = true;
-
-      const finishInterval = setInterval(() => {
-        progressValue += 2;
-
-        if (progressValue >= 100) {
-          progressValue = 100;
-          clearInterval(finishInterval);
-          clearInterval(intervalId);
-
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
           setFiles((prev) =>
             prev.map((f) =>
               f.fileName === file.name
                 ? {
                   ...f,
-                  progress: 100,
-                  uploadStatus: "Success",
-                  orderId: result.id,
-                  productType: result.product_type,
-                  unit: result.unit,
-                  tooth: result.tooth,
-                  message: result.message
+                  progress: percentComplete,
+                  uploadStatus: `Uploading... ${percentComplete}%`
                 }
                 : f
             )
           );
+        }
+      });
+
+      // Handle load completion
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.fileName === file.name
+                  ? {
+                    ...f,
+                    progress: 100,
+                    uploadStatus: "Success",
+                    orderId: result.id,
+                    productType: result.product_type,
+                    unit: result.unit,
+                    tooth: result.tooth,
+                    message: result.message
+                  }
+                  : f
+              )
+            );
+            resolve(result);
+          } catch (error) {
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.fileName === file.name
+                  ? {
+                    ...f,
+                    progress: 100,
+                    uploadStatus: "Failed",
+                    message: "Invalid response from server"
+                  }
+                  : f
+              )
+            );
+            reject(new Error('Invalid response from server'));
+          }
         } else {
           setFiles((prev) =>
             prev.map((f) =>
               f.fileName === file.name
                 ? {
                   ...f,
-                  progress: progressValue,
-                  uploadStatus: `Uploading... ${Math.floor(progressValue)}%`
+                  progress: 100,
+                  uploadStatus: "Failed",
+                  message: `Server error: ${xhr.status}`
                 }
                 : f
             )
           );
+          reject(new Error(`Server error: ${xhr.status}`));
         }
-      }, 40);
+      });
 
-    } catch (error) {
-      completed = true;
-      clearInterval(intervalId);
+      // Handle network errors
+      xhr.addEventListener('error', () => {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.fileName === file.name
+              ? {
+                ...f,
+                progress: 100,
+                uploadStatus: "Failed",
+                message: "Network error - upload failed"
+              }
+              : f
+          )
+        );
+        reject(new Error('Network error'));
+      });
 
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.fileName === file.name
-            ? {
-              ...f,
-              progress: 100,
-              uploadStatus: "Failed",
-              message: error.message
-            }
-            : f
-        )
-      );
-    }
+      // Handle upload cancellation
+      xhr.addEventListener('abort', () => {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.fileName === file.name
+              ? { ...f, uploadStatus: "Cancelled", progress: 0 }
+              : f
+          )
+        );
+        reject(new Error('Upload cancelled'));
+      });
+
+      // Open and send the request
+      xhr.open('POST', `${base_url}/new-orders`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.setRequestHeader('X-Tenant', 'skydent');
+      xhr.send(formData);
+    });
   };
 
 
