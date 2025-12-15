@@ -451,17 +451,14 @@ export default function Datatable({
                     for (let i = 0; i < files.length; i++) {
                         const encodedPath = encodeURIComponent(files[i]);
                         const finalUrl = `${base_url}/download?path=${encodedPath}`;
-                        const res = await fetch(finalUrl);
-                        if (!res.ok) continue;
-                        const blob = await res.blob();
+
                         const a = document.createElement("a");
-                        a.href = URL.createObjectURL(blob);
+                        a.href = finalUrl;
                         a.download = files[i].split('/').pop();
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
-                        // optional: release memory
-                        URL.revokeObjectURL(a.href);
+
                         await new Promise(r => setTimeout(r, 500));
                     }
 
