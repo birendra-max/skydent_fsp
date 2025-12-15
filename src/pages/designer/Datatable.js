@@ -223,7 +223,6 @@ export default function Datatable({
         }
 
         let missingFiles = [];
-        let downloadedCount = 0;
 
         for (const id of selectedRows) {
             const row = data.find((r) => r.orderid === id);
@@ -231,11 +230,10 @@ export default function Datatable({
 
             try {
                 if (fileType === "stl") {
-                    // Step 1: get file paths from backend
+                    // Step 1: get all STL file paths from backend
                     const res = await fetch(`${base_url}/download-all?orderid=${id}`, {
                         headers: { 'X-Tenant': 'skydent' }
                     });
-
                     const files = await res.json();
 
                     if (!Array.isArray(files) || files.length === 0) {
@@ -243,26 +241,28 @@ export default function Datatable({
                         continue;
                     }
 
-                    // Step 2: send each file path to your existing /download endpoint
-                    for (let i = 0; i < files.length; i++) {
-                        const encodedPath = encodeURIComponent(files[i]);
+                    // Step 2: download each STL file via backend
+                    for (const filePath of files) {
+                        if (!filePath) continue;
+
+                        const encodedPath = encodeURIComponent(filePath);
                         const finalUrl = `${base_url}/download?path=${encodedPath}`;
+                        const filename = filePath.split('/').pop();
 
-                        const a = document.createElement("a");
-                        a.href = finalUrl;
-                        a.download = files[i].split('/').pop();
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
+                        const link = document.createElement("a");
+                        link.href = finalUrl;
+                        link.target = "_blank";
+                        link.download = filename || "download";
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
 
-                        await new Promise(r => setTimeout(r, 500));
+                        await new Promise(r => setTimeout(r, 500)); // optional delay
                     }
 
-                } else {
-                    // Initial / finished → normal download
-                    let path = null;
-                    if (fileType === "initial") path = row.file_path;
-                    else if (fileType === "finish") path = row.finish_file_path;
+                } else if (fileType === "initial" || fileType === "finish") {
+                    // Get the correct file path
+                    let path = fileType === "initial" ? row.file_path : row.finish_file_path;
 
                     if (!path || path.trim() === "") {
                         missingFiles.push(id);
@@ -271,16 +271,16 @@ export default function Datatable({
 
                     const encodedPath = encodeURIComponent(path);
                     const finalUrl = `${base_url}/download?path=${encodedPath}`;
+                    const filename = `${fileType}_${id}`;
 
                     const link = document.createElement("a");
                     link.href = finalUrl;
-                    link.download = `${fileType}_${id}`;
+                    link.target = "_blank";
+                    link.download = filename;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
                 }
-
-                downloadedCount++;
             } catch (err) {
                 console.error("Download error:", err);
                 missingFiles.push(id);
@@ -291,6 +291,7 @@ export default function Datatable({
             alert(`Files not found for order IDs: ${missingFiles.join(", ")}`);
         }
     };
+
 
     return (
         <>
