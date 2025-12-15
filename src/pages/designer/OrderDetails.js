@@ -220,55 +220,77 @@ export default function OrderDetails() {
     };
 
     const handleFileUpload = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
+        const files = Array.from(event.target.files); // Get all selected files
+        if (!files || files.length === 0) return;
 
-        const fileName = file.name.toLowerCase();
-        let fileType = '';
+        // Show total count in toast
+        toast.loading(`Uploading ${files.length} file(s)...`);
 
-        if (fileName.endsWith('.stl')) {
-            fileType = 'stl';
-        } else if (fileName.endsWith('.zip') || fileName.endsWith('.rar') || fileName.endsWith('.7z')) {
-            fileType = 'finished';
-        } else {
-            toast.error("Please upload only .stl, .zip, .rar, or .7z files!");
-            return;
-        }
+        // Track upload results
+        let successCount = 0;
+        let errorCount = 0;
 
-        setUploading(true);
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("orderid", id);
-        formData.append("type", fileType);
+        // Upload each file sequentially
+        for (const file of files) {
+            const fileName = file.name.toLowerCase();
+            let fileType = '';
 
-        toast.loading(`Uploading ${fileType === 'stl' ? 'STL' : 'Finished'} file...`);
-
-        try {
-            const response = await fetch(`${base_url}/upload-order-file`, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    'X-Tenant': 'skydent'
-                },
-                body: formData,
-            });
-
-            const result = await response.json();
-            toast.dismiss();
-
-            if (result.status === "success") {
-                toast.success(`${file.name} uploaded successfully!`);
-                await fetchFileHistory();
+            // Validate file type
+            if (fileName.endsWith('.stl')) {
+                fileType = 'stl';
+            } else if (fileName.endsWith('.zip') || fileName.endsWith('.rar') || fileName.endsWith('.7z')) {
+                fileType = 'finished';
             } else {
-                toast.error(result.message || "Upload failed");
+                toast.error(`${file.name}: Invalid file type. Only .stl, .zip, .rar, or .7z files allowed!`);
+                errorCount++;
+                continue;
             }
-        } catch (error) {
-            toast.dismiss();
-            toast.error("Upload error!");
-        } finally {
-            setUploading(false);
-            event.target.value = '';
+
+            setUploading(true);
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("orderid", id);
+            formData.append("type", fileType);
+
+            try {
+                const response = await fetch(`${base_url}/upload-order-file`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        'X-Tenant': 'skydent'
+                    },
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    successCount++;
+                } else {
+                    errorCount++;
+                    toast.error(`${file.name}: ${result.message || "Upload failed"}`);
+                }
+            } catch (error) {
+                errorCount++;
+                toast.error(`${file.name}: Upload error!`);
+            }
         }
+
+        setUploading(false);
+        toast.dismiss();
+
+        // Show summary
+        if (successCount > 0) {
+            toast.success(`${successCount} file(s) uploaded successfully!`);
+            await fetchFileHistory(); // Refresh file list
+        }
+
+        if (errorCount > 0) {
+            toast.error(`${errorCount} file(s) failed to upload`);
+        }
+
+        // Reset file input
+        event.target.value = '';
     };
 
     const downloadFile = (filename, path) => {
@@ -567,6 +589,7 @@ export default function OrderDetails() {
                                             type="file"
                                             ref={fileInputRef}
                                             accept=".stl,.zip,.rar,.7z"
+                                            multiple
                                             onChange={handleFileUpload}
                                             className="hidden"
                                             disabled={uploading}
@@ -586,10 +609,10 @@ export default function OrderDetails() {
                                                 {uploading ? 'Uploading...' : 'Upload Files'}
                                             </button>
                                             <p className={`text-sm mt-4 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-                                                Drag & drop or click to upload
+                                                Drag & drop or click to upload multiple files
                                             </p>
                                             <p className={`text-xs mt-2 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>
-                                                Supported: .STL, .ZIP, .RAR, .7Z
+                                                Supported: .STL, .ZIP, .RAR, .7Z (Select multiple files)
                                             </p>
                                         </div>
                                     </div>
