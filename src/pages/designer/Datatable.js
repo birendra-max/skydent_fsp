@@ -216,7 +216,7 @@ export default function Datatable({
 
     const base_url = localStorage.getItem('base_url');
 
-    const handleBulkDownload = () => {
+    const handleBulkDownload = async () => {
         if (!selectedRows.length) {
             alert("Please select at least one record to proceed with the download.");
             return;
@@ -225,48 +225,75 @@ export default function Datatable({
         let missingFiles = [];
         let downloadedCount = 0;
 
-        selectedRows.forEach((id) => {
+        for (const id of selectedRows) {
             const row = data.find((r) => r.orderid === id);
-            if (!row) return;
+            if (!row) continue;
 
-            let path = null;
+            try {
+                if (fileType === "stl") {
+                    // Step 1: get file paths from backend
+                    const res = await fetch(`${base_url}/download-all?orderid=${id}`, {
+                        headers: { 'X-Tenant': 'skydent' }
+                    });
 
-            if (fileType === "initial") path = row.file_path;
-            else if (fileType === "stl") path = row.stl_file_path;
-            else if (fileType === "finish") path = row.finish_file_path;
+                    const files = await res.json();
 
-            if (path && path.trim() !== "") {
-                try {
+                    if (!Array.isArray(files) || files.length === 0) {
+                        missingFiles.push(id);
+                        continue;
+                    }
+
+                    // Step 2: send each file path to your existing /download endpoint
+                    for (let i = 0; i < files.length; i++) {
+                        const encodedPath = encodeURIComponent(files[i]);
+                        const finalUrl = `${base_url}/download?path=${encodedPath}`;
+                        const res = await fetch(finalUrl);
+                        if (!res.ok) continue;
+                        const blob = await res.blob();
+                        const a = document.createElement("a");
+                        a.href = URL.createObjectURL(blob);
+                        a.download = files[i].split('/').pop();
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        // optional: release memory
+                        URL.revokeObjectURL(a.href);
+                        await new Promise(r => setTimeout(r, 500));
+                    }
+
+                } else {
+                    // Initial / finished → normal download
+                    let path = null;
+                    if (fileType === "initial") path = row.file_path;
+                    else if (fileType === "finish") path = row.finish_file_path;
+
+                    if (!path || path.trim() === "") {
+                        missingFiles.push(id);
+                        continue;
+                    }
+
                     const encodedPath = encodeURIComponent(path);
-
-                    // Backend handles download safely
-                    const finalUrl = `${base_url}/download?path=` + encodedPath;
+                    const finalUrl = `${base_url}/download?path=${encodedPath}`;
 
                     const link = document.createElement("a");
                     link.href = finalUrl;
-                    link.target = "_blank";
                     link.download = `${fileType}_${id}`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-
-                    downloadedCount++;
-                } catch (err) {
-                    console.error("Download error:", err);
-                    missingFiles.push(id);
                 }
-            } else {
+
+                downloadedCount++;
+            } catch (err) {
+                console.error("Download error:", err);
                 missingFiles.push(id);
             }
-        });
+        }
 
         if (missingFiles.length > 0) {
-            alert(
-                `File Not found`
-            );
+            alert(`Files not found for order IDs: ${missingFiles.join(", ")}`);
         }
     };
-
 
     return (
         <>

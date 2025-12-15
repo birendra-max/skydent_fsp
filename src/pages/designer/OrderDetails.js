@@ -277,22 +277,19 @@ export default function OrderDetails() {
             return;
         }
 
-        if (path.startsWith('http')) {
-            window.open(path, '_blank');
-            return;
-        }
-
+        // Always download via backend
         const encodedPath = encodeURIComponent(path);
         const finalUrl = `${base_url}/download?path=${encodedPath}`;
 
         const link = document.createElement("a");
         link.href = finalUrl;
-        link.target = "_blank";
-        link.download = filename || "download";
+        link.target = "_blank"; // optional, forces new tab if needed
+        link.download = filename || "download"; // backend will set actual file name
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     };
+
 
     const handleEditToggle = () => {
         if (isEditing) {

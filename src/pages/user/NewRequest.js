@@ -4,7 +4,7 @@ import Foot from "./Foot";
 import { useNavigate } from "react-router-dom";
 import { ThemeContext } from "../../Context/ThemeContext";
 import { UserContext } from "../../Context/UserContext";
-import { fetchWithAuth } from '../../utils/userapi'
+import { fetchWithAuth } from '../../utils/userapi';
 
 export default function NewRequest() {
   let base_url = localStorage.getItem('base_url');
@@ -15,8 +15,9 @@ export default function NewRequest() {
   const [drag, setDragActive] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState("");
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [uploadRequests, setUploadRequests] = useState({});
 
-  const handleFiles = async (selectedFiles) => {
+  const handleFiles = (selectedFiles) => {
     const fileArray = Array.from(selectedFiles);
     const zipFiles = fileArray.filter((file) => file.name.endsWith(".zip"));
 
@@ -57,10 +58,10 @@ export default function NewRequest() {
       uploadFile(file);
     });
   };
+
   const token = localStorage.getItem('token');
 
   const uploadFile = async (file) => {
-    // 1️⃣ Check if file already exists before upload
     try {
       const checkResponse = await fetchWithAuth(`check-file-exists?file=${encodeURIComponent(file.name)}`);
 
@@ -70,7 +71,6 @@ export default function NewRequest() {
         );
 
         if (!confirmUpload) {
-          // User selected CANCEL → Do not upload
           setFiles((prev) =>
             prev.map((f) =>
               f.fileName === file.name
@@ -82,10 +82,8 @@ export default function NewRequest() {
         }
       }
     } catch (err) {
-      console.error("File check error:", err);
     }
 
-    // 2️⃣ Upload with real progress tracking using XMLHttpRequest
     return new Promise((resolve, reject) => {
       const formData = new FormData();
       formData.append("file", file);
@@ -94,7 +92,6 @@ export default function NewRequest() {
 
       const xhr = new XMLHttpRequest();
 
-      // Track upload progress
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable) {
           const percentComplete = Math.round((event.loaded / event.total) * 100);
@@ -112,7 +109,6 @@ export default function NewRequest() {
         }
       });
 
-      // Handle load completion
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
@@ -147,7 +143,7 @@ export default function NewRequest() {
                   : f
               )
             );
-            reject(new Error('Invalid response from server'));
+            reject(error);
           }
         } else {
           setFiles((prev) =>
@@ -164,9 +160,14 @@ export default function NewRequest() {
           );
           reject(new Error(`Server error: ${xhr.status}`));
         }
+        
+        setUploadRequests(prev => {
+          const newRequests = { ...prev };
+          delete newRequests[file.name];
+          return newRequests;
+        });
       });
 
-      // Handle network errors
       xhr.addEventListener('error', () => {
         setFiles((prev) =>
           prev.map((f) =>
@@ -175,34 +176,29 @@ export default function NewRequest() {
                 ...f,
                 progress: 100,
                 uploadStatus: "Failed",
-                message: "Network error - upload failed"
+                message: "Network error"
               }
               : f
           )
         );
         reject(new Error('Network error'));
+        
+        setUploadRequests(prev => {
+          const newRequests = { ...prev };
+          delete newRequests[file.name];
+          return newRequests;
+        });
       });
 
-      // Handle upload cancellation
-      xhr.addEventListener('abort', () => {
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.fileName === file.name
-              ? { ...f, uploadStatus: "Cancelled", progress: 0 }
-              : f
-          )
-        );
-        reject(new Error('Upload cancelled'));
-      });
-
-      // Open and send the request
       xhr.open('POST', `${base_url}/new-orders`);
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       xhr.setRequestHeader('X-Tenant', 'skydent');
+      xhr.timeout = 300000;
       xhr.send(formData);
+
+      setUploadRequests(prev => ({ ...prev, [file.name]: xhr }));
     });
   };
-
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -258,8 +254,7 @@ export default function NewRequest() {
             resetPage();
           }, 3000);
         }
-      }
-      else {
+      } else {
         if (resp.error === 'Invalid or expired token') {
           alert('Invalid or expired token. Please log in again.')
           navigate(logout);
@@ -267,7 +262,6 @@ export default function NewRequest() {
       }
 
     } catch (error) {
-      console.error("Error submitting:", error);
     }
   };
 
@@ -276,7 +270,6 @@ export default function NewRequest() {
     !files.some(f => f.uploadStatus.startsWith("Uploading...")) &&
     selectedDuration;
 
-  // Professional color scheme - Navy Blue & Slate
   const getCardClass = () => {
     return theme === 'light'
       ? 'bg-white border-gray-200 shadow-sm'
@@ -321,24 +314,6 @@ export default function NewRequest() {
       : 'border-gray-600 bg-gray-800 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
   };
 
-  const getDeliveryOptionClass = (option, isSelected) => {
-    const baseClass = "block p-4 border rounded-lg cursor-pointer transition-all duration-200";
-
-    if (isSelected) {
-      const colorMap = {
-        red: theme === 'light' ? 'border-red-500 bg-red-50' : 'border-red-500 bg-red-900/20',
-        yellow: theme === 'light' ? 'border-yellow-500 bg-yellow-50' : 'border-yellow-500 bg-yellow-900/20',
-        green: theme === 'light' ? 'border-green-500 bg-green-50' : 'border-green-500 bg-green-900/20'
-      };
-      return `${baseClass} ${colorMap[option.color]} shadow-sm`;
-    } else {
-      return theme === 'light'
-        ? `${baseClass} border-gray-200 bg-white hover:border-gray-300 text-gray-700`
-        : `${baseClass} border-gray-600 bg-gray-800 hover:border-gray-500 text-gray-200`;
-    }
-  };
-
-  // Professional StatusBadge component with progress
   const StatusBadge = ({ status, message, progress }) => {
     const getStatusConfig = (status) => {
       const config = {
@@ -363,11 +338,9 @@ export default function NewRequest() {
       return theme === 'light' ? config[status]?.light : config[status]?.dark;
     };
 
-    const config = getStatusConfig(status.split(' ')[0]); // Get base status without percentage
+    const config = getStatusConfig(status.split(' ')[0]);
 
-    // For uploading status, show progress bar
     const isUploading = status.startsWith("Uploading...");
-    const percentage = isUploading ? progress : 0;
 
     return (
       <div className="flex flex-col space-y-2">
@@ -380,12 +353,11 @@ export default function NewRequest() {
           <span>{status}</span>
         </div>
 
-        {/* Progress Bar for Uploading Files */}
         {isUploading && (
           <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
             <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${percentage}%` }}
+              style={{ width: `${progress}%` }}
             ></div>
           </div>
         )}
@@ -406,7 +378,6 @@ export default function NewRequest() {
     <>
       <Hd />
       <main id="main" className={`flex-grow px-6 transition-colors duration-300 ${theme === 'light' ? 'bg-gray-50 text-gray-900' : 'bg-gray-950 text-white'} pt-20`}>
-        {/* Success Popup */}
         {showSuccessPopup && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className={`rounded-xl p-8 max-w-md mx-4 shadow-xl ${theme === 'light' ? 'bg-white text-gray-900' : 'bg-gray-800 text-white'
@@ -434,10 +405,8 @@ export default function NewRequest() {
         )}
 
         <section className="max-w-8xl mx-auto">
-          {/* Main Content Card */}
           <div className={`rounded-xl border ${getCardClass()} mb-8`}>
 
-            {/* Upload Area */}
             {files.length === 0 && (
               <div className="p-8">
                 <div
@@ -495,10 +464,8 @@ export default function NewRequest() {
               </div>
             )}
 
-            {/* Files Table */}
             {files.length > 0 && (
               <div className="p-6">
-                {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                   {[
                     { count: files.length, label: "Total Files", bg: "bg-blue-500" },
@@ -513,7 +480,6 @@ export default function NewRequest() {
                   ))}
                 </div>
 
-                {/* Table Container */}
                 <div className={`rounded-lg border ${getTableContainerClass()} mb-8`}>
                   <div className="overflow-x-auto">
                     <table className="w-full">
@@ -590,10 +556,8 @@ export default function NewRequest() {
                   </div>
                 </div>
 
-                {/* Delivery Options and Submit Section */}
                 <div className={`rounded-xl border p-6 ${getTableContainerClass()} shadow-sm`}>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Delivery Options */}
                     <div className="lg:col-span-2">
                       <h3 className={`text-xl font-bold mb-6 ${theme === 'light' ? 'text-black' : 'text-white'}`}>Delivery Options</h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -603,7 +567,6 @@ export default function NewRequest() {
                             label: "Rush Delivery",
                             description: "1-2 Hours",
                             tagline: "Fastest possible",
-                            // price: "+$50",
                             color: "red",
                             icon: (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -616,7 +579,6 @@ export default function NewRequest() {
                             label: "Same Day",
                             description: "6 Hours",
                             tagline: "Quick turnaround",
-                            // price: "+$25",
                             color: "yellow",
                             icon: (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -629,7 +591,6 @@ export default function NewRequest() {
                             label: "Next Day",
                             description: "12 Hours",
                             tagline: "Standard delivery",
-                            // price: "Free",
                             color: "green",
                             icon: (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -663,7 +624,6 @@ export default function NewRequest() {
                               className="sr-only"
                             />
 
-                            {/* Radio Button */}
                             <div className="flex-shrink-0 mr-4 mt-1">
                               <div className={`
       w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
@@ -684,11 +644,9 @@ export default function NewRequest() {
                               </div>
                             </div>
 
-                            {/* Content */}
                             <div className="flex-1">
                               <div className="flex items-start space-x-3">
 
-                                {/* Icon Box (always white when selected) */}
                                 <div className={`
         flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all
         ${selectedDuration === option.value
@@ -701,7 +659,6 @@ export default function NewRequest() {
                                   {option.icon}
                                 </div>
 
-                                {/* Text Area */}
                                 <div className="flex-1 min-w-0">
                                   <span
                                     className={`font-bold text-base block 
@@ -730,7 +687,6 @@ export default function NewRequest() {
                               </div>
                             </div>
 
-                            {/* Selection Tick */}
                             {selectedDuration === option.value && (
                               <div className="absolute -top-2 -right-2">
                                 <div className={`
@@ -752,7 +708,6 @@ export default function NewRequest() {
                         ))}
                       </div>
 
-                      {/* Helper text to indicate selection */}
                       <div className={`mt-4 text-sm ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
                         <div className="flex items-center space-x-2">
                           <div className="w-3 h-3 rounded-full border-2 border-gray-400 flex items-center justify-center">
@@ -763,7 +718,6 @@ export default function NewRequest() {
                       </div>
                     </div>
 
-                    {/* Submit Section */}
                     <div className="flex flex-col justify-between">
                       <div>
                         <h3 className={`text-xl font-bold mb-6 ${theme === 'light' ? 'text-black' : 'text-white'}`}>Submit Orders</h3>
