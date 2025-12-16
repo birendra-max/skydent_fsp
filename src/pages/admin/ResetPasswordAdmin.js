@@ -124,7 +124,7 @@ export default function ResetPasswordAdmin() {
                                 <label className="font-semibold block mb-2">Client Email</label>
                                 <input
                                     type="email"
-                                    placeholder="Enter client email"
+                                    placeholder="Enter admin email"
                                     value={resetEmail}
                                     onChange={(e) => setResetEmail(e.target.value)}
                                     required

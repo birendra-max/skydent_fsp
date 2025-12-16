@@ -244,7 +244,7 @@ export default function AddAdmin() {
                                         : "bg-blue-600 hover:bg-blue-700 text-white"
                                         }`}
                                 >
-                                    {loading ? "Saving..." : "Save Client"}
+                                    {loading ? "Saving..." : "Save Admin"}
                                 </button>
                             </div>
                         </form>
