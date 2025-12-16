@@ -88,7 +88,7 @@ export default function CasesReports() {
         (async () => {
             try {
                 const res = await fetchWithAuth("/get-all-cases", { method: "GET" });
-                setData(res?.status === "success" ? res.new_cases : []);
+                setData(res?.status === "success" ? res.all_cases : []);
             } catch (error) {
                 console.error("Error fetching cases:", error);
                 setData([]);
