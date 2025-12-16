@@ -4,13 +4,15 @@ import Foot from './Foot';
 import Datatable from "./Datatable";
 import { ThemeContext } from "../../Context/ThemeContext";
 import { useParams } from "react-router-dom";
+import { fetchWithAuth } from "../../utils/userapi";
 
 export default function SearchOrder() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
-    const { id } = useParams();
-    const token = localStorage.getItem('token');
-    const base_url = localStorage.getItem('base_url');
+    const { searchData } = useParams();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
     const columns = [
         { header: "Order Id", accessor: "orderid" },
         { header: "File Name", accessor: "fname" },
@@ -24,37 +26,43 @@ export default function SearchOrder() {
     ];
 
     useEffect(() => {
-        async function fetchNewCases() {
+        async function fetchOrders() {
             try {
-                const data = await fetch(`${base_url}get-order/${id}`, {
-                    method: "GET",
-                    headers: {
-                        'Content-Type': "application/json",
-                        'Authorization': `Bearer ${token}`,
-                        'X-Tenant': 'skydent',
-                    }
+                setLoading(true);
+                setError(null);
+                const decodedSearch = decodeURIComponent(searchData);
+                const response = await fetchWithAuth(`/get-order`, {
+                    method: "POST",
+                    body: JSON.stringify({ search: decodedSearch }),
                 });
 
-                const resp = await data.json();
-                if (resp && resp.status === 'success') {
-                    setData(resp.order);
+                if (response.status === "success") {
+                    setData(response.orders);
                 } else {
                     setData([]);
                 }
             } catch (error) {
-                console.error("Error fetching cases:", error);
                 setData([]);
+                setError("Network error. Please check your connection.");
+            } finally {
+                setLoading(false);
             }
         }
 
-        fetchNewCases();
-    }, []);
+        if (searchData) {
+            fetchOrders();
+        }
+    }, [searchData]);
 
     return (
         <>
             <Hd />
-            <main id="main" className={`flex-grow px-4 transition-colors duration-300 ${theme === 'light' ? 'bg-white text-black' : 'bg-black text-white'} pt-16 sm:pt-22`}>
-                <Datatable columns={columns} data={data} rowsPerPage={50} />
+            <main
+                id="main"
+                className={`flex-grow px-4 transition-colors duration-300 ${theme === "light" ? "bg-white text-black" : "bg-black text-white"
+                    } pt-16 sm:pt-22`}
+            >
+                <Datatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
             </main>
             <Foot />
         </>

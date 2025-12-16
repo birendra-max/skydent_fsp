@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useRef } from "react";
 import Hd from "./Hd";
 import Foot from "./Foot";
 import { ThemeContext } from "../../Context/ThemeContext";
@@ -7,9 +7,10 @@ export default function NewRequest() {
   const { theme } = useContext(ThemeContext);
   const [files, setFiles] = useState([]);
   const [drag, setDragActive] = useState(false);
-  const [orderSelection, setOrderSelection] = useState({}); // { fileName: { selectedOrders: [], availableOrders: [] } }
+  const [orderSelection, setOrderSelection] = useState({});
   const token = localStorage.getItem('token');
   let base_url = localStorage.getItem('base_url');
+  const progressIntervalRefs = useRef({});
 
   const handleFiles = async (selectedFiles) => {
     const fileArray = Array.from(selectedFiles);
@@ -43,43 +44,80 @@ export default function NewRequest() {
           uploadStatus: "Waiting...",
           message: "",
           file: file,
-          matchingOrders: null, // Will store matching orders when found
-          showOrderSelection: false, // Control visibility of order selection
+          matchingOrders: null,
+          showOrderSelection: false,
+          fileSize: file.size,
         },
       ]);
       uploadFile(file);
     });
   };
 
+  const simulateProgress = (fileName) => {
+    // Clear any existing interval for this file
+    if (progressIntervalRefs.current[fileName]) {
+      clearInterval(progressIntervalRefs.current[fileName]);
+    }
+
+    // Create new interval with realistic speed
+    progressIntervalRefs.current[fileName] = setInterval(() => {
+      setFiles((prev) =>
+        prev.map((f) => {
+          if (f.fileName === fileName && f.progress < 95 && f.uploadStatus === "Uploading...") {
+            // More realistic progress simulation
+            let speed;
+            if (f.progress < 70) {
+              speed = 2.5; // Faster at start
+            } else if (f.progress < 90) {
+              speed = 1.2; // Slower near completion
+            } else {
+              speed = 0.5; // Very slow at the end
+            }
+
+            // Add small randomness
+            const randomFactor = 0.9 + Math.random() * 0.2;
+            const increment = speed * randomFactor;
+
+            return {
+              ...f,
+              progress: Math.min(f.progress + increment, 95),
+              message: `Uploading... ${Math.round(f.progress + increment)}%`
+            };
+          }
+          return f;
+        })
+      );
+    }, 300); // Slower update for more realistic feel
+  };
+
   const uploadFile = async (file, selectedOrderIds = null) => {
     setFiles((prev) =>
       prev.map((f) =>
         f.fileName === file.name
-          ? { ...f, uploadStatus: "Uploading...", progress: 20, showOrderSelection: false }
+          ? {
+            ...f,
+            uploadStatus: "Uploading...",
+            progress: 5,
+            showOrderSelection: false,
+            message: "Starting upload..."
+          }
           : f
       )
     );
 
-    const progressInterval = setInterval(() => {
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.fileName === file.name && f.progress < 80
-            ? { ...f, progress: f.progress + 5 }
-            : f
-        )
-      );
-    }, 300);
+    // Start progress simulation
+    simulateProgress(file.name);
 
     // If we have selected order IDs, use the upload-order-file endpoint
     if (selectedOrderIds && selectedOrderIds.length > 0) {
-      await uploadToOrderFileEndpoint(file, selectedOrderIds, progressInterval);
+      await uploadToOrderFileEndpoint(file, selectedOrderIds);
     } else {
       // First time upload - use new-orders endpoint
-      await uploadToNewOrdersEndpoint(file, progressInterval);
+      await uploadToNewOrdersEndpoint(file);
     }
   };
 
-  const uploadToNewOrdersEndpoint = async (file, progressInterval) => {
+  const uploadToNewOrdersEndpoint = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
 
@@ -93,9 +131,13 @@ export default function NewRequest() {
         body: formData,
       });
 
-      clearInterval(progressInterval);
-
       const result = await response.json();
+
+      // Clear interval and update when complete
+      if (progressIntervalRefs.current[file.name]) {
+        clearInterval(progressIntervalRefs.current[file.name]);
+        delete progressIntervalRefs.current[file.name];
+      }
 
       if (result.status === "success") {
         setFiles((prev) =>
@@ -105,14 +147,13 @@ export default function NewRequest() {
                 ...f,
                 uploadStatus: "Success",
                 progress: 100,
-                message: result.message || "File uploaded successfully",
+                message: "File uploaded successfully",
                 fileLink: result.file_link || ""
               }
               : f
           )
         );
       } else if (result.status === "multiple" && result.matches) {
-        // Handle multiple matching orders
         setFiles((prev) =>
           prev.map((f) =>
             f.fileName === file.name
@@ -131,7 +172,11 @@ export default function NewRequest() {
         throw new Error(result.message || "Upload failed");
       }
     } catch (error) {
-      clearInterval(progressInterval);
+      if (progressIntervalRefs.current[file.name]) {
+        clearInterval(progressIntervalRefs.current[file.name]);
+        delete progressIntervalRefs.current[file.name];
+      }
+
       setFiles((prev) =>
         prev.map((f) =>
           f.fileName === file.name
@@ -147,15 +192,17 @@ export default function NewRequest() {
     }
   };
 
-  const uploadToOrderFileEndpoint = async (file, selectedOrderIds, progressInterval) => {
+  const uploadToOrderFileEndpoint = async (file, selectedOrderIds) => {
     try {
-      // Upload to each selected order individually
-      const uploadPromises = selectedOrderIds.map(async (orderId) => {
+      // Track total progress across multiple uploads
+      let totalProgress = 0;
+      const progressPerOrder = 100 / selectedOrderIds.length;
+
+      const uploadPromises = selectedOrderIds.map(async (orderId, index) => {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("orderid", orderId);
 
-        // Determine file type based on extension
         const fileType = file.name.endsWith('.stl') ? 'stl' : 'finished';
         formData.append("type", fileType);
 
@@ -168,13 +215,30 @@ export default function NewRequest() {
           body: formData,
         });
 
+        // Update progress for this specific upload
+        totalProgress += progressPerOrder;
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.fileName === file.name
+              ? {
+                ...f,
+                progress: Math.min(Math.round(totalProgress), 100),
+                message: `Uploading to order ${index + 1}/${selectedOrderIds.length}...`
+              }
+              : f
+          )
+        );
+
         return response.json();
       });
 
       const results = await Promise.all(uploadPromises);
-      clearInterval(progressInterval);
 
-      // Check if all uploads were successful
+      if (progressIntervalRefs.current[file.name]) {
+        clearInterval(progressIntervalRefs.current[file.name]);
+        delete progressIntervalRefs.current[file.name];
+      }
+
       const allSuccessful = results.every(result => result.status === "success");
 
       if (allSuccessful) {
@@ -186,13 +250,12 @@ export default function NewRequest() {
                 uploadStatus: "Success",
                 progress: 100,
                 message: `File uploaded successfully to ${selectedOrderIds.length} order(s)`,
-                fileLink: results[0].file_link || "" // Use first result's file link
+                fileLink: results[0].file_link || ""
               }
               : f
           )
         );
       } else {
-        // Some uploads failed
         const errorMessages = results
           .filter(result => result.status !== "success")
           .map(result => result.message)
@@ -201,7 +264,11 @@ export default function NewRequest() {
         throw new Error(`Some uploads failed: ${errorMessages}`);
       }
     } catch (error) {
-      clearInterval(progressInterval);
+      if (progressIntervalRefs.current[file.name]) {
+        clearInterval(progressIntervalRefs.current[file.name]);
+        delete progressIntervalRefs.current[file.name];
+      }
+
       setFiles((prev) =>
         prev.map((f) =>
           f.fileName === file.name
@@ -241,7 +308,6 @@ export default function NewRequest() {
   const confirmOrderSelection = (file) => {
     const selection = orderSelection[file.fileName];
     if (!selection || selection.selectedOrders.length === 0) {
-      // Show error if no orders selected
       setFiles(prev =>
         prev.map(f =>
           f.fileName === file.fileName
@@ -252,7 +318,6 @@ export default function NewRequest() {
       return;
     }
 
-    // Reset progress and retry upload with selected orders using upload-order-file endpoint
     setFiles((prev) =>
       prev.map((f) =>
         f.fileName === file.fileName
@@ -267,7 +332,6 @@ export default function NewRequest() {
       )
     );
 
-    // Retry upload with selected orders using the upload-order-file endpoint
     uploadFile(file.file, selection.selectedOrders);
   };
 
@@ -282,6 +346,12 @@ export default function NewRequest() {
   };
 
   const resetPage = () => {
+    // Clear all intervals
+    Object.values(progressIntervalRefs.current).forEach(interval => {
+      clearInterval(interval);
+    });
+    progressIntervalRefs.current = {};
+
     setFiles([]);
     setOrderSelection({});
   };
@@ -324,187 +394,160 @@ export default function NewRequest() {
       : 'hover:bg-gray-700 text-white';
   };
 
-  // Order Selection Component
-  const OrderSelection = ({ file }) => {
-    const selection = orderSelection[file.fileName] || { selectedOrders: [] };
+  // Thick & Professional Progress Bar
+  const ProgressBar = ({ file }) => {
+    const getBarStyle = () => {
+      switch (file.uploadStatus) {
+        case "Success":
+          return "from-green-500 to-green-400";
+        case "Failed":
+        case "Error":
+          return "from-red-500 to-red-400";
+        case "Multiple Orders Found":
+          return "from-yellow-500 to-yellow-400";
+        case "Uploading...":
+          return "from-blue-600 to-blue-400 animate-pulse";
+        default:
+          return "from-gray-400 to-gray-300";
+      }
+    };
 
     return (
-      <div className={`mt-4 p-4 rounded-lg border ${theme === 'light' ? 'bg-yellow-50 border-yellow-200' : 'bg-yellow-900/20 border-yellow-700'}`}>
-        <div className="flex items-center mb-3">
-          <svg className={`w-5 h-5 mr-2 ${theme === 'light' ? 'text-yellow-600' : 'text-yellow-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-          <span className={`font-semibold ${theme === 'light' ? 'text-yellow-700' : 'text-yellow-300'}`}>
-            Multiple orders found for this file
-          </span>
-        </div>
-
-        <p className={`text-sm mb-4 ${theme === 'light' ? 'text-yellow-600' : 'text-yellow-400'}`}>
-          Please select which orders you want to update with this file:
-        </p>
-
-        <div className="space-y-2 mb-4">
-          {file.matchingOrders && file.matchingOrders.map((order) => (
-            <label key={order.orderid} className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${theme === 'light'
-              ? 'bg-white border-gray-200 hover:bg-gray-50'
-              : 'bg-gray-800 border-gray-600 hover:bg-gray-700'
-              }`}>
-              <input
-                type="checkbox"
-                checked={selection.selectedOrders.includes(order.orderid)}
-                onChange={(e) => handleOrderSelection(file.fileName, order.orderid, e.target.checked)}
-                className={`w-4 h-4 rounded ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}
-              />
-              <div className="flex-1">
-                <div className={`font-medium ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-                  Order ID: {order.orderid}
-                </div>
-                {order.fname && (
-                  <div className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
-                    File: {order.fname}
-                  </div>
-                )}
-              </div>
-            </label>
-          ))}
-        </div>
-
-        <div className="flex justify-between items-center">
-          <span className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
-            {selection.selectedOrders.length} order(s) selected
-          </span>
-          <button
-            onClick={() => confirmOrderSelection(file)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${theme === 'light'
-              ? 'bg-blue-600 hover:bg-blue-700 text-white'
-              : 'bg-blue-700 hover:bg-blue-600 text-white'
+      <div className="w-full max-w-xs">
+        <div className="flex items-center gap-4">
+          {/* Progress Container */}
+          <div
+            className={`relative flex-1 h-3 rounded-full overflow-hidden ${theme === "light" ? "bg-gray-200" : "bg-gray-700"
               }`}
           >
-            Confirm Selection
-          </button>
+            {/* Progress Fill */}
+            <div
+              className={`
+              h-full rounded-full
+              bg-gradient-to-r ${getBarStyle()}
+              transition-all duration-500 ease-out
+              ${file.uploadStatus === "Uploading..."
+                  ? "shadow-[0_0_10px_rgba(59,130,246,0.7)]"
+                  : ""
+                }
+            `}
+              style={{ width: `${file.progress}%` }}
+            />
+          </div>
+
+          {/* Percentage */}
+          <span
+            className={`text-sm font-semibold min-w-[50px] text-right ${theme === "light" ? "text-gray-800" : "text-gray-200"
+              }`}
+          >
+            {Math.round(file.progress)}%
+          </span>
         </div>
+
+        {/* Status Text */}
+        {file.message && (
+          <div
+            className={`mt-1 text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"
+              }`}
+          >
+            {file.message}
+          </div>
+        )}
       </div>
     );
   };
 
-  // Status badge component
+
+  // Status badge component - Simplified
   const StatusBadge = ({ status, message, fileLink, file, showOrderSelection }) => {
-    const getStatusConfig = (status) => {
-      const lightConfig = {
-        Success: {
-          bgColor: "bg-gradient-to-r from-green-50 to-green-100",
-          textColor: "text-green-700",
-          borderColor: "border-green-200",
-        },
-        Failed: {
-          bgColor: "bg-gradient-to-r from-red-50 to-red-100",
-          textColor: "text-red-700",
-          borderColor: "border-red-200",
-        },
-        "Uploading...": {
-          bgColor: "bg-gradient-to-r from-blue-50 to-blue-100",
-          textColor: "text-blue-700",
-          borderColor: "border-blue-200",
-        },
-        "Waiting...": {
-          bgColor: "bg-gradient-to-r from-gray-50 to-gray-100",
-          textColor: "text-gray-700",
-          borderColor: "border-gray-200",
-        },
-        "Error": {
-          bgColor: "bg-gradient-to-r from-red-50 to-red-100",
-          textColor: "text-red-700",
-          borderColor: "border-red-200",
-        },
-        "Multiple Orders Found": {
-          bgColor: "bg-gradient-to-r from-yellow-50 to-yellow-100",
-          textColor: "text-yellow-700",
-          borderColor: "border-yellow-200",
-        }
-      };
-
-      const darkConfig = {
-        Success: {
-          bgColor: "bg-gradient-to-r from-green-900/20 to-green-800/20",
-          textColor: "text-green-400",
-          borderColor: "border-green-700",
-        },
-        Failed: {
-          bgColor: "bg-gradient-to-r from-red-900/20 to-red-800/20",
-          textColor: "text-red-400",
-          borderColor: "border-red-700",
-        },
-        "Uploading...": {
-          bgColor: "bg-gradient-to-r from-blue-900/20 to-blue-800/20",
-          textColor: "text-blue-400",
-          borderColor: "border-blue-700",
-        },
-        "Waiting...": {
-          bgColor: "bg-gradient-to-r from-gray-700 to-gray-800",
-          textColor: "text-gray-400",
-          borderColor: "border-gray-600",
-        },
-        "Error": {
-          bgColor: "bg-gradient-to-r from-red-900/20 to-red-800/20",
-          textColor: "text-red-400",
-          borderColor: "border-red-700",
-        },
-        "Multiple Orders Found": {
-          bgColor: "bg-gradient-to-r from-yellow-900/20 to-yellow-800/20",
-          textColor: "text-yellow-400",
-          borderColor: "border-yellow-700",
-        }
-      };
-
-      const config = theme === 'light' ? lightConfig[status] : darkConfig[status];
-
-      return {
-        ...config,
-        shadow: "shadow-sm",
-        icon: (
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${status === "Success" ? "bg-green-500" :
-            status === "Failed" ? "bg-red-500" :
-              status === "Uploading..." ? "bg-blue-500" :
-                status === "Error" ? "bg-red-500" :
-                  status === "Multiple Orders Found" ? "bg-yellow-500" :
-                    "bg-gray-400"
-            }`}>
-            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {status === "Success" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />}
-              {status === "Failed" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />}
-              {status === "Uploading..." && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />}
-              {status === "Waiting..." && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />}
-              {status === "Error" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />}
-              {status === "Multiple Orders Found" && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />}
-            </svg>
-          </div>
-        )
-      };
+    const getStatusColor = () => {
+      if (status === "Success") {
+        return theme === 'light'
+          ? "bg-green-100 text-green-800 border-green-200"
+          : "bg-green-900/30 text-green-400 border-green-800";
+      }
+      if (status === "Failed" || status === "Error") {
+        return theme === 'light'
+          ? "bg-red-100 text-red-800 border-red-200"
+          : "bg-red-900/30 text-red-400 border-red-800";
+      }
+      if (status === "Uploading...") {
+        return theme === 'light'
+          ? "bg-blue-100 text-blue-800 border-blue-200"
+          : "bg-blue-900/30 text-blue-400 border-blue-800";
+      }
+      if (status === "Multiple Orders Found") {
+        return theme === 'light'
+          ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+          : "bg-yellow-900/30 text-yellow-400 border-yellow-800";
+      }
+      return theme === 'light'
+        ? "bg-gray-100 text-gray-800 border-gray-200"
+        : "bg-gray-800 text-gray-400 border-gray-700";
     };
-
-    const config = getStatusConfig(status);
 
     return (
       <div className="flex flex-col space-y-2">
-        <div className={`inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-semibold border ${config.bgColor} ${config.textColor} ${config.borderColor} ${config.shadow} transition-all duration-200`}>
-          {config.icon}
-          <span className="font-medium">{status}</span>
+        <div className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium border ${getStatusColor()}`}>
+          <span>{status}</span>
         </div>
 
-        {(status === "Failed" || status === "Error") && message && (
-          <div className={`flex items-start space-x-2 text-xs px-3 py-2 rounded-lg border ${theme === 'light'
-            ? 'text-red-600 bg-red-50 border-red-200'
-            : 'text-red-400 bg-red-900/20 border-red-700'
-            }`}>
-            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-            <span className="flex-1">{message}</span>
-          </div>
-        )}
-
         {status === "Multiple Orders Found" && showOrderSelection && file.matchingOrders && (
-          <OrderSelection file={file} />
+          <div className={`mt-3 p-4 rounded-lg border ${theme === 'light' ? 'bg-yellow-50 border-yellow-200' : 'bg-yellow-900/20 border-yellow-700'}`}>
+            <div className="flex items-center mb-3">
+              <svg className={`w-5 h-5 mr-2 ${theme === 'light' ? 'text-yellow-600' : 'text-yellow-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <span className={`font-semibold ${theme === 'light' ? 'text-yellow-700' : 'text-yellow-300'}`}>
+                Multiple orders found for this file
+              </span>
+            </div>
+
+            <p className={`text-sm mb-4 ${theme === 'light' ? 'text-yellow-600' : 'text-yellow-400'}`}>
+              Please select which orders you want to update with this file:
+            </p>
+
+            <div className="space-y-2 mb-4">
+              {file.matchingOrders && file.matchingOrders.map((order) => (
+                <label key={order.orderid} className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${theme === 'light'
+                  ? 'bg-white border-gray-200 hover:bg-gray-50'
+                  : 'bg-gray-800 border-gray-600 hover:bg-gray-700'
+                  }`}>
+                  <input
+                    type="checkbox"
+                    checked={(orderSelection[file.fileName]?.selectedOrders || []).includes(order.orderid)}
+                    onChange={(e) => handleOrderSelection(file.fileName, order.orderid, e.target.checked)}
+                    className={`w-4 h-4 rounded ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`}
+                  />
+                  <div className="flex-1">
+                    <div className={`font-medium ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+                      Order ID: {order.orderid}
+                    </div>
+                    {order.fname && (
+                      <div className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
+                        File: {order.fname}
+                      </div>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
+                {(orderSelection[file.fileName]?.selectedOrders || []).length} order(s) selected
+              </span>
+              <button
+                onClick={() => confirmOrderSelection(file)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${theme === 'light'
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-blue-700 hover:bg-blue-600 text-white'
+                  }`}
+              >
+                Confirm Selection
+              </button>
+            </div>
+          </div>
         )}
 
         {status === "Success" && fileLink && (
@@ -555,8 +598,7 @@ export default function NewRequest() {
                     }}
                     onDrop={handleDrop}
                   >
-                    <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${theme === 'light' ? 'bg-blue-100' : 'bg-blue-900/20'
-                      }`}>
+                    <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${theme === 'light' ? 'bg-blue-100' : 'bg-blue-900/20'}`}>
                       <svg className={`w-10 h-10 ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
@@ -564,8 +606,7 @@ export default function NewRequest() {
                     <h3 className="text-xl font-semibold mb-3">
                       {drag ? "Drop files to upload" : "Upload Order Files"}
                     </h3>
-                    <p className={`mb-6 max-w-md mx-auto ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'
-                      }`}>
+                    <p className={`mb-6 max-w-md mx-auto ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
                       Drag and drop your files here or click the button below. Supported formats: .zip or .stl
                     </p>
                     <label className={`inline-flex items-center px-8 py-3 font-semibold rounded-lg shadow-sm cursor-pointer transition-colors ${theme === 'light'
@@ -594,33 +635,37 @@ export default function NewRequest() {
                   {/* Header with reset button */}
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-semibold">Uploaded Files</h2>
+
                     <button
                       onClick={resetPage}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${theme === 'light'
-                        ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                        : 'bg-gray-700 hover:bg-gray-600 text-white'
-                        }`}
+                      className={`
+      inline-flex items-center gap-2 px-5 py-2.5
+      rounded-xl font-semibold text-sm
+      transition-all duration-300
+      shadow-md hover:shadow-lg active:scale-95
+      ${theme === "light"
+                          ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600"
+                          : "bg-gradient-to-r from-blue-700 to-blue-600 text-white hover:from-blue-600 hover:to-blue-500"
+                        }
+    `}
                     >
+                      {/* Icon */}
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+
                       Upload New Files
                     </button>
                   </div>
 
-                  {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    {[
-                      { count: files.length, label: "Total Files", gradient: "from-blue-500 to-blue-600" },
-                      { count: files.filter(f => f.uploadStatus === "Success").length, label: "Completed", gradient: "from-green-500 to-green-600" },
-                      { count: files.filter(f => f.uploadStatus === "Uploading...").length, label: "In Progress", gradient: "from-yellow-500 to-yellow-600" },
-                      { count: files.filter(f => f.uploadStatus === "Waiting..." || f.uploadStatus === "Multiple Orders Found").length, label: "Pending", gradient: "from-gray-500 to-gray-600" },
-                    ].map((card, index) => (
-                      <div key={index} className={`bg-gradient-to-r ${card.gradient} text-white rounded-lg p-4 shadow-sm`}>
-                        <div className="text-2xl font-bold">{card.count}</div>
-                        <div className="text-opacity-90 text-sm">{card.label}</div>
-                      </div>
-                    ))}
-                  </div>
 
-                  {/* Table Container - Only FILE NAME and STATUS */}
+                  {/* Table Container */}
                   <div className={`rounded-lg border ${getTableContainerClass()}`}>
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -628,6 +673,9 @@ export default function NewRequest() {
                           <tr className={`border-b ${theme === 'light' ? 'border-gray-200' : 'border-gray-700'}`}>
                             <th className={`px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider ${getTableHeaderClass()}`}>
                               FILE NAME
+                            </th>
+                            <th className={`px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider ${getTableHeaderClass()}`}>
+                              PROGRESS
                             </th>
                             <th className={`px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider ${getTableHeaderClass()}`}>
                               STATUS
@@ -641,15 +689,18 @@ export default function NewRequest() {
                                 <div className="flex items-center space-x-3">
                                   <div className={`w-2 h-2 rounded-full ${file.uploadStatus === "Success" ? "bg-green-500" :
                                     file.uploadStatus === "Failed" ? "bg-red-500" :
-                                      file.uploadStatus === "Uploading..." ? "bg-blue-500 animate-pulse" :
+                                      file.uploadStatus === "Uploading..." ? "bg-blue-500" :
                                         file.uploadStatus === "Error" ? "bg-red-500" :
                                           file.uploadStatus === "Multiple Orders Found" ? "bg-yellow-500" :
                                             "bg-gray-400"
                                     }`}></div>
-                                  <span className="text-sm font-medium">
+                                  <span className="text-sm font-medium truncate max-w-xs">
                                     {file.fileName}
                                   </span>
                                 </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <ProgressBar file={file} />
                               </td>
                               <td className="px-6 py-4">
                                 <StatusBadge

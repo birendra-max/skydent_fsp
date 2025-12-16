@@ -21,7 +21,10 @@ import {
     faCalendarWeek,
     faRepeat,
     faComments,
-    faStar
+    faStar,
+    faPaperPlane,
+    faCheckCircle,
+    faExclamationCircle
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Dashboard() {
@@ -36,6 +39,12 @@ export default function Dashboard() {
         likes: "",
     });
     const [showModal, setShowModal] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitStatus, setSubmitStatus] = useState({
+        type: '', // 'success' or 'error'
+        message: '',
+        show: false
+    });
 
     const handleChange = (e) => {
         setForm({
@@ -46,11 +55,22 @@ export default function Dashboard() {
 
     const feedBackaRef = useRef(null);
     const token = localStorage.getItem('token');
+    
     const saveFeedback = async () => {
-        if (form.feedback === '') {
+        if (form.feedback.trim() === '') {
             feedBackaRef.current.focus();
+            setSubmitStatus({
+                type: 'error',
+                message: 'Please enter your feedback before submitting.',
+                show: true
+            });
+            return;
         }
-        else {
+
+        setIsSubmitting(true);
+        setSubmitStatus({ type: '', message: '', show: false });
+
+        try {
             const resp = await fetch(`${base_url}/save-feedback`, {
                 method: "POST",
                 headers: {
@@ -59,35 +79,56 @@ export default function Dashboard() {
                     'X-Tenant': 'skydent'
                 },
                 body: JSON.stringify(form),
-            })
+            });
 
-            const data = await resp.json()
+            const data = await resp.json();
+            
             if (data.status === 'success') {
-                const statusEl = document.getElementById('status');
-                statusEl.className = 'mb-4 w-full px-4 py-2 text-sm font-medium border rounded-lg border-green-400 bg-green-100 text-green-700';
-                statusEl.innerText = data.message;
+                setSubmitStatus({
+                    type: 'success',
+                    message: data.message || 'Thank you for your feedback!',
+                    show: true
+                });
+                
                 setForm({ feedback: "", likes: "" });
                 document.getElementById('feedbackform').reset();
+                
+                // Reset star ratings
+                const starElement = document.getElementById('star');
+                if (starElement) {
+                    const items = starElement.children;
+                    for (let i = 0; i < items.length; i++) {
+                        items[i].classList.remove('bg-yellow-400', 'scale-110', 'shadow-lg');
+                    }
+                }
+                
+                // Hide modal after 2 seconds
                 setTimeout(() => {
                     setShowModal(false);
+                    setSubmitStatus({ type: '', message: '', show: false });
                 }, 2000);
-
+                
             } else {
-
                 if (data.error === 'Invalid or expired token') {
                     alert('Invalid or expired token. Please log in again.')
                     navigate(logout);
                 }
 
-                const statusEl = document.getElementById('status');
-                statusEl.className = 'mb-4 w-full px-4 py-2 text-sm font-medium border rounded-lg border-red-400 bg-red-100 text-red-700';
-                statusEl.innerText = data.message;
-                setForm({ feedback: "", likes: "" });
-                document.getElementById('feedbackform').reset();
-                setTimeout(() => {
-                    setShowModal(false);
-                }, 2000);
+                setSubmitStatus({
+                    type: 'error',
+                    message: data.message || 'Failed to submit feedback. Please try again.',
+                    show: true
+                });
             }
+        } catch (error) {
+            console.error("Error submitting feedback:", error);
+            setSubmitStatus({
+                type: 'error',
+                message: 'Network error. Please check your connection and try again.',
+                show: true
+            });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -100,7 +141,6 @@ export default function Dashboard() {
 
                 if (data.status === 'success') {
                     setCases(data);
-                    console.log(data);
                 } else {
                     setCases(null);
                 }
@@ -136,10 +176,13 @@ export default function Dashboard() {
 
     const handleOpenModal = () => {
         setShowModal(true);
+        setSubmitStatus({ type: '', message: '', show: false });
     };
 
     const handleCloseModal = () => {
         setShowModal(false);
+        setForm({ feedback: "", likes: "" });
+        setSubmitStatus({ type: '', message: '', show: false });
     };
 
     function star(num) {
@@ -150,7 +193,7 @@ export default function Dashboard() {
         setForm((prevForm) => ({
             ...prevForm,
             likes: num
-        }))
+        }));
 
         for (let i = 0; i < items.length; i++) {
             items[i].classList.remove('bg-yellow-400', 'scale-110', 'shadow-lg');
@@ -182,8 +225,8 @@ export default function Dashboard() {
 
     const getTextAreaClass = () => {
         return theme === 'dark'
-            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-            : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500';
+            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
+            : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500';
     };
 
     const getButtonClass = () => {
@@ -204,7 +247,34 @@ export default function Dashboard() {
             : 'text-gray-900';
     };
 
-    if (cards && cards != null) {
+    const getSubmitButtonClass = () => {
+        const baseClass = "px-6 py-3 rounded-lg transition-colors cursor-pointer text-sm font-medium flex items-center justify-center gap-2 min-w-[140px]";
+        
+        if (isSubmitting) {
+            return theme === 'dark' 
+                ? `${baseClass} bg-blue-800 text-blue-200 cursor-not-allowed`
+                : `${baseClass} bg-blue-400 text-white cursor-not-allowed`;
+        }
+        
+        return theme === 'dark'
+            ? `${baseClass} bg-blue-600 text-white hover:bg-blue-700`
+            : `${baseClass} bg-blue-600 text-white hover:bg-blue-700`;
+    };
+
+    const getStatusClass = () => {
+        if (submitStatus.type === 'success') {
+            return theme === 'dark'
+                ? 'bg-green-900/30 border border-green-800 text-green-300'
+                : 'bg-green-50 border border-green-200 text-green-700';
+        } else if (submitStatus.type === 'error') {
+            return theme === 'dark'
+                ? 'bg-red-900/30 border border-red-800 text-red-300'
+                : 'bg-red-50 border border-red-200 text-red-700';
+        }
+        return '';
+    };
+
+    if (cards && cards.length > 0) {
         return (
             <section className={`p-4 ${getBackgroundClass()}`}>
                 {/* Cards Grid - Compact Design */}
@@ -233,105 +303,155 @@ export default function Dashboard() {
                     ))}
                 </div>
 
-                {/* Feedback Modal - Compact Design */}
+                {/* Feedback Modal - Professional Design */}
                 <div
                     id="feedbackModal"
-                    className={`${showModal ? 'flex' : 'hidden'} fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4`}
+                    className={`${showModal ? 'flex' : 'hidden'} fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm transition-all duration-300`}
+                    onClick={(e) => e.target.id === 'feedbackModal' && handleCloseModal()}
                 >
-                    <div className={`border w-full max-w-md rounded-xl shadow-lg relative ${getModalClass()}`}>
+                    <div className={`border w-full max-w-md rounded-xl shadow-2xl relative ${getModalClass()} animate-scale-in`}>
                         <button
                             onClick={handleCloseModal}
-                            className={`absolute top-3 right-3 w-8 h-8 rounded flex items-center justify-center text-sm cursor-pointer ${getButtonClass()}`}
+                            className={`absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-sm cursor-pointer ${getButtonClass()} transition-all duration-200`}
                         >
                             ✖
                         </button>
 
-                        <div className="p-5">
+                        <div className="p-6">
+                            {/* Header */}
+                            <div className="text-center mb-6">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 mb-4">
+                                    <FontAwesomeIcon icon={faComments} className="text-2xl text-white" />
+                                </div>
+                                <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                    Share Your Feedback
+                                </h3>
+                                <p className={`text-sm mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Help us improve your experience
+                                </p>
+                            </div>
 
-                            <p id="status" className=" mt-4 w-full mb-3"></p>
+                            {/* Status Message */}
+                            {submitStatus.show && (
+                                <div className={`mb-6 p-4 rounded-lg ${getStatusClass()} animate-fade-in`}>
+                                    <div className="flex items-center gap-3">
+                                        <FontAwesomeIcon 
+                                            icon={submitStatus.type === 'success' ? faCheckCircle : faExclamationCircle} 
+                                            className={submitStatus.type === 'success' ? 'text-green-500' : 'text-red-500'} 
+                                        />
+                                        <span className="text-sm font-medium">{submitStatus.message}</span>
+                                    </div>
+                                </div>
+                            )}
 
-                            <form className="space-y-4" id="feedbackform">
+                            <form className="space-y-6" id="feedbackform">
+                                {/* Feedback Textarea */}
                                 <div>
-                                    <label className={`block mb-2 text-sm font-medium ${getTextClass()}`}>Your Feedback</label>
+                                    <label className={`block mb-3 text-sm font-semibold ${getTextClass()}`}>
+                                        Your Feedback
+                                        <span className="text-red-500 ml-1">*</span>
+                                    </label>
                                     <textarea
                                         ref={feedBackaRef}
-                                        rows="3"
+                                        rows="4"
                                         name="feedback"
                                         value={form.feedback}
                                         onChange={handleChange}
-                                        className={`w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm ${getTextAreaClass()}`}
-                                        placeholder="Share your thoughts..."
+                                        className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200 resize-none ${getTextAreaClass()}`}
+                                        placeholder="Tell us what you think... We value your input!"
+                                        disabled={isSubmitting}
                                     ></textarea>
+                                    <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        Minimum 10 characters required
+                                    </p>
                                 </div>
 
-                                {/* Rate Your Experience Section */}
-                                <div className="mt-4">
-                                    <label className={`block mb-2 text-sm font-medium ${getTextClass()}`}>
+                                {/* Star Rating Section */}
+                                <div>
+                                    <label className={`block mb-3 text-sm font-semibold ${getTextClass()}`}>
                                         Rate Your Experience
                                     </label>
-
-                                    <div className="flex items-center justify-start space-x-2">
+                                    <div id="star" className="flex items-center justify-center space-x-1 mb-2">
                                         {[1, 2, 3, 4, 5].map((num) => (
                                             <button
                                                 key={num}
-                                                onClick={() =>
-                                                    setForm((prev) => ({ ...prev, likes: num }))
-                                                }
+                                                onClick={() => !isSubmitting && star(num)}
                                                 type="button"
+                                                disabled={isSubmitting}
                                                 className={`
-          group relative w-8 h-8 rounded-full flex items-center justify-center
-          transition-all duration-300 transform hover:scale-110
-          ${form.likes >= num
-                                                        ? 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-white shadow-[0_0_10px_rgba(250,204,21,0.6)]'
+                                                    group relative w-10 h-10 rounded-full flex items-center justify-center
+                                                    transition-all duration-300 transform hover:scale-110
+                                                    ${form.likes >= num
+                                                        ? 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-white shadow-[0_0_15px_rgba(250,204,21,0.7)]'
                                                         : theme === 'dark'
                                                             ? 'bg-gray-700 text-yellow-400 hover:bg-yellow-400 hover:text-white'
-                                                            : 'bg-gray-200 text-yellow-500 hover:bg-yellow-400 hover:text-white'
+                                                            : 'bg-gray-100 text-yellow-500 hover:bg-yellow-400 hover:text-white'
                                                     }
-        `}
+                                                    ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                                                `}
                                             >
-                                                <FontAwesomeIcon icon={faStar} className="text-lg" />
-                                                <span className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs px-2 py-1 rounded-md bg-black/70 text-white whitespace-nowrap">
+                                                <FontAwesomeIcon icon={faStar} className="text-xl" />
+                                                <span className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all duration-300 text-xs px-3 py-1.5 rounded-md bg-gray-900 text-white whitespace-nowrap shadow-lg">
                                                     {num === 1
-                                                        ? 'Terrible 😞'
+                                                        ? 'Poor 😞'
                                                         : num === 2
-                                                            ? 'Poor 😕'
+                                                            ? 'Fair 😕'
                                                             : num === 3
-                                                                ? 'Average 🙂'
+                                                                ? 'Good 🙂'
                                                                 : num === 4
-                                                                    ? 'Good 😃'
+                                                                    ? 'Very Good 😃'
                                                                     : 'Excellent 🤩'}
                                                 </span>
                                             </button>
                                         ))}
                                     </div>
-
+                                    
                                     {form.likes > 0 && (
-                                        <p
-                                            className={`mt-2 text-sm font-medium ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
-                                                }`}
-                                        >
-                                            You rated:{' '}
+                                        <p className={`text-center text-sm font-medium ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                                            <FontAwesomeIcon icon={faStar} className="mr-2" />
                                             {form.likes === 1
-                                                ? 'Terrible'
+                                                ? 'Poor'
                                                 : form.likes === 2
-                                                    ? 'Poor'
+                                                    ? 'Fair'
                                                     : form.likes === 3
-                                                        ? 'Average'
+                                                        ? 'Good'
                                                         : form.likes === 4
-                                                            ? 'Good'
+                                                            ? 'Very Good'
                                                             : 'Excellent'}
                                         </p>
                                     )}
                                 </div>
 
-
-                                <div className="text-right pt-2">
+                                {/* Submit Button */}
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={handleCloseModal}
+                                        disabled={isSubmitting}
+                                        className={`px-5 py-2.5 rounded-lg border transition-colors text-sm font-medium ${theme === 'dark' 
+                                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                        } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                    >
+                                        Cancel
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={saveFeedback}
-                                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer text-sm font-medium"
+                                        disabled={isSubmitting || form.feedback.trim().length < 10}
+                                        className={getSubmitButtonClass()}
                                     >
-                                        Submit Feedback
+                                        {isSubmitting ? (
+                                            <>
+                                                <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                                                Submitting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FontAwesomeIcon icon={faPaperPlane} />
+                                                Submit Feedback
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </form>
@@ -339,16 +459,59 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Feedback Button - Compact */}
-                <div className="fixed bottom-4 right-4 z-40">
+                {/* Feedback Button */}
+                <div className="fixed bottom-6 right-6 z-40 animate-bounce-slow">
                     <button
                         onClick={handleOpenModal}
-                        className="w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-lg cursor-pointer"
+                        className="group relative w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center cursor-pointer"
                     >
-                        <FontAwesomeIcon icon={faComments} className="text-2xl" />
+                        <FontAwesomeIcon icon={faComments} className="text-xl" />
+                        <span className="absolute -top-12 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs px-3 py-1.5 rounded-md bg-gray-900 text-white whitespace-nowrap shadow-lg">
+                            Share Feedback
+                        </span>
                     </button>
                 </div>
 
+                {/* Add CSS animations */}
+                <style jsx>{`
+                    @keyframes scale-in {
+                        from {
+                            transform: scale(0.95);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: scale(1);
+                            opacity: 1;
+                        }
+                    }
+                    @keyframes fade-in {
+                        from {
+                            opacity: 0;
+                            transform: translateY(-10px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                    @keyframes bounce-slow {
+                        0%, 100% {
+                            transform: translateY(0);
+                        }
+                        50% {
+                            transform: translateY(-10px);
+                        }
+                    }
+                    .animate-scale-in {
+                        animation: scale-in 0.3s ease-out;
+                    }
+                    .animate-fade-in {
+                        animation: fade-in 0.3s ease-out;
+                    }
+                    .animate-bounce-slow {
+                        animation: bounce-slow 2s infinite;
+                    }
+                `}</style>
             </section>
         )
     } else {

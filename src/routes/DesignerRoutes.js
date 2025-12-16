@@ -48,7 +48,7 @@ export default function DesignerRoutes() {
                 <Route path="/weekly_case" element={<WeeklyCases />} />
                 <Route path="/redesign_cases" element={<RedesignCases />} />
                 <Route path="/orderDeatails/:id" element={<OrderDetails />} />
-                <Route path='/search-order/:id' element={<SearchOrder />} />
+                <Route path='/search-order/:searchData' element={<SearchOrder />} />
             </Routes>
         </DesignerProvider>
     )

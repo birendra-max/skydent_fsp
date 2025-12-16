@@ -42,7 +42,7 @@ export default function UserRoutes() {
                 <Route path="/today_cases" element={<TodayCases />} />
                 <Route path="/weekly_case" element={<WeeklyCases />} />
                 <Route path="/redesign_cases" element={<RedesignCases />} />
-                <Route path='/search-order/:id' element={<SearchOrder />} />
+                <Route path='/search-order/:searchData' element={<SearchOrder />} />
                 <Route path='/profile' element={<Profile />} />
             </Routes>
         </UserProvider>
