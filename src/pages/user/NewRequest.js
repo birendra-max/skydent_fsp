@@ -16,6 +16,7 @@ export default function NewRequest() {
   const [selectedDuration, setSelectedDuration] = useState("");
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [uploadRequests, setUploadRequests] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFiles = (selectedFiles) => {
     const fileArray = Array.from(selectedFiles);
@@ -224,9 +225,11 @@ export default function NewRequest() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     if (!selectedDuration) {
       alert("Please select a time duration");
+      setIsSubmitting(false);
       return;
     }
 
@@ -260,15 +263,17 @@ export default function NewRequest() {
           navigate(logout);
         }
       }
-
     } catch (error) {
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const canSubmit = files.length > 0 &&
     files.some(f => f.uploadStatus === "Success") &&
     !files.some(f => f.uploadStatus.startsWith("Uploading...")) &&
-    selectedDuration;
+    selectedDuration &&
+    !isSubmitting;
 
   const getCardClass = () => {
     return theme === 'light'
@@ -339,7 +344,6 @@ export default function NewRequest() {
     };
 
     const config = getStatusConfig(status.split(' ')[0]);
-
     const isUploading = status.startsWith("Uploading...");
 
     return (
@@ -406,7 +410,6 @@ export default function NewRequest() {
 
         <section className="max-w-8xl mx-auto">
           <div className={`rounded-xl border ${getCardClass()} mb-8`}>
-
             {files.length === 0 && (
               <div className="p-8">
                 <div
@@ -601,9 +604,7 @@ export default function NewRequest() {
                         ].map((option) => (
                           <label
                             key={option.value}
-                            className={`
-    relative flex p-5 rounded-xl border cursor-pointer transition-all duration-200 group
-    ${selectedDuration === option.value
+                            className={`relative flex p-5 rounded-xl border cursor-pointer transition-all duration-200 group ${selectedDuration === option.value
                                 ? option.color === "red"
                                   ? "border-red-500 bg-white shadow-md"
                                   : option.color === "yellow"
@@ -612,8 +613,7 @@ export default function NewRequest() {
                                 : theme === "light"
                                   ? "border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50"
                                   : "border-gray-600 bg-gray-800 hover:border-gray-500 hover:bg-gray-700"
-                              }
-  `}
+                              }`}
                           >
                             <input
                               type="radio"
@@ -625,9 +625,7 @@ export default function NewRequest() {
                             />
 
                             <div className="flex-shrink-0 mr-4 mt-1">
-                              <div className={`
-      w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
-      ${selectedDuration === option.value
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedDuration === option.value
                                   ? option.color === "red"
                                     ? "border-red-500 bg-red-500"
                                     : option.color === "yellow"
@@ -636,8 +634,7 @@ export default function NewRequest() {
                                   : theme === "light"
                                     ? "border-gray-400 bg-white"
                                     : "border-gray-500 bg-gray-700"
-                                }
-    `}>
+                                }`}>
                                 {selectedDuration === option.value && (
                                   <div className="w-2 h-2 bg-white rounded-full"></div>
                                 )}
@@ -646,40 +643,30 @@ export default function NewRequest() {
 
                             <div className="flex-1">
                               <div className="flex items-start space-x-3">
-
-                                <div className={`
-        flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all
-        ${selectedDuration === option.value
+                                <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all ${selectedDuration === option.value
                                     ? "bg-white text-black border border-gray-300"
                                     : theme === "light"
                                       ? "bg-gray-100 text-gray-500"
                                       : "bg-gray-700 text-gray-400"
-                                  }
-      `}>
+                                  }`}>
                                   {option.icon}
                                 </div>
 
                                 <div className="flex-1 min-w-0">
                                   <span
-                                    className={`font-bold text-base block 
-            ${selectedDuration === option.value ? "text-black" : theme === 'light' ? "text-gray-900" : "text-white"}
-          `}
+                                    className={`font-bold text-base block ${selectedDuration === option.value ? "text-black" : theme === 'light' ? "text-gray-900" : "text-white"}`}
                                   >
                                     {option.label}
                                   </span>
 
                                   <span
-                                    className={`text-sm font-medium block mt-1
-            ${selectedDuration === option.value ? "text-black" : theme === 'light' ? "text-gray-700" : "text-gray-300"}
-          `}
+                                    className={`text-sm font-medium block mt-1 ${selectedDuration === option.value ? "text-black" : theme === 'light' ? "text-gray-700" : "text-gray-300"}`}
                                   >
                                     {option.description}
                                   </span>
 
                                   <span
-                                    className={`text-xs block mt-1
-            ${selectedDuration === option.value ? "text-black/70" : theme === 'light' ? "text-gray-500" : "text-gray-400"}
-          `}
+                                    className={`text-xs block mt-1 ${selectedDuration === option.value ? "text-black/70" : theme === 'light' ? "text-gray-500" : "text-gray-400"}`}
                                   >
                                     {option.tagline}
                                   </span>
@@ -689,15 +676,12 @@ export default function NewRequest() {
 
                             {selectedDuration === option.value && (
                               <div className="absolute -top-2 -right-2">
-                                <div className={`
-        w-6 h-6 rounded-full flex items-center justify-center shadow-md
-        ${option.color === "red"
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center shadow-md ${option.color === "red"
                                     ? "bg-red-500"
                                     : option.color === "yellow"
                                       ? "bg-yellow-500"
                                       : "bg-green-500"
-                                  }
-      `}>
+                                  }`}>
                                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
@@ -721,9 +705,7 @@ export default function NewRequest() {
                     <div className="flex flex-col justify-between">
                       <div>
                         <h3 className={`text-xl font-bold mb-6 ${theme === 'light' ? 'text-black' : 'text-white'}`}>Submit Orders</h3>
-                        <div className={`
-          flex items-center p-4 rounded-lg mb-6 text-sm font-medium
-          ${files.some(f => f.uploadStatus.startsWith("Uploading..."))
+                        <div className={`flex items-center p-4 rounded-lg mb-6 text-sm font-medium ${files.some(f => f.uploadStatus.startsWith("Uploading..."))
                             ? theme === 'light'
                               ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
                               : "bg-yellow-900/20 text-yellow-300 border border-yellow-800"
@@ -738,8 +720,7 @@ export default function NewRequest() {
                                 : theme === 'light'
                                   ? "bg-gray-50 text-gray-600 border border-gray-200"
                                   : "bg-gray-800 text-gray-400 border border-gray-700"
-                          }`}
-                        >
+                          }`}>
                           <div className="flex items-center space-x-2">
                             {files.some(f => f.uploadStatus.startsWith("Uploading...")) ? (
                               <>
@@ -775,16 +756,19 @@ export default function NewRequest() {
                         <button
                           onClick={handleSubmit}
                           disabled={!canSubmit}
-                          className={`
-            w-full font-bold py-4 px-6 rounded-xl text-base transition-all duration-200 cursor-pointer
-            ${canSubmit
+                          className={`w-full font-bold py-4 px-6 rounded-xl text-base transition-all duration-200 ${canSubmit
                               ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                               : theme === 'light'
                                 ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
                                 : "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700"
                             }`}
                         >
-                          {canSubmit ? (
+                          {isSubmitting ? (
+                            <span className="flex items-center justify-center space-x-2">
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span>Submitting...</span>
+                            </span>
+                          ) : canSubmit ? (
                             <span className="flex items-center justify-center space-x-2">
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -796,14 +780,11 @@ export default function NewRequest() {
                           )}
                         </button>
 
-                        {files.some(f => f.uploadStatus === "Failed") && canSubmit && (
-                          <div className={`
-            flex items-center justify-center space-x-2 p-3 rounded-lg text-sm
-            ${theme === 'light'
+                        {files.some(f => f.uploadStatus === "Failed") && canSubmit && !isSubmitting && (
+                          <div className={`flex items-center justify-center space-x-2 p-3 rounded-lg text-sm ${theme === 'light'
                               ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                               : 'bg-yellow-900/20 text-yellow-300 border border-yellow-800'
-                            }`}
-                          >
+                            }`}>
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
