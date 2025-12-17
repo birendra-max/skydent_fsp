@@ -2,18 +2,18 @@ import { useState, useMemo, useEffect, useContext } from "react";
 import Loder from "../../Components/Loder";
 import Chatbox from "../../Components/Chatbox";
 import { ThemeContext } from "../../Context/ThemeContext";
-import { exportToExcel } from '../../helper/ExcelGenerate';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
-import { fetchWithAuth } from '../../utils/designerapi';
 import { Link } from 'react-router-dom';
 import {
     faFolderOpen,
     faSearch,
     faSort,
     faSortUp,
-    faSortDown
+    faSortDown,
+    faBolt
 } from '@fortawesome/free-solid-svg-icons';
+import { fetchWithAuth } from "../../utils/designerapi";
 
 export default function Datatable({
     columns = [],
@@ -214,6 +214,48 @@ export default function Datatable({
         }
     };
 
+    const runSelf = async () => {
+        if (!selectedRows.length) {
+            alert("Please select at least one record to proceed with in progress.");
+            return;
+        }
+
+        let successCount = 0;
+        let invalidCount = 0;
+
+        try {
+            for (const id of selectedRows) {
+                const record = data.find(x => x.orderid === id);
+
+                if (!record) continue;
+
+                if (record.status === 'New' || record.status === 'Redesign') {
+                    await fetchWithAuth(`/update-pending/${id}`);
+                    successCount++;
+                } else {
+                    invalidCount++;
+                }
+            }
+            if (successCount > 0 && invalidCount === 0) {
+                alert(`${successCount} order(s) sent to In Progress successfully.`);
+                window.location.reload();
+            } else if (successCount > 0 && invalidCount > 0) {
+                alert(
+                    `${successCount} order(s) sent to In Progress.\n` +
+                    `${invalidCount} order(s) were skipped (only New & Redesign allowed).`
+                );
+                window.location.reload();
+            } else {
+                alert("Only New & Redesign orders can be sent to In Progress.");
+            }
+
+        } catch (error) {
+            console.error("Run Self error:", error);
+            alert("Something went wrong. Please try again.");
+        }
+    };
+
+
     const base_url = localStorage.getItem('base_url');
 
     const handleBulkDownload = async () => {
@@ -330,14 +372,15 @@ export default function Datatable({
                                         </select>
                                     </div>
 
-                                    {/* Download Report */}
+                                    {/* Run Self */}
                                     <button
-                                        onClick={() => exportToExcel(data, "Reports")}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm font-medium rounded-lg border border-green-600 transition-all duration-200 shadow-lg hover:shadow-xl cursor-pointer"
+                                        onClick={runSelf}
+                                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-sm font-medium rounded-lg border border-red-600 transition-all duration-200 shadow-lg hover:shadow-xl cursor-pointer"
                                     >
-                                        <FontAwesomeIcon icon={faDownload} className="text-white" />
-                                        Download Report
+                                        <FontAwesomeIcon icon={faBolt} className="text-white" />
+                                        Run Self
                                     </button>
+
 
                                     <div className={`flex items-center gap-3 px-4 py-2 rounded-xl`}>
 
