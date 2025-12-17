@@ -69,7 +69,7 @@ function Chatbox({ orderid, theme }) {
     const loadChatHistory = async () => {
         try {
             const response = await fetch(`${config.API_BASE_URL}/chat/get-chat-history/${orderid}`, {
-                headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant': 'skydent' }
+                headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant': 'bravodent' }
             });
             const data = await response.json();
 
@@ -102,7 +102,7 @@ function Chatbox({ orderid, theme }) {
     const startSSEConnection = () => {
         if (!orderid || !token || eventSourceRef.current) return;
 
-        const url = `${config.API_BASE_URL}/chat/stream-chat/${orderid}?lastId=${lastMessageIdRef.current}&tenant=skydent`;
+        const url = `${config.API_BASE_URL}/chat/stream-chat/${orderid}?lastId=${lastMessageIdRef.current}&tenant=bravodent`;
 
         try {
             eventSourceRef.current = new EventSource(url);
@@ -188,7 +188,7 @@ function Chatbox({ orderid, theme }) {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
-                    'X-Tenant': 'skydent'
+                    'X-Tenant': 'bravodent'
                 },
                 body: JSON.stringify({
                     orderid,
@@ -215,7 +215,7 @@ function Chatbox({ orderid, theme }) {
 
         fetch(`${config.API_BASE_URL}/chat/chat-file`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant': 'skydent' },
+            headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant': 'bravodent' },
             body: formData
         })
             .then(() => e.target.value = '')
@@ -259,15 +259,15 @@ function Chatbox({ orderid, theme }) {
             {/* ================= HEADER ================= */}
             <div
                 className={`shrink-0 flex items-center justify-between rounded-xl px-6 py-4 border-b ${theme === "light"
-                        ? "bg-white border-gray-200"
-                        : "bg-gray-800 border-gray-700"
+                    ? "bg-white border-gray-200"
+                    : "bg-gray-800 border-gray-700"
                     }`}
             >
                 <div className="flex items-center gap-3">
                     <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center ${theme === "light"
-                                ? "bg-blue-100 text-blue-600"
-                                : "bg-blue-900 text-blue-300"
+                            ? "bg-blue-100 text-blue-600"
+                            : "bg-blue-900 text-blue-300"
                             }`}
                     >
                         <FontAwesomeIcon icon={faComments} />
@@ -329,12 +329,12 @@ function Chatbox({ orderid, theme }) {
                             >
                                 <div
                                     className={`max-w-[80%] rounded-2xl p-3 break-words ${isRight
-                                            ? theme === "light"
-                                                ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-                                                : "bg-gradient-to-r from-green-600 to-emerald-700 text-white"
-                                            : theme === "light"
-                                                ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white"
-                                                : "bg-gradient-to-r from-blue-600 to-purple-700 text-white"
+                                        ? theme === "light"
+                                            ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+                                            : "bg-gradient-to-r from-green-600 to-emerald-700 text-white"
+                                        : theme === "light"
+                                            ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white"
+                                            : "bg-gradient-to-r from-blue-600 to-purple-700 text-white"
                                         }`}
                                 >
                                     {msg.hasAttachment && msg.file_path ? (
@@ -379,8 +379,8 @@ function Chatbox({ orderid, theme }) {
             {/* ================= INPUT ================= */}
             <div
                 className={`shrink-0 border-t p-4 rounded-xl ${theme === "light"
-                        ? "bg-white border-gray-200"
-                        : "bg-gray-800 border-gray-700"
+                    ? "bg-white border-gray-200"
+                    : "bg-gray-800 border-gray-700"
                     }`}
             >
                 <div className="flex items-start gap-2">
@@ -395,8 +395,8 @@ function Chatbox({ orderid, theme }) {
                         onClick={triggerFileInput}
                         disabled={!orderid}
                         className={`p-3 rounded-lg ${theme === "light"
-                                ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                            ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                             } disabled:opacity-50`}
                     >
                         <FontAwesomeIcon icon={faPaperclip} />
@@ -412,8 +412,8 @@ function Chatbox({ orderid, theme }) {
                         disabled={!orderid}
                         style={{ minHeight: "44px", maxHeight: "120px", overflowY: "auto" }}
                         className={`w-full p-3 rounded-lg text-sm resize-none focus:outline-none ${theme === "light"
-                                ? "bg-gray-100 text-gray-900 border border-gray-300"
-                                : "bg-gray-700 text-white border border-gray-600"
+                            ? "bg-gray-100 text-gray-900 border border-gray-300"
+                            : "bg-gray-700 text-white border border-gray-600"
                             }`}
                     />
 
@@ -421,8 +421,8 @@ function Chatbox({ orderid, theme }) {
                         onClick={sendMessage}
                         disabled={!newMessage.trim() || !orderid}
                         className={`p-3 rounded-lg font-medium ${theme === "light"
-                                ? "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400"
-                                : "bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-800"
+                            ? "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400"
+                            : "bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-800"
                             } disabled:cursor-not-allowed`}
                     >
                         <FontAwesomeIcon icon={faPaperPlane} />
@@ -456,7 +456,7 @@ export default function OrderDetails() {
                 setLoading(true);
                 const response = await fetch(`${base_url}/get-order-details`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
                     body: JSON.stringify({ orderid: id }),
                 });
 
@@ -478,7 +478,7 @@ export default function OrderDetails() {
             try {
                 const response = await fetch(`${base_url}/get-file-history`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
                     body: JSON.stringify({ orderid: id }),
                 });
 
@@ -500,7 +500,7 @@ export default function OrderDetails() {
         try {
             const response = await fetch(`${base_url}/update-order-status`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
                 body: JSON.stringify({ orderid: id, status: selectedStatus }),
             });
 
@@ -523,7 +523,7 @@ export default function OrderDetails() {
         try {
             const response = await fetch(`${base_url}/delete-file`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
                 body: JSON.stringify({ file_id: fileId, file_type: type }),
             });
 
@@ -542,7 +542,7 @@ export default function OrderDetails() {
         try {
             const response = await fetch(`${base_url}/get-file-history`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
                 body: JSON.stringify({ orderid: id }),
             });
 
@@ -580,7 +580,7 @@ export default function OrderDetails() {
             try {
                 const response = await fetch(`${base_url}/upload-order-file`, {
                     method: "POST",
-                    headers: { "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
+                    headers: { "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
                     body: formData,
                 });
 
@@ -649,7 +649,7 @@ export default function OrderDetails() {
 
             const response = await fetch(`${base_url}/update-order-details`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
                 body: JSON.stringify({ orderid: id, userid: order?.userid, updates: updates }),
             });
 
@@ -772,7 +772,7 @@ export default function OrderDetails() {
                             </motion.div>
 
                             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className={`rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}>
-                                <div className="p-6 h-full">
+                                <div className="p-6 h-full flex flex-col">
                                     <div className="flex items-center justify-between mb-6">
                                         <div className="flex items-center gap-3">
                                             <div className={`p-3 rounded-xl ${theme === "light" ? "bg-green-100 text-green-600" : "bg-green-900 text-green-300"}`}><FontAwesomeIcon icon={faFileAlt} className="text-xl" /></div>
@@ -780,49 +780,52 @@ export default function OrderDetails() {
                                         </div>
                                     </div>
 
-                                    <div className="overflow-x-auto h-[calc(100%-100px)]">
-                                        <table className="w-full">
-                                            <thead>
-                                                <tr className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"}`}>
-                                                    <th className="py-3 px-4 text-left font-bold text-sm">File Name</th>
-                                                    <th className="py-3 px-4 text-left font-bold text-sm">Type</th>
-                                                    <th className="py-3 px-4 text-left font-bold text-sm">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {[...fileHistory.stl_files, ...fileHistory.finished_files].map((file, index) => {
-                                                    const isStlFile = file.type === 'stl' || file.file_type === 'stl' || (file.fname && file.fname.toLowerCase().endsWith('.stl'));
-                                                    const fileIcon = isStlFile ? faCube : faArchive;
-                                                    const fileType = isStlFile ? 'STL' : 'Finished';
+                                    <div className="flex-grow flex flex-col min-h-0"> {/* Added flex container */}
+                                        <div className="overflow-x-auto flex-shrink-0"> {/* Fixed header area */}
+                                            <table className="w-full">
+                                                <thead>
+                                                    <tr className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"}`}>
+                                                        <th className="py-3 px-4 text-left font-bold text-sm">File Name</th>
+                                                        <th className="py-3 px-4 text-center font-bold text-sm">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
 
-                                                    return (
-                                                        <tr key={file.id || index} className={`border-b ${theme === "light" ? "border-gray-100 hover:bg-gray-50" : "border-gray-700 hover:bg-gray-700"}`}>
-                                                            <td className="py-3 px-4">
-                                                                <div className="flex items-start gap-3">
-                                                                    <div className="mt-1"><FontAwesomeIcon icon={fileIcon} className={`text-lg ${isStlFile ? 'text-blue-500' : 'text-green-500'}`} /></div>
-                                                                    <div>
-                                                                        <p className={`font-semibold ${theme === "light" ? "text-gray-900" : "text-white"}`} title={file.fname}>{file.fname}</p>
-                                                                        <p className={`text-xs mt-1 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}><FontAwesomeIcon icon={faClock} className="mr-1 text-xs" />Uploaded: {file.upload_date || 'N/A'}</p>
+                                        <div className="overflow-y-auto flex-grow" style={{ maxHeight: '400px' }}> {/* Scrollable body */}
+                                            <table className="w-full">
+                                                <tbody>
+                                                    {[...fileHistory.stl_files, ...fileHistory.finished_files].map((file, index) => {
+                                                        const isStlFile = file.type === 'stl' || file.file_type === 'stl' || (file.fname && file.fname.toLowerCase().endsWith('.stl'));
+                                                        const fileIcon = isStlFile ? faCube : faArchive;
+                                                        const fileType = isStlFile ? 'STL' : 'Finished';
+
+                                                        return (
+                                                            <tr key={file.id || index} className={`border-b ${theme === "light" ? "border-gray-100 hover:bg-gray-50" : "border-gray-700 hover:bg-gray-700"}`}>
+                                                                <td className="py-3 px-4">
+                                                                    <div className="flex items-start gap-3">
+                                                                        <div className="mt-1"><FontAwesomeIcon icon={fileIcon} className={`text-sm ${isStlFile ? 'text-blue-500' : 'text-green-500'}`} /></div>
+                                                                        <div>
+                                                                            <p className={`font-semibold text-[14px] ${theme === "light" ? "text-gray-900" : "text-white"}`} title={file.fname}>{file.fname}</p>
+                                                                            <p className={`text-xs mt-1 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}><FontAwesomeIcon icon={faClock} className="mr-1 text-xs" />Uploaded: {file.upload_date || 'N/A'}</p>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                <span className={`px-2 py-1 rounded text-xs font-bold ${isStlFile ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>{fileType}</span>
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                <div className="flex gap-2">
-                                                                    <button onClick={() => { const filePath = file.url || file.path || file.file_path; if (filePath) downloadFile(file.fname, filePath); else toast.error("File path not found!"); }} className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-all"><FontAwesomeIcon icon={faDownload} />Download</button>
-                                                                    <button onClick={() => { const fileType = file.type || file.file_type || (isStlFile ? 'stl' : 'finished'); handleDeleteFile(file.id, fileType); }} className="flex items-center gap-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition-all"><FontAwesomeIcon icon={faTrash} />Delete</button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                                {fileHistory.stl_files.length === 0 && fileHistory.finished_files.length === 0 && (
-                                                    <tr><td colSpan="3" className="py-8 text-center"><div className="flex flex-col items-center justify-center py-4"><FontAwesomeIcon icon={faFileAlt} className="text-3xl mb-3 opacity-50" /><p className={`text-lg ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>No files uploaded yet</p><p className={`text-sm mt-1 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>Upload your first file to get started</p></div></td></tr>
-                                                )}
-                                            </tbody>
-                                        </table>
+                                                                </td>
+                                                                <td className="py-3 px-4">
+                                                                    <div className="flex gap-2">
+                                                                        <button onClick={() => { const filePath = file.url || file.path || file.file_path; if (filePath) downloadFile(file.fname, filePath); else toast.error("File path not found!"); }} className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-all"><FontAwesomeIcon icon={faDownload} /></button>
+                                                                        <button onClick={() => { const fileType = file.type || file.file_type || (isStlFile ? 'stl' : 'finished'); handleDeleteFile(file.id, fileType); }} className="flex items-center gap-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition-all"><FontAwesomeIcon icon={faTrash} /></button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                    {fileHistory.stl_files.length === 0 && fileHistory.finished_files.length === 0 && (
+                                                        <tr><td colSpan="3" className="py-8 text-center"><div className="flex flex-col items-center justify-center py-4"><FontAwesomeIcon icon={faFileAlt} className="text-3xl mb-3 opacity-50" /><p className={`text-lg ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>No files uploaded yet</p><p className={`text-sm mt-1 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>Upload your first file to get started</p></div></td></tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </motion.div>
