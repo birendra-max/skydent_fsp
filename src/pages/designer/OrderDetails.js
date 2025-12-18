@@ -329,7 +329,7 @@ function Chatbox({ orderid, theme }) {
             {/* ================= INPUT ================= */}
             <div className={`shrink-0 border-t p-4 rounded-xl ${theme === "light" ? "bg-white border-gray-200" : "bg-gray-800 border-gray-700"}`}>
                 <div className="flex items-start gap-2">
-                    <input ref={fileInputRef} type="file" onChange={handleFileUpload} className="hidden" />
+                    <input ref={fileInputRef} type="file" onChange={handleFileUpload} multiple className="hidden" />
                     <button onClick={triggerFileInput} disabled={!orderid} className={`p-3 rounded-lg ${theme === "light" ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-gray-700 text-gray-300 hover:bg-gray-600"} disabled:opacity-50`}>
                         <FontAwesomeIcon icon={faPaperclip} />
                     </button>
