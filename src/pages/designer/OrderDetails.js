@@ -24,7 +24,9 @@ import {
     faPaperPlane,
     faComments,
     faFile,
-    faPaperclip
+    faPaperclip,
+    faPalette,
+    faUserCog
 } from "@fortawesome/free-solid-svg-icons";
 import { UserContext } from "../../Context/UserContext";
 import { DesignerContext } from "../../Context/DesignerContext";
@@ -69,7 +71,7 @@ function Chatbox({ orderid, theme }) {
     const loadChatHistory = async () => {
         try {
             const response = await fetch(`${config.API_BASE_URL}/chat/get-chat-history/${orderid}`, {
-                headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant': 'bravodent' }
+                headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant': 'skydent' }
             });
             const data = await response.json();
 
@@ -102,7 +104,7 @@ function Chatbox({ orderid, theme }) {
     const startSSEConnection = () => {
         if (!orderid || !token || eventSourceRef.current) return;
 
-        const url = `${config.API_BASE_URL}/chat/stream-chat/${orderid}?lastId=${lastMessageIdRef.current}&tenant=bravodent`;
+        const url = `${config.API_BASE_URL}/chat/stream-chat/${orderid}?lastId=${lastMessageIdRef.current}&tenant=skydent`;
 
         try {
             eventSourceRef.current = new EventSource(url);
@@ -188,7 +190,7 @@ function Chatbox({ orderid, theme }) {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
-                    'X-Tenant': 'bravodent'
+                    'X-Tenant': 'skydent'
                 },
                 body: JSON.stringify({
                     orderid,
@@ -205,22 +207,33 @@ function Chatbox({ orderid, theme }) {
         }
     };
 
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file || !orderid) return;
+    const handleFileUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length || !orderid) return;
 
-        const formData = new FormData();
-        formData.append('orderid', orderid);
-        formData.append('chatfile', file);
+        for (const file of files) {
+            const formData = new FormData();
+            formData.append('orderid', orderid);
+            formData.append('chatfile', file);
 
-        fetch(`${config.API_BASE_URL}/chat/chat-file`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant': 'bravodent' },
-            body: formData
-        })
-            .then(() => e.target.value = '')
-            .catch(() => e.target.value = '');
+            try {
+                await fetch(`${config.API_BASE_URL}/chat/chat-file`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'X-Tenant': 'skydent'
+                    },
+                    body: formData
+                });
+            } catch (err) {
+                console.error(`Failed to upload ${file.name}`, err);
+            }
+        }
+
+        // Reset input so same files can be selected again
+        e.target.value = '';
     };
+
 
     const triggerFileInput = () => fileInputRef.current?.click();
 
@@ -254,40 +267,19 @@ function Chatbox({ orderid, theme }) {
     };
 
     return (
-        <div className="h-full flex flex-col rounded-xl overflow-hidden">
+        <div className={`flex flex-col h-full rounded-xl overflow-hidden border ${theme === "light" ? "bg-white border-gray-200" : "bg-gray-900 border-gray-700"}`}>
 
             {/* ================= HEADER ================= */}
-            <div
-                className={`shrink-0 flex items-center justify-between rounded-xl px-6 py-4 border-b ${theme === "light"
-                    ? "bg-white border-gray-200"
-                    : "bg-gray-800 border-gray-700"
-                    }`}
-            >
+            <div className={`shrink-0 flex items-center justify-between px-6 py-4 border-b ${theme === "light" ? "bg-white border-gray-200" : "bg-gray-800 border-gray-700"}`}>
                 <div className="flex items-center gap-3">
-                    <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${theme === "light"
-                            ? "bg-blue-100 text-blue-600"
-                            : "bg-blue-900 text-blue-300"
-                            }`}
-                    >
+                    <div className={`w-10 h-10 flex items-center justify-center rounded-full ${theme === "light" ? "bg-blue-100 text-blue-600" : "bg-blue-900 text-blue-300"}`}>
                         <FontAwesomeIcon icon={faComments} />
                     </div>
                     <div>
-                        <h3
-                            className={`font-bold ${theme === "light" ? "text-gray-900" : "text-white"
-                                }`}
-                        >
-                            Order Chat
-                        </h3>
+                        <h3 className={`font-bold ${theme === "light" ? "text-gray-900" : "text-white"}`}>Order Chat</h3>
                         <div className="flex items-center gap-2">
-                            <div
-                                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"
-                                    }`}
-                            />
-                            <span
-                                className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"
-                                    }`}
-                            >
+                            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
+                            <span className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>
                                 {isConnected ? "Connected" : "Connecting..."}
                             </span>
                         </div>
@@ -295,79 +287,37 @@ function Chatbox({ orderid, theme }) {
                 </div>
             </div>
 
-            {/* ================= CHAT BODY (SCROLLS) ================= */}
+            {/* ================= CHAT BODY (scrollable) ================= */}
             <div
                 ref={chatBodyRef}
-                className={`flex-1 overflow-y-auto p-6 space-y-4 ${theme === "light" ? "bg-gray-50" : "bg-gray-800"
-                    }`}
+                className={`flex-1 overflow-y-auto p-6 space-y-4 ${theme === "light" ? "bg-gray-50" : "bg-gray-800"}`}
             >
                 {messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center">
-                            <FontAwesomeIcon
-                                icon={faComments}
-                                className={`text-4xl mb-3 ${theme === "light" ? "text-gray-300" : "text-gray-600"
-                                    }`}
-                            />
-                            <p
-                                className={
-                                    theme === "light" ? "text-gray-500" : "text-gray-400"
-                                }
-                            >
-                                No messages yet. Start the conversation!
-                            </p>
+                            <FontAwesomeIcon icon={faComments} className={`text-4xl mb-3 ${theme === "light" ? "text-gray-300" : "text-gray-600"}`} />
+                            <p className={`${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>No messages yet. Start the conversation!</p>
                         </div>
                     </div>
                 ) : (
                     messages.map((msg) => {
                         const isRight = msg.alignment === "right";
                         return (
-                            <div
-                                key={msg.id}
-                                className={`flex flex-col ${isRight ? "items-end" : "items-start"
-                                    }`}
-                            >
-                                <div
-                                    className={`max-w-[80%] rounded-2xl p-3 break-words ${isRight
-                                        ? theme === "light"
-                                            ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-                                            : "bg-gradient-to-r from-green-600 to-emerald-700 text-white"
-                                        : theme === "light"
-                                            ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white"
-                                            : "bg-gradient-to-r from-blue-600 to-purple-700 text-white"
-                                        }`}
-                                >
+                            <div key={msg.id} className={`flex flex-col ${isRight ? "items-end" : "items-start"}`}>
+                                <div className={`max-w-[80%] rounded-2xl p-3 break-words ${isRight ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white" : "bg-gradient-to-r from-blue-500 to-purple-600 text-white"}`}>
                                     {msg.hasAttachment && msg.file_path ? (
                                         <div className="flex items-center gap-2">
                                             <FontAwesomeIcon icon={faFile} className="text-white/90" />
-                                            <span className="text-sm font-medium text-white">
-                                                {msg.filename}
-                                            </span>
-                                            <button
-                                                onClick={() =>
-                                                    downloadFile(msg.file_path, msg.filename)
-                                                }
-                                                className="ml-2 hover:opacity-80 transition-opacity"
-                                                title="Download file"
-                                            >
-                                                <FontAwesomeIcon
-                                                    icon={faDownload}
-                                                    className="text-white/90 hover:text-white"
-                                                />
+                                            <span className="text-sm font-medium text-white">{msg.filename}</span>
+                                            <button onClick={() => downloadFile(msg.file_path, msg.filename)} className="ml-2 hover:opacity-80 transition-opacity" title="Download file">
+                                                <FontAwesomeIcon icon={faDownload} className="text-white/90 hover:text-white" />
                                             </button>
                                         </div>
                                     ) : (
-                                        <p className="text-sm text-white leading-relaxed">
-                                            {msg.text}
-                                        </p>
+                                        <p className="text-sm text-white leading-relaxed">{msg.text}</p>
                                     )}
                                 </div>
-
-                                <div
-                                    className={`text-xs mt-1 px-2 ${isRight ? "text-right" : "text-left"
-                                        } ${theme === "light" ? "text-gray-500" : "text-gray-400"
-                                        }`}
-                                >
+                                <div className={`text-xs mt-1 px-2 ${isRight ? "text-right" : "text-left"} ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
                                     {msg.timestamp}
                                 </div>
                             </div>
@@ -377,31 +327,12 @@ function Chatbox({ orderid, theme }) {
             </div>
 
             {/* ================= INPUT ================= */}
-            <div
-                className={`shrink-0 border-t p-4 rounded-xl ${theme === "light"
-                    ? "bg-white border-gray-200"
-                    : "bg-gray-800 border-gray-700"
-                    }`}
-            >
+            <div className={`shrink-0 border-t p-4 rounded-xl ${theme === "light" ? "bg-white border-gray-200" : "bg-gray-800 border-gray-700"}`}>
                 <div className="flex items-start gap-2">
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                    />
-
-                    <button
-                        onClick={triggerFileInput}
-                        disabled={!orderid}
-                        className={`p-3 rounded-lg ${theme === "light"
-                            ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                            } disabled:opacity-50`}
-                    >
+                    <input ref={fileInputRef} type="file" onChange={handleFileUpload} className="hidden" />
+                    <button onClick={triggerFileInput} disabled={!orderid} className={`p-3 rounded-lg ${theme === "light" ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-gray-700 text-gray-300 hover:bg-gray-600"} disabled:opacity-50`}>
                         <FontAwesomeIcon icon={faPaperclip} />
                     </button>
-
                     <textarea
                         ref={textareaRef}
                         value={newMessage}
@@ -411,25 +342,19 @@ function Chatbox({ orderid, theme }) {
                         rows="1"
                         disabled={!orderid}
                         style={{ minHeight: "44px", maxHeight: "120px", overflowY: "auto" }}
-                        className={`w-full p-3 rounded-lg text-sm resize-none focus:outline-none ${theme === "light"
-                            ? "bg-gray-100 text-gray-900 border border-gray-300"
-                            : "bg-gray-700 text-white border border-gray-600"
-                            }`}
+                        className={`w-full p-3 rounded-lg text-sm resize-none focus:outline-none ${theme === "light" ? "bg-gray-100 text-gray-900 border border-gray-300" : "bg-gray-700 text-white border border-gray-600"}`}
                     />
-
                     <button
                         onClick={sendMessage}
                         disabled={!newMessage.trim() || !orderid}
-                        className={`p-3 rounded-lg font-medium ${theme === "light"
-                            ? "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400"
-                            : "bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-800"
-                            } disabled:cursor-not-allowed`}
+                        className={`p-3 rounded-lg font-medium ${theme === "light" ? "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400" : "bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-800"} disabled:cursor-not-allowed`}
                     >
                         <FontAwesomeIcon icon={faPaperPlane} />
                     </button>
                 </div>
             </div>
         </div>
+
     );
 
 }
@@ -445,6 +370,8 @@ export default function OrderDetails() {
     const [uploading, setUploading] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedOrder, setEditedOrder] = useState({});
+    const [designPreferences, setDesignPreferences] = useState(null);
+    const [preferencesLoading, setPreferencesLoading] = useState(false);
     const navigate = useNavigate();
     const base_url = localStorage.getItem("base_url");
     const token = localStorage.getItem("token");
@@ -456,7 +383,7 @@ export default function OrderDetails() {
                 setLoading(true);
                 const response = await fetch(`${base_url}/get-order-details`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
                     body: JSON.stringify({ orderid: id }),
                 });
 
@@ -466,6 +393,9 @@ export default function OrderDetails() {
                     setEditedOrder(resp.order);
                     setSelectedStatus(resp.order.status);
                     await fetchFileHistory();
+                    if (resp.order?.userid) {
+                        fetchUserPreferences(resp.order.userid);
+                    }
                 } else setError(resp.message || "Failed to fetch order details");
             } catch (error) {
                 setError("Failed to fetch order details");
@@ -478,7 +408,7 @@ export default function OrderDetails() {
             try {
                 const response = await fetch(`${base_url}/get-file-history`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
                     body: JSON.stringify({ orderid: id }),
                 });
 
@@ -490,6 +420,31 @@ export default function OrderDetails() {
         if (id) fetchOrderDetails();
     }, [id]);
 
+    const fetchUserPreferences = async (userid) => {
+        try {
+            setPreferencesLoading(true);
+            const response = await fetch(`${base_url}/get-default-pref/${userid}`, {
+                headers: { 'X-Tenant': 'skydent' }
+            });
+
+            const result = await response.json();
+            console.log("User preferences response:", result); // For debugging
+
+            if (result.status === 'Success') {
+                // Note: The key is 'prefe' not 'pref' based on your PHP response
+                setDesignPreferences(result.prefe || {});
+            } else {
+                setDesignPreferences({});
+            }
+        } catch (error) {
+            console.error("Error fetching user preferences:", error);
+            setDesignPreferences({});
+        } finally {
+            setPreferencesLoading(false);
+        }
+    };
+
+    console.log(designPreferences);
     const handleStatusUpdate = async () => {
         if (!selectedStatus) {
             toast.error("Please select a status");
@@ -500,7 +455,7 @@ export default function OrderDetails() {
         try {
             const response = await fetch(`${base_url}/update-order-status`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
                 body: JSON.stringify({ orderid: id, status: selectedStatus }),
             });
 
@@ -523,7 +478,7 @@ export default function OrderDetails() {
         try {
             const response = await fetch(`${base_url}/delete-file`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
                 body: JSON.stringify({ file_id: fileId, file_type: type }),
             });
 
@@ -542,7 +497,7 @@ export default function OrderDetails() {
         try {
             const response = await fetch(`${base_url}/get-file-history`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
                 body: JSON.stringify({ orderid: id }),
             });
 
@@ -580,7 +535,7 @@ export default function OrderDetails() {
             try {
                 const response = await fetch(`${base_url}/upload-order-file`, {
                     method: "POST",
-                    headers: { "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
+                    headers: { "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
                     body: formData,
                 });
 
@@ -649,7 +604,7 @@ export default function OrderDetails() {
 
             const response = await fetch(`${base_url}/update-order-details`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'bravodent' },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
                 body: JSON.stringify({ orderid: id, userid: order?.userid, updates: updates }),
             });
 
@@ -780,8 +735,8 @@ export default function OrderDetails() {
                                         </div>
                                     </div>
 
-                                    <div className="flex-grow flex flex-col min-h-0"> {/* Added flex container */}
-                                        <div className="overflow-x-auto flex-shrink-0"> {/* Fixed header area */}
+                                    <div className="flex-grow flex flex-col min-h-0">
+                                        <div className="overflow-x-auto flex-shrink-0">
                                             <table className="w-full">
                                                 <thead>
                                                     <tr className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"}`}>
@@ -792,7 +747,7 @@ export default function OrderDetails() {
                                             </table>
                                         </div>
 
-                                        <div className="overflow-y-auto flex-grow" style={{ maxHeight: '400px' }}> {/* Scrollable body */}
+                                        <div className="overflow-y-auto flex-grow" style={{ maxHeight: '400px' }}>
                                             <table className="w-full">
                                                 <tbody>
                                                     {[...fileHistory.stl_files, ...fileHistory.finished_files].map((file, index) => {
@@ -911,8 +866,93 @@ export default function OrderDetails() {
                                 </div>
                             </motion.div>
 
-                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className={`h-[600px]   rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}>
-                                <Chatbox orderid={id} theme={theme} />
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className={`rounded-xl shadow-lg max-h-[700px] ${theme === "light" ? "bg-white" : "bg-gray-800"}`}>
+                                <div className="p-6 h-full flex flex-col">
+                                    {/* Default Design Preferences Section */}
+                                    <div className="mb-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h2 className="text-lg font-semibold flex items-center gap-2">
+                                                <FontAwesomeIcon icon={faPalette} className="text-purple-600" />
+                                                Default Design Preferences
+                                            </h2>
+                                            {preferencesLoading && (
+                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                            )}
+                                        </div>
+
+                                        {designPreferences ? (
+                                            <div className={`rounded-lg p-4 ${theme === "light" ? "bg-gray-50" : "bg-gray-700/50"}`}>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={`text-sm font-bold ${theme === "light" ? "text-black" : "text-gray-300"}`}>
+                                                            Contact:
+                                                        </span>
+                                                        <span className={`text-sm font-semibold px-3 py-1 rounded ${theme === "light" ? "text-black" : "bg-blue-900/50 text-blue-300"}`}>
+                                                            {designPreferences.contact}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={`text-sm font-bold ${theme === "light" ? "text-black" : "text-gray-300"}`}>
+                                                            Occlusion:
+                                                        </span>
+                                                        <span className={`text-sm font-semibold px-3 py-1 rounded ${theme === "light" ? "text-black" : "bg-green-900/50 text-green-300"}`}>
+                                                            {designPreferences.occlusion}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={`text-sm font-bold ${theme === "light" ? "text-black" : "text-gray-300"}`}>
+                                                            Anatomy:
+                                                        </span>
+                                                        <span className={`text-sm font-semibold px-3 py-1 rounded ${theme === "light" ? "text-black" : "bg-purple-900/50 text-purple-300"}`}>
+                                                            {designPreferences.anatomy}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={`text-sm font-bold ${theme === "light" ? "text-black" : "text-gray-300"}`}>
+                                                            Pontic:
+                                                        </span>
+                                                        <span className={`text-sm font-semibold px-3 py-1 rounded ${theme === "light" ? "text-black" : "bg-amber-900/50 text-amber-300"}`}>
+                                                            {designPreferences.pontic}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={`text-sm font-bold ${theme === "light" ? "text-black" : "text-gray-300"}`}>
+                                                            Liner Spacer:
+                                                        </span>
+                                                        <span className={`text-sm font-semibold px-3 py-1 rounded ${theme === "light" ? "text-black" : "bg-indigo-900/50 text-indigo-300"}`}>
+                                                            {designPreferences.liner_spacer}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={`text-sm font-bold ${theme === "light" ? "text-black" : "text-gray-300"}`}>
+                                                            Custom:
+                                                        </span>
+                                                        <span className={`text-sm font-semibold px-3 py-1 rounded ${theme === "light" ? "text-black" : "bg-pink-900/50 text-pink-300"}`}>
+                                                            {designPreferences.custom}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className={`rounded-lg p-4 text-center ${theme === "light" ? "bg-gray-50" : "bg-gray-700/50"}`}>
+                                                <FontAwesomeIcon icon={faUserCog} className={`text-2xl mb-2 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`} />
+                                                <p className={`text-sm ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
+                                                    No design preferences found for this user
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Chatbox Section */}
+                                    <div className="flex flex-col h-full rounded-xl overflow-hidden">
+                                        <Chatbox orderid={id} theme={theme} />
+                                    </div>
+                                </div>
                             </motion.div>
                         </div>
                     </div>
