@@ -740,8 +740,8 @@ export default function OrderDetails() {
                                             <table className="w-full">
                                                 <thead>
                                                     <tr className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"}`}>
-                                                        <th className="py-3 px-4 text-left font-bold text-sm">File Name</th>
-                                                        <th className="py-3 px-4 text-center font-bold text-sm">Actions</th>
+                                                        <th className="py-3 px-4 text-left font-bold text-sm w-[40%]">File Name</th>
+                                                        <th className="py-3 px-4 text-right font-bold text-sm">Actions</th>
                                                     </tr>
                                                 </thead>
                                             </table>
@@ -757,19 +757,19 @@ export default function OrderDetails() {
 
                                                         return (
                                                             <tr key={file.id || index} className={`border-b ${theme === "light" ? "border-gray-100 hover:bg-gray-50" : "border-gray-700 hover:bg-gray-700"}`}>
-                                                                <td className="py-3 px-4">
+                                                                <td className="py-3 px-4 w-[80%]">
                                                                     <div className="flex items-start gap-3">
                                                                         <div className="mt-1"><FontAwesomeIcon icon={fileIcon} className={`text-sm ${isStlFile ? 'text-blue-500' : 'text-green-500'}`} /></div>
                                                                         <div>
-                                                                            <p className={`font-semibold text-[14px] ${theme === "light" ? "text-gray-900" : "text-white"}`} title={file.fname}>{file.fname}</p>
+                                                                            <p className={`font-semibold text-[14px] ${theme === "light" ? "text-gray-900" : "text-white"}`} title={file.fname}>{file.fname.toLowerCase()}</p>
                                                                             <p className={`text-xs mt-1 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}><FontAwesomeIcon icon={faClock} className="mr-1 text-xs" />Uploaded: {file.upload_date || 'N/A'}</p>
                                                                         </div>
                                                                     </div>
                                                                 </td>
                                                                 <td className="py-3 px-4">
                                                                     <div className="flex gap-2">
-                                                                        <button onClick={() => { const filePath = file.url || file.path || file.file_path; if (filePath) downloadFile(file.fname, filePath); else toast.error("File path not found!"); }} className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-all"><FontAwesomeIcon icon={faDownload} /></button>
-                                                                        <button onClick={() => { const fileType = file.type || file.file_type || (isStlFile ? 'stl' : 'finished'); handleDeleteFile(file.id, fileType); }} className="flex items-center gap-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition-all"><FontAwesomeIcon icon={faTrash} /></button>
+                                                                        <button onClick={() => { const filePath = file.url || file.path || file.file_path; if (filePath) downloadFile(file.fname, filePath); else toast.error("File path not found!"); }} className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-md font-semibold transition-all"><FontAwesomeIcon icon={faDownload} /></button>
+                                                                        <button onClick={() => { const fileType = file.type || file.file_type || (isStlFile ? 'stl' : 'finished'); handleDeleteFile(file.id, fileType); }} className="flex items-center gap-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-md font-semibold transition-all"><FontAwesomeIcon icon={faTrash} /></button>
                                                                     </div>
                                                                 </td>
                                                             </tr>
@@ -787,7 +787,7 @@ export default function OrderDetails() {
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className={`rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}>
+                            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className={`max-h-[800px] rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}>
                                 <div className="p-6">
                                     <div className="flex items-center justify-between mb-6">
                                         <h3 className={`text-xl font-bold flex items-center gap-2 ${theme === "light" ? "text-gray-900" : "text-white"}`}><FontAwesomeIcon icon={faFileCircleCheck} className="text-blue-600" />Order Summary</h3>
@@ -805,39 +805,39 @@ export default function OrderDetails() {
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>User Order No</label>
-                                                {isEditing ? (<input type="text" value={editedOrder.user_order_no || ''} onChange={(e) => handleInputChange('user_order_no', e.target.value)} className={`w-full p-2 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.user_order_no || "N/A"}</p>)}
+                                                {isEditing ? (<input type="text" value={editedOrder.user_order_no || ''} onChange={(e) => handleInputChange('user_order_no', e.target.value)} className={`w-full p-4 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.user_order_no || "N/A"}</p>)}
                                             </div>
                                             <div>
                                                 <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>User ID</label>
-                                                <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.userid || "N/A"}</p>
+                                                <p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.userid || "N/A"}</p>
                                             </div>
                                         </div>
 
                                         <div>
                                             <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>Lab Name</label>
-                                            {isEditing ? (<input type="text" value={editedOrder.labname || ''} onChange={(e) => handleInputChange('labname', e.target.value)} className={`w-full p-2 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.labname || "N/A"}</p>)}
+                                            {isEditing ? (<input type="text" value={editedOrder.labname || ''} onChange={(e) => handleInputChange('labname', e.target.value)} className={`w-full p-4 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.labname || "N/A"}</p>)}
                                         </div>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>Tooth</label>
-                                                {isEditing ? (<input type="text" value={editedOrder.tooth || ''} onChange={(e) => handleInputChange('tooth', e.target.value)} className={`w-full p-2 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.tooth || "N/A"}</p>)}
+                                                {isEditing ? (<input type="text" value={editedOrder.tooth || ''} onChange={(e) => handleInputChange('tooth', e.target.value)} className={`w-full p-4 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.tooth || "N/A"}</p>)}
                                             </div>
                                             <div>
                                                 <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>Unit</label>
-                                                {isEditing ? (<input type="text" value={editedOrder.unit || ''} onChange={(e) => handleInputChange('unit', e.target.value)} className={`w-full p-2 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.unit || "N/A"}</p>)}
+                                                {isEditing ? (<input type="text" value={editedOrder.unit || ''} onChange={(e) => handleInputChange('unit', e.target.value)} className={`w-full p-4 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.unit || "N/A"}</p>)}
                                             </div>
                                         </div>
 
                                         <div>
                                             <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>Product Type</label>
-                                            {isEditing ? (<input type="text" value={editedOrder.product_type || ''} onChange={(e) => handleInputChange('product_type', e.target.value)} className={`w-full p-2 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.product_type || "N/A"}</p>)}
+                                            {isEditing ? (<input type="text" value={editedOrder.product_type || ''} onChange={(e) => handleInputChange('product_type', e.target.value)} className={`w-full p-4 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.product_type || "N/A"}</p>)}
                                         </div>
 
                                         <div>
                                             <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>Turnaround Time</label>
                                             {isEditing ? (
-                                                <select value={editedOrder.tduration || ''} onChange={(e) => handleInputChange('tduration', e.target.value)} className={`w-full p-2 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`}>
+                                                <select value={editedOrder.tduration || ''} onChange={(e) => handleInputChange('tduration', e.target.value)} className={`w-full p-4 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`}>
                                                     <option value="">Select TAT</option>
                                                     <option value="Rush">Rush (1-2 Hours)</option>
                                                     <option value="Same Day">Same Day (6 Hours)</option>
@@ -845,7 +845,7 @@ export default function OrderDetails() {
                                                 </select>
                                             ) : (
                                                 <div className="flex items-center gap-2">
-                                                    <p className={`p-2 rounded-lg text-sm flex-1 ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.tduration === "Rush" ? "1–2 Hours" : order?.tduration === "Same Day" ? "6 Hours" : order?.tduration === "Next Day" ? "12 Hours" : "N/A"}</p>
+                                                    <p className={`p-4 rounded-lg text-sm flex-1 ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.tduration === "Rush" ? "1–2 Hours" : order?.tduration === "Same Day" ? "6 Hours" : order?.tduration === "Next Day" ? "12 Hours" : "N/A"}</p>
                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${theme === "light" ? "bg-blue-100 text-blue-700" : "bg-blue-900 text-blue-300"}`}>{order?.tduration || "N/A"}</span>
                                                 </div>
                                             )}
@@ -853,20 +853,20 @@ export default function OrderDetails() {
 
                                         <div>
                                             <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>Order Date</label>
-                                            <p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.order_date || "N/A"}</p>
+                                            <p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.order_date || "N/A"}</p>
                                         </div>
 
                                         {order?.message && (
                                             <div>
                                                 <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>Message</label>
-                                                {isEditing ? (<textarea value={editedOrder.message || ''} onChange={(e) => handleInputChange('message', e.target.value)} className={`w-full p-2 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} rows="3" />) : (<p className={`p-2 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.message || "N/A"}</p>)}
+                                                {isEditing ? (<textarea value={editedOrder.message || ''} onChange={(e) => handleInputChange('message', e.target.value)} className={`w-full p-4 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} rows="3" />) : (<p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.message || "N/A"}</p>)}
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             </motion.div>
 
-                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className={`rounded-xl shadow-lg max-h-[700px] ${theme === "light" ? "bg-white" : "bg-gray-800"}`}>
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className={`rounded-xl shadow-lg max-h-[800px] ${theme === "light" ? "bg-white" : "bg-gray-800"}`}>
                                 <div className="p-6 h-full flex flex-col">
                                     {/* Default Design Preferences Section */}
                                     <div className="mb-4">
@@ -882,7 +882,7 @@ export default function OrderDetails() {
 
                                         {designPreferences ? (
                                             <div className={`rounded-lg p-4 ${theme === "light" ? "bg-gray-50" : "bg-gray-700/50"}`}>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                     <div className="flex justify-between items-center">
                                                         <span className={`text-sm font-bold ${theme === "light" ? "text-black" : "text-gray-300"}`}>
                                                             Contact:

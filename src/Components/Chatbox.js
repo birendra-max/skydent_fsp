@@ -261,42 +261,46 @@ export default function Chatbox({ orderid }) {
 
 
     // File upload - FIXED: No optimistic updates to avoid duplicates
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file || !orderid) return;
+    const handleFileUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length || !orderid) return;
 
-        const formData = new FormData();
-        formData.append('orderid', orderid);
-        formData.append('chatfile', file);
+        for (const file of files) {
+            const formData = new FormData();
+            formData.append('orderid', orderid);
+            formData.append('chatfile', file);
 
-        // Create a unique identifier for this file upload to track duplicates
-        const fileKey = `${file.name}_${Date.now()}`;
-        recentlySentMessagesRef.current.add(fileKey);
+            // Create a unique identifier for this file upload to track duplicates
+            const fileKey = `${file.name}_${Date.now()}`;
+            recentlySentMessagesRef.current.add(fileKey);
 
-        fetch(`${config.API_BASE_URL}/chat/chat-file`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant': 'skydent' },
-            body: formData
-        })
-            .then(res => res.json())
-            .then(res => {
-                if (res.status !== 'success') {
-                    console.error("❌ Upload failed:", res.message);
+            try {
+                const res = await fetch(`${config.API_BASE_URL}/chat/chat-file`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant': 'skydent' },
+                    body: formData
+                });
+
+                const result = await res.json();
+
+                if (result.status !== 'success') {
+                    console.error("❌ Upload failed:", result.message);
                 }
 
-                // Clear file input
-                e.target.value = '';
-
-                // Remove the file key after some time
+                // Remove the file key after 5 seconds
                 setTimeout(() => {
                     recentlySentMessagesRef.current.delete(fileKey);
                 }, 5000);
-            })
-            .catch(err => {
+
+            } catch (err) {
                 console.error("❌ File upload error:", err);
-                e.target.value = ''; // Still clear input on error
-            });
+            }
+        }
+
+        // Clear file input after all uploads
+        e.target.value = '';
     };
+
 
     const triggerFileInput = () => fileInputRef.current?.click();
 
@@ -365,7 +369,7 @@ export default function Chatbox({ orderid }) {
             id="chatbox"
             ref={chatboxRef}
             style={{ position: "fixed", top: "80px", right: "24px" }}
-            className="md:w-[320px] w-[300px] h-[420px] rounded-xl shadow-xl border border-blue-400/30 bg-gradient-to-br from-gray-900 to-gray-800 z-[999] hidden overflow-hidden backdrop-blur-sm"
+            className="md:w-[400px] w-[300px] h-[520px] rounded-xl shadow-xl border border-blue-400/30 bg-gradient-to-br from-gray-900 to-gray-800 z-[999] hidden overflow-hidden backdrop-blur-sm"
         >
             {/* Header */}
             <div id="chatHeader" className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-800/60 to-purple-800/60 rounded-t-xl border-b border-blue-400/30 cursor-move select-none">
@@ -386,9 +390,6 @@ export default function Chatbox({ orderid }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
-                    {/* <button className="w-6 h-6 flex items-center justify-center text-white/60 hover:text-green-300 hover:bg-green-500/20 rounded">
-                        <FontAwesomeIcon icon={faVideo} />
-                    </button> */}
                     <button
                         onClick={() => document.getElementById('chatbox').style.display = "none"}
                         className="w-6 h-6 flex items-center justify-center text-white/60 hover:text-red-300 hover:bg-red-500/20 rounded"
@@ -399,7 +400,7 @@ export default function Chatbox({ orderid }) {
             </div>
 
             {/* Messages */}
-            <div ref={chatBodyRef} className="p-3 h-72 overflow-y-auto space-y-3 bg-gradient-to-br from-gray-900 to-gray-800">
+            <div ref={chatBodyRef} className="p-3 h-[78%] overflow-y-auto space-y-3 bg-gradient-to-br from-gray-900 to-gray-800">
                 {messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
                         <p className="text-gray-400 text-sm">No messages yet. Start chatting!</p>
@@ -422,7 +423,7 @@ export default function Chatbox({ orderid }) {
                                                 className="text-green-300 hover:text-green-200 ml-2"
                                                 title="Download file"
                                             >
-                                                <FontAwesomeIcon icon={faDownload} className="text-lg" />
+                                                <FontAwesomeIcon icon={faDownload} className="text-xl hover:text-black cursor-pointer shadow-lg" />
                                             </button>
                                         </div>
                                     ) : (
@@ -441,13 +442,13 @@ export default function Chatbox({ orderid }) {
             {/* Input */}
             <div className="absolute bottom-0 left-0 right-0 border-t border-blue-400/20 px-3 py-2 bg-gradient-to-r from-gray-800 to-gray-700 rounded-b-xl">
                 <div className="flex items-start gap-1.5">
-                    <input ref={fileInputRef} type="file" onChange={handleFileUpload} className="hidden" />
+                    <input ref={fileInputRef} type="file" onChange={handleFileUpload} multiple className="hidden" />
                     <button
                         onClick={triggerFileInput}
                         disabled={!orderid}
-                        className="w-7 h-7 flex items-center justify-center text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 rounded disabled:opacity-50 mt-1"
+                        className="w-10 h-10 flex items-center justify-center text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 rounded disabled:opacity-50"
                     >
-                        <FontAwesomeIcon icon={faPaperclip} />
+                        <FontAwesomeIcon icon={faPaperclip} className='text-[20px]' />
                     </button>
                     <textarea
                         ref={textareaRef}
@@ -469,7 +470,7 @@ export default function Chatbox({ orderid }) {
                         disabled={!newMessage.trim() || !orderid}
                         className="w-10 h-10 flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-200 cursor-pointer shadow-md hover:shadow-blue-500/20 text-xs disabled:opacity-50 disabled:cursor-not-allowed "
                     >
-                        <FontAwesomeIcon icon={faPaperPlane} />
+                        <FontAwesomeIcon icon={faPaperPlane} className='text-lg' />
                     </button>
                 </div>
             </div>
