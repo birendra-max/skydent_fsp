@@ -2,9 +2,11 @@ import { useContext, useState, useRef } from "react";
 import Hd from "./Hd";
 import Foot from "./Foot";
 import { ThemeContext } from "../../Context/ThemeContext";
+import { DesignerContext } from "../../Context/DesignerContext";
 
 export default function NewRequest() {
   const { theme } = useContext(ThemeContext);
+  const { designer } = useContext(DesignerContext);
   const [files, setFiles] = useState([]);
   const [drag, setDragActive] = useState(false);
   const [orderSelection, setOrderSelection] = useState({});
@@ -120,6 +122,7 @@ export default function NewRequest() {
   const uploadToNewOrdersEndpoint = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
+    formData.append('desiid', designer.desiid);
 
     try {
       const response = await fetch(`${base_url}/new-orders`, {
@@ -202,6 +205,7 @@ export default function NewRequest() {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("orderid", orderId);
+        formData.append('desiid', designer.desiid);
 
         const fileType = file.name.endsWith('.stl') ? 'stl' : 'finished';
         formData.append("type", fileType);

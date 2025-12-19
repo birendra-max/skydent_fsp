@@ -226,7 +226,7 @@ function Chatbox({ orderid, theme }) {
                     body: formData
                 });
             } catch (err) {
-                console.error(`Failed to upload ${file.name}`, err);
+                alert(`Failed to upload ${file.name}`, err);
             }
         }
 
@@ -361,6 +361,7 @@ function Chatbox({ orderid, theme }) {
 
 export default function OrderDetails() {
     const { theme } = useContext(ThemeContext);
+    const { designer } = useContext(DesignerContext);
     const { id } = useParams();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -428,23 +429,19 @@ export default function OrderDetails() {
             });
 
             const result = await response.json();
-            console.log("User preferences response:", result); // For debugging
 
             if (result.status === 'Success') {
-                // Note: The key is 'prefe' not 'pref' based on your PHP response
                 setDesignPreferences(result.prefe || {});
             } else {
                 setDesignPreferences({});
             }
         } catch (error) {
-            console.error("Error fetching user preferences:", error);
             setDesignPreferences({});
         } finally {
             setPreferencesLoading(false);
         }
     };
 
-    console.log(designPreferences);
     const handleStatusUpdate = async () => {
         if (!selectedStatus) {
             toast.error("Please select a status");
@@ -531,6 +528,7 @@ export default function OrderDetails() {
             formData.append("file", file);
             formData.append("orderid", id);
             formData.append("type", fileType);
+            formData.append('desiid', designer.desiid);
 
             try {
                 const response = await fetch(`${base_url}/upload-order-file`, {
