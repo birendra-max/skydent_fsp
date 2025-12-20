@@ -11,6 +11,8 @@ import { fetchWithAuth } from "../../utils/adminapi";
 export default function InitialFile() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const columns = [
         { header: "Order Id", accessor: "orderid" },
@@ -22,12 +24,19 @@ export default function InitialFile() {
 
     const getClients = async () => {
         try {
+            setLoading(true);
+            setError(null);
             const res = await fetchWithAuth("/get-initial-file", { method: "GET" });
             if (res && res.status === "success") setData(res.initial);
-            else setData([]);
+            else {
+                setData([]);
+                setError("No data found ! in the server")
+            }
         } catch (error) {
-            console.error("Error fetching clients:", error);
             setData([]);
+            setError("Network error. Please check your connection.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -70,7 +79,7 @@ export default function InitialFile() {
                     </div>
 
                     {/* Client Table */}
-                    <FileDatatable columns={columns} data={data} rowsPerPage={50} />
+                    <FileDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error}/>
                 </div>
             </main>
             <Foot />

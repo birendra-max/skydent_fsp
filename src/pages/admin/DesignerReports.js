@@ -11,6 +11,8 @@ import { fetchWithAuth } from "../../utils/adminapi";
 export default function ClientReports() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const columns = [
         { header: "Client Id", accessor: "userid" },
@@ -23,12 +25,20 @@ export default function ClientReports() {
     useEffect(() => {
         async function getClients() {
             try {
+                setLoading(true);
+                setError(null);
                 const data = await fetchWithAuth("/get-reports", { method: "GET" });
                 if (data && data.status === "success") setData(data.data);
-                else setData([]);
+                else {
+                    setData([]);
+                    setError("No data found ! in the server")
+
+                }
             } catch (error) {
-                console.error("Error fetching clients:", error);
                 setData([]);
+                setError("Network error. Please check your connection.");
+            } finally {
+                setLoading(false);
             }
         }
         getClients();
@@ -64,7 +74,7 @@ export default function ClientReports() {
                     </div>
 
                     {/* 📊 Client Table */}
-                    <Datatable columns={columns} data={data} rowsPerPage={50} />
+                    <Datatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
                 </div>
             </main>
             <Foot />

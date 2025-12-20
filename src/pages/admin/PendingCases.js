@@ -5,12 +5,14 @@ import Foot from "./Foot";
 import { ThemeContext } from "../../Context/ThemeContext";
 import CasesDatatable from "./CasesDatatable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHourglassHalf  } from "@fortawesome/free-solid-svg-icons";
+import { faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 
 export default function PendingCases() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const columns = [
         { header: "Order Id", accessor: "orderid" },
@@ -26,6 +28,8 @@ export default function PendingCases() {
     useEffect(() => {
         async function fetchAllCases() {
             try {
+                setLoading(true);
+                setError(null);
                 const data = await fetchWithAuth('/get-progress', {
                     method: "GET",
                 });
@@ -35,10 +39,14 @@ export default function PendingCases() {
                     setData(data.new_cases);
                 } else {
                     setData([]);
+                    setError("No data found ! in the server")
+
                 }
             } catch (error) {
-                console.error("Error fetching cases:", error);
                 setData([]);
+                setError("Network error. Please check your connection.");
+            } finally {
+                setLoading(false);
             }
         }
 
@@ -74,7 +82,7 @@ export default function PendingCases() {
                         </p>
                     </div>
                     {/* 📊 Client Table */}
-                    <CasesDatatable columns={columns} data={data} rowsPerPage={50} />
+                    <CasesDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error}/>
                 </div>
             </main>
             <Foot />

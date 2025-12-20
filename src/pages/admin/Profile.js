@@ -24,8 +24,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Profile() {
-    let base_url = localStorage.getItem('base_url');
-    const token = localStorage.getItem('token');
     const { theme } = useContext(ThemeContext);
     const [formStatus, setFormStatus] = useState(0);
     const { admin, setAdmin } = useContext(AdminContext);

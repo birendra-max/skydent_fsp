@@ -9,8 +9,8 @@ import config from '../../config';
 
 export default function Login() {
   useEffect(() => {
-    const data = localStorage.getItem('admin') ? localStorage.getItem('admin') : "";
-    const token = localStorage.getItem('token') ? localStorage.getItem('token') : "";
+    const data = localStorage.getItem('skydent_admin') ? localStorage.getItem('skydent_admin') : "";
+    const token = localStorage.getItem('skydent_admin_token') ? localStorage.getItem('skydent_admin_token') : "";
 
     if (data !== '' && token !== '') {
       navigate("/admin/dashboard");
@@ -59,8 +59,8 @@ export default function Login() {
       const data = await res.json();
       if (data.status === "success" && data.message === "Login successfully" && data.admin?.id) {
         setAdmin(data.admin);
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('base_url', data.base_url);
+        localStorage.setItem('skydent_admin_token', data.token);
+        localStorage.setItem('skydent_admin_base_url', data.base_url);
         setStatus({ type: "success", message: data.message });
         navigate('/admin/dashboard');
       } else {
@@ -92,11 +92,11 @@ export default function Login() {
             transition={{ delay: 0.2 }}
             className="relative z-10 mb-8"
           >
-            <div className="w-40 h-40 rounded-2xl bg-white/5 backdrop-blur-md flex items-center justify-center border border-white/10">
+            <div className="w-60 h-30 rounded-2xl bg-white/5 backdrop-blur-md flex items-center justify-center border border-white/10">
               <img
                 src="/img/logo.png"
                 alt="Admin Logo"
-                className="w-32 h-32 object-contain"
+                className="w-full h-full object-contain"
               />
             </div>
           </motion.div>

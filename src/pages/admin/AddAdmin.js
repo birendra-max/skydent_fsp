@@ -14,6 +14,8 @@ export default function AddAdmin() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "" });
     const [showPassword, setShowPassword] = useState(false); // 👈 For toggle
+    const [error, setError] = useState(null);
+
 
     const [formData, setFormData] = useState({
         name: "",
@@ -33,15 +35,24 @@ export default function AddAdmin() {
 
     const getClients = async () => {
         try {
+            setLoading(true);
+            setError(null);
             const res = await fetchWithAuth("/get-admin", {
                 method: "GET",
             });
 
-            if (res && res.status === "success") setData(res.admin);
-            else setData([]);
+            if (res && res.status === "success") {
+                setData(res.admin);
+            }
+            else {
+                setData([]);
+                setError("No data found ! in the server")
+            }
         } catch (error) {
-            console.error("Error fetching clients:", error);
             setData([]);
+            setError("Network error. Please check your connection.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -252,7 +263,7 @@ export default function AddAdmin() {
 
 
                     {/* Client Table */}
-                    <AdminDatatable columns={columns} data={data} rowsPerPage={50} />
+                    <AdminDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error}/>
                 </div>
             </main>
             <Foot />

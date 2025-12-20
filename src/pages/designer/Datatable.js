@@ -5,6 +5,7 @@ import { ThemeContext } from "../../Context/ThemeContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { Link } from 'react-router-dom';
+import { DesignerContext } from "../../Context/DesignerContext";
 import {
     faFolderOpen,
     faSearch,
@@ -23,6 +24,7 @@ export default function Datatable({
     error = null
 }) {
     const { theme } = useContext(ThemeContext);
+    const { designer } = useContext(DesignerContext);
     const [status, setStatus] = useState("show");
     const [search, setSearch] = useState("");
     const [currentPage, setCurrentPage] = useState(1);

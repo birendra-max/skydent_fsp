@@ -5,12 +5,14 @@ import Foot from "./Foot";
 import { ThemeContext } from "../../Context/ThemeContext";
 import CasesDatatable from "./CasesDatatable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFolderTree  } from "@fortawesome/free-solid-svg-icons";
+import { faFolderTree } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 
 export default function AllCases() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const columns = [
         { header: "Order Id", accessor: "orderid" },
@@ -26,6 +28,8 @@ export default function AllCases() {
     useEffect(() => {
         async function fetchAllCases() {
             try {
+                setLoading(true);
+                setError(null);
                 const data = await fetchWithAuth('/get-all-cases', {
                     method: "GET",
                 });
@@ -35,10 +39,13 @@ export default function AllCases() {
                     setData(data.all_cases);
                 } else {
                     setData([]);
+                    setError("No data found ! in the server")
                 }
             } catch (error) {
-                console.error("Error fetching cases:", error);
                 setData([]);
+                setError("Network error. Please check your connection.");
+            } finally {
+                setLoading(false);
             }
         }
 
@@ -63,7 +70,7 @@ export default function AllCases() {
                             className={`text-3xl font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"
                                 }`}
                         >
-                            <FontAwesomeIcon icon={faFolderTree } className="text-blue-500" />
+                            <FontAwesomeIcon icon={faFolderTree} className="text-blue-500" />
                             All Cases
                         </h1>
                         <p
@@ -74,7 +81,7 @@ export default function AllCases() {
                         </p>
                     </div>
                     {/* 📊 Client Table */}
-                    <CasesDatatable columns={columns} data={data} rowsPerPage={50} />
+                    <CasesDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
                 </div>
             </main>
             <Foot />

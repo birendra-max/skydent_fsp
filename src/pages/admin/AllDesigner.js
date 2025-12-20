@@ -18,6 +18,7 @@ export default function AllDesigners() {
     const [showPassword, setShowPassword] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "" });
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     // ============================
     // 📌 Dynamic Config Based on Designer IDs
@@ -74,16 +75,21 @@ export default function AllDesigners() {
     useEffect(() => {
         async function loadData() {
             try {
+                setLoading(true);
+                setError(null);
                 const res = await fetchWithAuth(`/fetch-designer-info/${id}`);
 
                 if (res && res.status === "success") {
                     setData(res.data || []);
                 } else {
                     setData([]);
+                    setError("No data found ! in the server")
                 }
-            } catch (err) {
-                console.error("Error fetching designers:", err);
+            } catch (error) {
                 setData([]);
+                setError("Network error. Please check your connection.");
+            } finally {
+                setLoading(false);
             }
         }
 
@@ -229,6 +235,7 @@ export default function AllDesigners() {
                         columns={config?.columns || []}
                         data={data}
                         rowsPerPage={50}
+                        loading={loading} error={error}
                     />
                 </div>
             </main>

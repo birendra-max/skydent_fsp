@@ -11,6 +11,8 @@ import { fetchWithAuth } from "../../utils/adminapi";
 export default function StlFile() {
     const { theme } = useContext(ThemeContext);
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const columns = [
         { header: "Row Id", accessor: "id" },
@@ -22,12 +24,19 @@ export default function StlFile() {
 
     const getClients = async () => {
         try {
+            setLoading(true);
+            setError(null);
             const res = await fetchWithAuth("/get-stl-file", { method: "GET" });
             if (res && res.status === "success") setData(res.stl);
-            else setData([]);
+            else {
+                setData([]);
+                setError("No data found ! in the server")
+            }
         } catch (error) {
-            console.error("Error fetching clients:", error);
             setData([]);
+            setError("Network error. Please check your connection.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -70,7 +79,7 @@ export default function StlFile() {
                     </div>
 
                     {/* Client Table */}
-                    <CommanDatatable columns={columns} data={data} rowsPerPage={50} />
+                    <CommanDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
                 </div>
             </main>
             <Foot />

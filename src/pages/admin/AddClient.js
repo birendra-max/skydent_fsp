@@ -13,7 +13,8 @@ export default function AllClients() {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "" });
-    const [showPassword, setShowPassword] = useState(false); // 👈 For toggle
+    const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState(null);
 
     const [formData, setFormData] = useState({
         name: "",
@@ -42,14 +43,18 @@ export default function AllClients() {
 
     const getClients = async () => {
         try {
+            setLoading(true);
+            setError(null);
             const res = await fetchWithAuth("/get-all-clients", {
                 method: "GET",
             });
             if (res && res.status === "success") setData(res.clients);
-            else setData([]);
+            else setData([]); setError("No data found ! in the server");
         } catch (error) {
-            console.error("Error fetching clients:", error);
             setData([]);
+            setError("Network error. Please check your connection.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -246,7 +251,7 @@ export default function AllClients() {
                     </div>
 
                     {/* Client Table */}
-                    <Datatable columns={columns} data={data} rowsPerPage={50} />
+                    <Datatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
                 </div>
             </main>
             <Foot />

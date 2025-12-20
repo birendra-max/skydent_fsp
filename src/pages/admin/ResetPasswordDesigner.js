@@ -16,6 +16,7 @@ export default function ResetPasswordDesigner() {
     const [showPassword, setShowPassword] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "" });
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const columns = [
         { header: "Designer Id", accessor: "desiid" },
@@ -31,14 +32,21 @@ export default function ResetPasswordDesigner() {
     useEffect(() => {
         async function getClients() {
             try {
+                setLoading(true);
+                setError(null);
                 const data = await fetchWithAuth("/get-all-designer", {
                     method: "GET",
                 });
                 if (data && data.status === "success") setData(data.clients);
-                else setData([]);
+                else {
+                    setData([])
+                    setError("No data found ! in the server")
+                };
             } catch (error) {
-                console.error("Error fetching clients:", error);
                 setData([]);
+                setError("Network error. Please check your connection.");
+            } finally {
+                setLoading(false);
             }
         }
         getClients();
@@ -188,7 +196,7 @@ export default function ResetPasswordDesigner() {
                     </div>
 
                     {/* 📊 Designer Table */}
-                    <DesignerDatatable columns={columns} data={data} rowsPerPage={50} />
+                    <DesignerDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
                 </div>
             </main>
             <Foot />

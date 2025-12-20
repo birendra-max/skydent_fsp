@@ -5,7 +5,7 @@ export const AdminContext = createContext();
 
 export const AdminProvider = ({ children }) => {
     const [admin, setAdmin] = useState(() => {
-        const storedAdmin = localStorage.getItem('admin');
+        const storedAdmin = localStorage.getItem('skydent_admin');
         return storedAdmin ? JSON.parse(storedAdmin) : null;
     });
 
@@ -13,16 +13,16 @@ export const AdminProvider = ({ children }) => {
 
     useEffect(() => {
         if (admin) {
-            localStorage.setItem('admin', JSON.stringify(admin));
+            localStorage.setItem('skydent_admin', JSON.stringify(admin));
         } else {
-            localStorage.removeItem('admin');
+            localStorage.removeItem('skydent_admin');
         }
     }, [admin]);
 
     const logout = async () => {
         setAdmin(null);
-        localStorage.removeItem('admin');
-        localStorage.removeItem('token');
+        localStorage.removeItem('skydent_admin');
+        localStorage.removeItem('skydent_admin_token');
         localStorage.removeItem('theme');
         navigate('/admin', { replace: true });
     }

@@ -24,8 +24,8 @@ export default function Hd() {
 
     // Redirect if not logged in
     useEffect(() => {
-        const data = localStorage.getItem("admin");
-        const token = localStorage.getItem("token");
+        const data = localStorage.getItem("skydent_admin");
+        const token = localStorage.getItem("skydent_admin_token");
         if (!data || !token) navigate("/admin");
     }, [navigate]);
 

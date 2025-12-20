@@ -12,6 +12,8 @@ export default function AdminDatatable({
     columns = [],
     data = [],
     rowsPerPageOptions = [50, 100, 200, 500],
+    loading = false,
+    error = null
 }) {
     const { theme } = useContext(ThemeContext);
     const [status, setStatus] = useState("show");
@@ -68,12 +70,14 @@ export default function AdminDatatable({
         return filteredData.slice(start, start + rowsPerPage);
     }, [currentPage, filteredData, rowsPerPage]);
 
-    // ✅ Spinner control
+    // ✅ Control loader based on parent's loading prop
     useEffect(() => {
-        if (tableData && tableData.length > 0) {
+        if (!loading) {
             setStatus("hide");
+        } else {
+            setStatus("show");
         }
-    }, [tableData]);
+    }, [loading]);
 
     const handleSearch = (e) => {
         setSearch(e.target.value);

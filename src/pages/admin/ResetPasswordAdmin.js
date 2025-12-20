@@ -16,6 +16,7 @@ export default function ResetPasswordAdmin() {
     const [showPassword, setShowPassword] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "" });
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const columns = [
         { header: "Admin Id", accessor: "id" },
@@ -29,14 +30,22 @@ export default function ResetPasswordAdmin() {
     useEffect(() => {
         async function getClients() {
             try {
+                setLoading(true);
+                setError(null);
                 const data = await fetchWithAuth("/get-admin", {
                     method: "GET",
                 });
                 if (data && data.status === "success") setData(data.admin);
-                else setData([]);
+                else {
+                    setData([]);
+                    setError("No data found ! in the server")
+                }
+
             } catch (error) {
-                console.error("Error fetching clients:", error);
                 setData([]);
+                setError("Network error. Please check your connection.");
+            } finally {
+                setLoading(false);
             }
         }
         getClients();
@@ -186,7 +195,7 @@ export default function ResetPasswordAdmin() {
                     </div>
 
                     {/* 📊 Client Table */}
-                    <AdminDatatable columns={columns} data={data} rowsPerPage={50} />
+                    <AdminDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
                 </div>
             </main>
             <Foot />

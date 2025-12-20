@@ -16,6 +16,7 @@ export default function ResetPsswordClient() {
     const [showPassword, setShowPassword] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "" });
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const token = localStorage.getItem("token");
     const base_url = localStorage.getItem("base_url");
@@ -34,14 +35,21 @@ export default function ResetPsswordClient() {
     useEffect(() => {
         async function getClients() {
             try {
+                setLoading(true);
+                setError(null);
                 const data = await fetchWithAuth("/get-all-clients", {
                     method: "GET",
                 });
                 if (data && data.status === "success") setData(data.clients);
-                else setData([]);
+                else {
+                    setData([]);
+                    setError("No data found ! in the server");
+                }
             } catch (error) {
-                console.error("Error fetching clients:", error);
                 setData([]);
+                setError("Network error. Please check your connection.");
+            } finally {
+                setLoading(false);
             }
         }
         getClients();
@@ -191,7 +199,7 @@ export default function ResetPsswordClient() {
                     </div>
 
                     {/* 📊 Client Table */}
-                    <Datatable columns={columns} data={data} rowsPerPage={50} />
+                    <Datatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error}/>
                 </div>
             </main>
             <Foot />

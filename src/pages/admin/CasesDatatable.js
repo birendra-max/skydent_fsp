@@ -10,6 +10,8 @@ export default function CasesDatatable({
     columns = [],
     data = [],
     rowsPerPageOptions = [50, 100, 200, 500],
+    loading = false,
+    error = null
 }) {
     const { theme } = useContext(ThemeContext);
     const [status, setStatus] = useState("show");
@@ -69,12 +71,14 @@ export default function CasesDatatable({
         return filteredData.slice(start, start + rowsPerPage);
     }, [currentPage, filteredData, rowsPerPage]);
 
-    // ✅ Spinner control: hide loader once data is ready
+    // ✅ Control loader based on parent's loading prop
     useEffect(() => {
-        if (data && data.length > 0) {
+        if (!loading) {
             setStatus("hide");
+        } else {
+            setStatus("show");
         }
-    }, [data]);
+    }, [loading]);
 
     const handleSearch = (e) => {
         setSearch(e.target.value);
@@ -209,13 +213,9 @@ export default function CasesDatatable({
         }
     };
 
-    const base_url = localStorage.getItem('base_url');
 
     const handleBulkDownload = () => {
-        if (!selectedRows.length) {
-            alert("Please select at least one record to proceed with the download.");
-            return;
-        }
+        if (!selectedRows.length) return alert("Please select at least one record!");
 
         let missingFiles = [];
         let downloadedCount = 0;
@@ -230,17 +230,18 @@ export default function CasesDatatable({
             else if (fileType === "stl") path = row.stl_file_path;
             else if (fileType === "finish") path = row.finish_file_path;
 
+            // ✅ Check if valid path exists
             if (path && path.trim() !== "") {
                 try {
-                    const encodedPath = encodeURIComponent(path);
-
-                    // Backend handles download safely
-                    const finalUrl = `${base_url}/download?path=` + encodedPath;
+                    // ✅ Use your symbol-safe download logic
+                    const parts = path.split("/");
+                    const encodedFile = encodeURIComponent(parts.pop());
+                    const encodedUrl = parts.join("/") + "/" + encodedFile;
 
                     const link = document.createElement("a");
-                    link.href = finalUrl;
-                    link.target = "_blank";
+                    link.href = encodedUrl;
                     link.download = `${fileType}_${id}`;
+                    link.target = "_blank";
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -255,12 +256,15 @@ export default function CasesDatatable({
             }
         });
 
+        // ✅ Final alert summary
         if (missingFiles.length > 0) {
-            alert(
-                `File Not found`
-            );
+            alert(`File not available for these record(s): ${missingFiles.join(", ")}`);
+        } else if (downloadedCount === 0) {
+            alert("No files available for the selected type.");
         }
     };
+
+
 
     return (
         <>

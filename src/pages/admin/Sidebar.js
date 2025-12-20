@@ -6,10 +6,10 @@ import {
     faUsers,
     faPalette,
     faCircleInfo,
-    faFileLines,
     faChevronDown,
     faChevronUp,
     faFolderOpen,
+    faMagnifyingGlass
 } from "@fortawesome/free-solid-svg-icons";
 import { Link, useLocation } from "react-router-dom";
 import { ThemeContext } from "../../Context/ThemeContext";
@@ -90,14 +90,13 @@ export default function Sidebar() {
             ],
         },
         {
-            name: "Reports",
-            icon: faFileLines,
+            name: "Search Cases",
+            icon: faMagnifyingGlass,
             id: "reports",
             type: "dropdown",
             submenus: [
-                { name: "Client Reports", link: "/admin/clients-reports" },
-                // { name: "Designer Reports", link: "/admin/designer-reports" },
-                { name: "Date-wise Reports", link: "/admin/cases-reports" },
+                { name: "Multi Search", link: "/admin/multi-serch" },
+                { name: "Reports", link: "/admin/cases-reports" },
             ],
         },
         {

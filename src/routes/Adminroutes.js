@@ -4,7 +4,7 @@ import Dashboard from '../pages/admin/Dashboard';
 import { AdminProvider } from '../Context/AdminContext';
 import ResetPsswordClient from '../pages/admin/ResetPsswordClient';
 import AddClient from '../pages/admin/AddClient';
-import ClientReports from '../pages/admin/ClientResports';
+import MultiSerch from '../pages/admin/MultiSerch';
 import ResetPasswordDesigner from '../pages/admin/ResetPasswordDesigner';
 import AddDesigner from '../pages/admin/AddDesigner';
 import AllCases from '../pages/admin/AllCases';
@@ -31,7 +31,7 @@ import AllClients from '../pages/admin/AllClients';
 import AllDesigners from '../pages/admin/AllDesigner';
 export default function Adminroutes() {
 
-    document.title='Admin Login | Portal'
+    document.title = 'Admin Login | Portal';
 
     return (
         <AdminProvider>
@@ -40,7 +40,7 @@ export default function Adminroutes() {
                 <Route path='/dashboard' element={<Dashboard />} />
                 <Route path='/reset-password-client' element={<ResetPsswordClient />} />
                 <Route path='/add-client' element={<AddClient />} />
-                <Route path='/clients-reports' element={<ClientReports />} />
+                <Route path='/multi-serch' element={<MultiSerch />} />
                 <Route path='/designer-reports' element={<DesignerReports />} />
                 <Route path='/reset-password-designer' element={<ResetPasswordDesigner />} />
                 <Route path='/add-designer' element={<AddDesigner />} />

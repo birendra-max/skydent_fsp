@@ -16,10 +16,11 @@ import Sidebar from "./Sidebar";
 export default function CasesReports() {
     const { theme } = useContext(ThemeContext);
     const [selectedFilter, setSelectedFilter] = useState();
-    const [isLoading, setIsLoading] = useState(false);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const themeClasses = {
         main: theme === "dark" ? "bg-gray-950 text-gray-100" : "bg-gray-100 text-gray-900",
@@ -62,39 +63,33 @@ export default function CasesReports() {
     ];
 
     const handleSearch = async (filterValue = null) => {
-        if (filterValue) setSelectedFilter(filterValue);
-        setIsLoading(true);
-
+        const isQuickFilter = filterValue !== null;
+        if (isQuickFilter) {
+            setSelectedFilter(filterValue);
+            setStartDate("");
+            setEndDate("");
+        }
         try {
+            setLoading(true);
+            setError(null);
             const responseData = await fetchWithAuth("/get-reports-cases", {
                 method: "POST",
                 body: JSON.stringify({
-                    filter: filterValue || selectedFilter,
-                    startDate,
-                    endDate,
+                    filter: filterValue ?? selectedFilter,
+                    startDate: isQuickFilter ? "" : startDate,
+                    endDate: isQuickFilter ? "" : endDate,
                 }),
             });
 
             setData(responseData?.status === "success" ? responseData.cases : []);
         } catch (error) {
-            console.error("Report fetch error:", error);
             setData([]);
+            setError("Network error. Please check your connection.");
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
     };
 
-    useEffect(() => {
-        (async () => {
-            try {
-                const res = await fetchWithAuth("/get-all-cases", { method: "GET" });
-                setData(res?.status === "success" ? res.all_cases : []);
-            } catch (error) {
-                console.error("Error fetching cases:", error);
-                setData([]);
-            }
-        })();
-    }, []);
 
     return (
         <>
@@ -175,7 +170,7 @@ export default function CasesReports() {
                             ))}
                         </div>
                     </div>
-                    <CasesDatatable columns={columns} data={data} rowsPerPage={50} />
+                    <CasesDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
                 </div>
             </main>
             <Foot />
