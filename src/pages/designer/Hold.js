@@ -20,6 +20,7 @@ export default function Hold() {
         { header: "Unit", accessor: "unit" },
         { header: "Tooth", accessor: "tooth" },
         { header: "Lab Name", accessor: "labname" },
+        { header: "Run Self By", accessor: "run_self_by" },
         { header: "Date", accessor: "order_date" },
         { header: "Message", accessor: "message" },
     ];
