@@ -503,13 +503,13 @@ export default function Datatable({
                                                         {columns.map((col) => (
                                                             <td
                                                                 key={col.accessor}
-                                                                className="p-4 text-[12px] border-r border-gray-300/30 dark:border-gray-600/30 last:border-r-0"
+                                                                className="p-4 text-[12px] border-r border-gray-300/30 dark:border-gray-600/30 last:border-r-0 break-words"
                                                             >
                                                                 {col.header === 'Order Id' ? (
                                                                     <div>
                                                                         <Link
                                                                             to={`/designer/orderDeatails/${row.orderid}`}
-                                                                            className="text-[14px] text-blue-600 hover:text-blue-800 hover:underline font-bold transition-colors"
+                                                                            className="text-[14px] text-blue-600 hover:text-blue-800 hover:underline font-bold transition-colors break-words"
                                                                         >
                                                                             {row.orderid}
                                                                         </Link>
@@ -569,7 +569,10 @@ export default function Datatable({
                                                                         })()}
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="truncate max-w-xs" title={row[col.accessor] ?? "-"}>
+                                                                    <div 
+                                                                        className="break-words whitespace-normal"
+                                                                        title={row[col.accessor] ?? "-"}
+                                                                    >
                                                                         {row[col.accessor] ?? "-"}
                                                                     </div>
                                                                 )}

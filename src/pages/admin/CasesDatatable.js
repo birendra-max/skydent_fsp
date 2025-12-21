@@ -11,7 +11,8 @@ export default function CasesDatatable({
     data = [],
     rowsPerPageOptions = [50, 100, 200, 500],
     loading = false,
-    error = null
+    error = null,
+    onSelectionChange = () => { }   // ✅ ADD THIS
 }) {
     const { theme } = useContext(ThemeContext);
     const [status, setStatus] = useState("show");
@@ -24,6 +25,11 @@ export default function CasesDatatable({
     // ✅ NEW STATES for multi-select & dropdown
     const [selectedRows, setSelectedRows] = useState([]);
     const [fileType, setFileType] = useState("finish");
+
+    useEffect(() => {
+        onSelectionChange(selectedRows);
+    }, [selectedRows]);
+
 
     // Filter & Sort
     const filteredData = useMemo(() => {

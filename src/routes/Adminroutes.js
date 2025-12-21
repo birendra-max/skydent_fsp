@@ -29,6 +29,7 @@ import HoldCases from '../pages/admin/HoldCases';
 import WeeklyCases from '../pages/admin/WeeklyCases';
 import AllClients from '../pages/admin/AllClients';
 import AllDesigners from '../pages/admin/AllDesigner';
+import AssignOrders from '../pages/admin/AssignOrders';
 export default function Adminroutes() {
 
     document.title = 'Admin Login | Portal';
@@ -38,6 +39,7 @@ export default function Adminroutes() {
             <Routes>
                 <Route index element={<Login />} />
                 <Route path='/dashboard' element={<Dashboard />} />
+                <Route path='/assign-orders' element={<AssignOrders />} />
                 <Route path='/reset-password-client' element={<ResetPsswordClient />} />
                 <Route path='/add-client' element={<AddClient />} />
                 <Route path='/multi-serch' element={<MultiSerch />} />
