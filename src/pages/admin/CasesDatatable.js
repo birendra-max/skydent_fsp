@@ -433,7 +433,7 @@ export default function CasesDatatable({
 
                                                                     return (
                                                                         <span
-                                                                            className={`px-3 py-1 text-xs font-bold rounded-full shadow-md ${statusColor} ${textColor}`}
+                                                                            className={`px-2 py-1 text-[12px] font-bold text-nowrap rounded-full shadow-md ${statusColor} ${textColor}`}
                                                                         >
                                                                             {row.status ? row.status : 'Unknown'}
                                                                         </span>

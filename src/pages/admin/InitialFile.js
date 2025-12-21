@@ -19,6 +19,7 @@ export default function InitialFile() {
         { header: "File Name", accessor: "fname" },
         { header: "Order Date", accessor: "order_date" },
         { header: "Status", accessor: "status" },
+        { header: "Run Self By", accessor: "run_self_by" },
         { header: "File", accessor: "is_initial_file_deleted" },
     ];
 

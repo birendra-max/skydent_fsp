@@ -22,6 +22,7 @@ export default function PendingCases() {
         { header: "Unit", accessor: "unit" },
         { header: "Tooth", accessor: "tooth" },
         { header: "Lab Name", accessor: "labname" },
+        { header: "Run Self By", accessor: "run_self_by" },
         { header: "Date", accessor: "order_date" },
     ];
 
@@ -40,7 +41,6 @@ export default function PendingCases() {
                 } else {
                     setData([]);
                     setError("No data found ! in the server")
-
                 }
             } catch (error) {
                 setData([]);

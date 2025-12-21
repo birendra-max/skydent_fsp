@@ -9,7 +9,8 @@ import {
     faChevronDown,
     faChevronUp,
     faFolderOpen,
-    faMagnifyingGlass
+    faMagnifyingGlass,
+    faUserGear 
 } from "@fortawesome/free-solid-svg-icons";
 import { Link, useLocation } from "react-router-dom";
 import { ThemeContext } from "../../Context/ThemeContext";
@@ -37,6 +38,13 @@ export default function Sidebar() {
             icon: faGaugeHigh,
             id: "dashboard",
             link: "/admin/dashboard",
+            type: "single",
+        },
+        {
+            name: "Assign Orders",
+            icon: faUserGear ,
+            id: "assign-orders",
+            link: "/admin/assign-orders",
             type: "single",
         },
         {
@@ -163,9 +171,8 @@ export default function Sidebar() {
     return (
         <aside className={sidebarClasses}>
             <div
-                className={`flex items-center justify-between p-5 border-b ${
-                    theme === "dark" ? "border-gray-800" : "border-gray-200"
-                }`}
+                className={`flex items-center justify-between p-5 border-b ${theme === "dark" ? "border-gray-800" : "border-gray-200"
+                    }`}
             >
                 {!collapsed && <span className="font-bold text-xl">Admin Dashboard</span>}
             </div>
@@ -216,24 +223,22 @@ export default function Sidebar() {
 
                                 {/* FIXED → Unlimited height */}
                                 <div
-                                    className={`overflow-hidden transition-[max-height,opacity,margin] duration-300 ease-in-out ${
-                                        (isMenuOpen && !collapsed) || isClosing
-                                            ? "max-h-[9999px] opacity-100 mt-2"
-                                            : "max-h-0 opacity-0"
-                                    }`}
+                                    className={`overflow-hidden transition-[max-height,opacity,margin] duration-300 ease-in-out ${(isMenuOpen && !collapsed) || isClosing
+                                        ? "max-h-[9999px] opacity-100 mt-2"
+                                        : "max-h-0 opacity-0"
+                                        }`}
                                 >
                                     <ul className={submenuClasses}>
                                         {item.submenus.map((sub, index) => (
                                             <li key={index}>
                                                 <Link
                                                     to={sub.link}
-                                                    className={`block px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${
-                                                        currentPath === sub.link
-                                                            ? "bg-blue-600 text-white"
-                                                            : theme === "dark"
-                                                                ? "text-gray-400 hover:text-white hover:bg-gray-800"
-                                                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                                                    }`}
+                                                    className={`block px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${currentPath === sub.link
+                                                        ? "bg-blue-600 text-white"
+                                                        : theme === "dark"
+                                                            ? "text-gray-400 hover:text-white hover:bg-gray-800"
+                                                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                                        }`}
                                                 >
                                                     {sub.name}
                                                 </Link>

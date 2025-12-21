@@ -22,7 +22,8 @@ export default function AllCases() {
         { header: "Unit", accessor: "unit" },
         { header: "Tooth", accessor: "tooth" },
         { header: "Lab Name", accessor: "labname" },
-        { header: "Date", accessor: "order_date" },
+        { header: "Run Self By", accessor: "run_self_by" },
+        { header: "Order Date", accessor: "order_date" },
     ];
 
     useEffect(() => {

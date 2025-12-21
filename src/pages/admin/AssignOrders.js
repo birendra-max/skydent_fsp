@@ -6,16 +6,14 @@ import CasesDatatable from "./CasesDatatable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faSearch,
-    faFilter,
-    faHome,
+    faUserGear
 } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 import Sidebar from "./Sidebar";
-import { Link } from 'react-router-dom';
 
-export default function MultiSearch() {
+export default function AssignOrders() {
     const { theme } = useContext(ThemeContext);
-    const [selectedFilter, setSelectedFilter] = useState('1'); // '1' = 'All'
+    const [selectedFilter, setSelectedFilter] = useState('1');
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [orderIdFrom, setOrderIdFrom] = useState('');
@@ -103,7 +101,7 @@ export default function MultiSearch() {
                 '11': 'Redesign'
             };
             const targetStatus = statusMap[selectedFilter];
-            
+
             if (targetStatus) {
                 filtered = filtered.filter(item => {
                     const itemStatus = item.status?.toLowerCase();
@@ -238,39 +236,12 @@ export default function MultiSearch() {
 
                 {/* Main Content */}
                 <div className="flex-1 ml-64 p-4 mt-16 space-y-8">
-                    {/* Page Header */}
-                    <div className={`bg-gray-50 rounded-xl border-b shadow-sm my-4 px-4 ${getHeaderClass()}`}>
-                        <div className="container mx-auto px-3 sm:px py-4 sm:py-3">
-                            <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="text-center sm:text-left">
-                                    <h1 className={`text-2xl sm:text-3xl font-bold ${theme === 'light' ? 'text-gray-800' : 'text-white'
-                                        }`}>
-                                        Multi Search
-                                    </h1>
-                                    <p className={`mt-1 text-sm sm:text-base ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'
-                                        }`}>Generate, filter, and analyze your case data</p>
-                                </div>
-                                <nav className="flex justify-center sm:justify-start">
-                                    <ol className="flex items-center space-x-2 sm:space-x-3 text-xs sm:text-sm">
-                                        <li>
-                                            <Link to="/admin/dashboard" className={`hover:text-blue-800 transition-colors duration-300 flex items-center ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'
-                                                }`}>
-                                                <FontAwesomeIcon icon={faHome} className="w-3 h-3 mr-1 sm:mr-2" />
-                                                <span className="hidden xs:inline">Dashboard</span>
-                                            </Link>
-                                        </li>
-                                    </ol>
-                                </nav>
-                            </div>
-                        </div>
-                    </div>
-
                     {/* Search Card */}
                     <div className={`rounded-2xl p-6 shadow-lg ${themeClasses.card}`}>
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <FontAwesomeIcon icon={faFilter} className="text-blue-500" />
-                                Advanced Case Filtering
+                                <FontAwesomeIcon icon={faUserGear} className="text-blue-500" />
+                                Assign orders to the designer
                             </h2>
                             <button
                                 onClick={handleClearFilters}
@@ -369,12 +340,12 @@ export default function MultiSearch() {
                     </div>
 
                     {/* Cases Datatable */}
-                    <CasesDatatable 
-                        columns={columns} 
-                        data={filteredData} 
-                        rowsPerPage={50} 
-                        loading={loading} 
-                        error={error} 
+                    <CasesDatatable
+                        columns={columns}
+                        data={filteredData}
+                        rowsPerPage={50}
+                        loading={loading}
+                        error={error}
                     />
                 </div>
             </main>
