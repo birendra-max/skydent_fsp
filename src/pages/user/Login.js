@@ -9,8 +9,8 @@ import { motion } from 'framer-motion';
 export default function Login() {
 
     useEffect(() => {
-        const data = localStorage.getItem('user') ? localStorage.getItem('user') : "";
-        const token = localStorage.getItem('token') ? localStorage.getItem('token') : "";
+        const data = localStorage.getItem('skydent_user') ? localStorage.getItem('skydent_user') : "";
+        const token = localStorage.getItem('skydent_user_token') ? localStorage.getItem('skydent_user_token') : "";
 
         if (data !== '' && token !== '') {
             navigate("/user/home");
@@ -64,8 +64,8 @@ export default function Login() {
             const data = await res.json();
             if (data.status === "success" && data.message === "Login successfully" && data.user?.userid) {
                 setUser(data.user);
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('base_url', data.base_url);
+                localStorage.setItem('skydent_user_token', data.token);
+                localStorage.setItem('skydent_user_base_url', data.base_url);
                 setStatus({ type: "success", message: data.message });
                 navigate('/user/home');
             } else {

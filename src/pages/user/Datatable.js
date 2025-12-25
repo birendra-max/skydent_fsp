@@ -418,7 +418,7 @@ export default function Datatable({
     };
 
 
-    const base_url = localStorage.getItem('base_url');
+    const base_url = localStorage.getItem('skydent_user_base_url');
 
     const handleBulkDownload = async () => {
         if (!selectedRows.length) {

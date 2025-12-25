@@ -1,11 +1,11 @@
 import { logoutUser } from "./adminauth";
 
-let isLoggingOut = false; // 🔒 Prevent multiple logouts overlapping
+let isLoggingOut = false;
 
 export async function fetchWithAuth(endpoint, options = {}) {
     let token = localStorage.getItem("skydent_admin_token");
     let base_url = localStorage.getItem('skydent_admin_base_url');
-    // 🛡️ Ensure token is valid before using it
+
     if (!token || token === "null" || token === "undefined" || token.trim() === "") {
         console.warn("Invalid token found in localStorage:", token);
         token = null;
@@ -29,7 +29,6 @@ export async function fetchWithAuth(endpoint, options = {}) {
             headers,
         });
 
-        // Token expired or unauthorized
         if (response.status === 401 || response.status === 403) {
             if (!isLoggingOut) {
                 isLoggingOut = true;
@@ -39,7 +38,6 @@ export async function fetchWithAuth(endpoint, options = {}) {
             return null;
         }
 
-        // Safely parse JSON
         const data = await response.json().catch(() => null);
         if (
             data?.error &&
@@ -63,7 +61,6 @@ export async function fetchWithAuth(endpoint, options = {}) {
         }
         return null;
     } finally {
-        // 🧹 Destroy headers after every request (important)
         for (let key in headers) {
             delete headers[key];
         }

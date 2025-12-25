@@ -10,9 +10,9 @@ import { AdminContext } from '../Context/AdminContext';
 import config from '../config';
 
 export default function Chatbox({ orderid }) {
-    const userToken = localStorage.getItem('token');
+    const userToken = localStorage.getItem('skydent_user_token');
     const adminToken = localStorage.getItem('skydent_admin_token');
-    const designerToken = localStorage.getItem('token');
+    const designerToken = localStorage.getItem('skydent_designer_token');
     const token = userToken || adminToken || designerToken || "";
 
     const userCtx = useContext(UserContext);
@@ -342,7 +342,7 @@ export default function Chatbox({ orderid }) {
         }
 
         try {
-            const base_url = localStorage.getItem("base_url") || config.API_BASE_URL;
+            const base_url = localStorage.getItem("skydent_user_base_url");
             const encodedPath = encodeURIComponent(url);
             const finalUrl = `${base_url}/download?path=${encodedPath}`;
 

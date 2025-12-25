@@ -1,7 +1,7 @@
 export function logoutUser() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("designer");
-  
-  // redirect to login
+  localStorage.removeItem('skydent_designer');
+  localStorage.removeItem('skydent_designer_token');
+  localStorage.removeItem('skydent_designer_base_url');
+  localStorage.removeItem('theme');
   window.location.href = "/designer/login";
 }

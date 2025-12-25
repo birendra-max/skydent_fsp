@@ -23,6 +23,7 @@ export const AdminProvider = ({ children }) => {
         setAdmin(null);
         localStorage.removeItem('skydent_admin');
         localStorage.removeItem('skydent_admin_token');
+        localStorage.removeItem('skydent_admin_base_url');
         localStorage.removeItem('theme');
         navigate('/admin', { replace: true });
     }

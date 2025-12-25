@@ -7,7 +7,7 @@ import { UserContext } from "../../Context/UserContext";
 import { fetchWithAuth } from '../../utils/userapi';
 
 export default function NewRequest() {
-  let base_url = localStorage.getItem('base_url');
+  let base_url = localStorage.getItem('skydent_user_base_url');
   const { theme } = useContext(ThemeContext);
   const { user, logout } = useContext(UserContext);
   const navigate = useNavigate();
@@ -60,7 +60,7 @@ export default function NewRequest() {
     });
   };
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('skydent_user_token');
 
   const uploadFile = async (file) => {
     try {

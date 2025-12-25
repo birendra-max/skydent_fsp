@@ -31,8 +31,8 @@ export default function Hd() {
 
     // Authentication check
     useEffect(() => {
-        const data = localStorage.getItem('user');
-        const token = localStorage.getItem('token');
+        const data = localStorage.getItem('skydent_user');
+        const token = localStorage.getItem('skydent_user_token');
 
         if (!data || !token) {
             navigate('/user');

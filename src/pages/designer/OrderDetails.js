@@ -278,9 +278,9 @@ function Chatbox({ orderid, theme }) {
                     <div>
                         <h3 className={`font-bold ${theme === "light" ? "text-gray-900" : "text-white"}`}>Order Chat</h3>
                         <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
+                            <div className={`w-2 h-2 rounded-full bg-green-500`} />
                             <span className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>
-                                {isConnected ? "Connected" : "Connecting..."}
+                                Connected
                             </span>
                         </div>
                     </div>
