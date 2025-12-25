@@ -33,13 +33,13 @@ export default function Sidebar() {
     };
 
     const navItems = [
-        {
-            name: "Dashboard",
-            icon: faGaugeHigh,
-            id: "dashboard",
-            link: "/admin/dashboard",
-            type: "single",
-        },
+        // {
+        //     name: "Dashboard",
+        //     icon: faGaugeHigh,
+        //     id: "dashboard",
+        //     link: "/admin/dashboard",
+        //     type: "single",
+        // },
         {
             name: "Assign Orders",
             icon: faUserGear ,
@@ -97,16 +97,16 @@ export default function Sidebar() {
                 { name: "Weekly Cases", link: "/admin/weekly-cases" },
             ],
         },
-        {
-            name: "Search Cases",
-            icon: faMagnifyingGlass,
-            id: "reports",
-            type: "dropdown",
-            submenus: [
-                { name: "Multi Search", link: "/admin/multi-serch" },
-                { name: "Reports", link: "/admin/cases-reports" },
-            ],
-        },
+        // {
+        //     name: "Search Cases",
+        //     icon: faMagnifyingGlass,
+        //     id: "reports",
+        //     type: "dropdown",
+        //     submenus: [
+        //         { name: "Multi Search", link: "/admin/multi-serch" },
+        //         { name: "Reports", link: "/admin/cases-reports" },
+        //     ],
+        // },
         {
             name: "Files",
             icon: faFolderOpen,

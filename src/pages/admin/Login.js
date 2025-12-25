@@ -9,8 +9,8 @@ import config from '../../config';
 
 export default function Login() {
   useEffect(() => {
-    const data = localStorage.getItem('skydent_admin') ? localStorage.getItem('skydent_admin') : "";
-    const token = localStorage.getItem('skydent_admin_token') ? localStorage.getItem('skydent_admin_token') : "";
+    const data = localStorage.getItem('bravo_admin') ? localStorage.getItem('bravo_admin') : "";
+    const token = localStorage.getItem('bravo_admin_token') ? localStorage.getItem('bravo_admin_token') : "";
 
     if (data !== '' && token !== '') {
       navigate("/admin/dashboard");
@@ -59,8 +59,8 @@ export default function Login() {
       const data = await res.json();
       if (data.status === "success" && data.message === "Login successfully" && data.admin?.id) {
         setAdmin(data.admin);
-        localStorage.setItem('skydent_admin_token', data.token);
-        localStorage.setItem('skydent_admin_base_url', data.base_url);
+        localStorage.setItem('bravo_admin_token', data.token);
+        localStorage.setItem('bravo_admin_base_url', data.base_url);
         setStatus({ type: "success", message: data.message });
         navigate('/admin/dashboard');
       } else {
@@ -111,7 +111,7 @@ export default function Login() {
           </p>
 
           <p className="text-xs text-gray-500 mt-8">
-            © 2025 Sdkydent Admin Panel
+            © 2025 Skydent Admin Panel
           </p>
         </div>
 

@@ -18,8 +18,8 @@ export default function StlFile() {
         { header: "Row Id", accessor: "id" },
         { header: "Order Id", accessor: "orderid" },
         { header: "File Name", accessor: "fname" },
-        { header: "Order Date", accessor: "order_date" },
-        { header: "Uploaded By", accessor: "uploaded_by" },
+        { header: "Upload By", accessor: "uploaded_by" },
+        { header: "Upload Date", accessor: "upload_date" },
         { header: "File", accessor: "file_deleted" },
     ];
 

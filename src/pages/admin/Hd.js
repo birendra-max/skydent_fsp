@@ -1,15 +1,18 @@
 import { useState, useEffect, useContext } from "react";
 import { AdminContext } from "../../Context/AdminContext";
 import { ThemeContext } from "../../Context/ThemeContext";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom"; // ADD useLocation
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faSearch,
+    faGaugeHigh,
+    faUpload,
+    faChartBar,
+    faUser,
+    faSignOutAlt,
     faMoon,
     faSun,
     faTimes,
-    faSignOutAlt,
-    faUser,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Hd() {
@@ -20,12 +23,14 @@ export default function Hd() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [activePage, setActivePage] = useState(null); // Change to null initially
     const navigate = useNavigate();
+    const location = useLocation(); // ADD this
 
     // Redirect if not logged in
     useEffect(() => {
-        const data = localStorage.getItem("skydent_admin");
-        const token = localStorage.getItem("skydent_admin_token");
+        const data = localStorage.getItem("bravo_admin");
+        const token = localStorage.getItem("bravo_admin_token");
         if (!data || !token) navigate("/admin");
     }, [navigate]);
 
@@ -42,6 +47,30 @@ export default function Hd() {
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
+
+    // DETERMINE IF CURRENT PAGE IS IN MENU ITEMS
+    useEffect(() => {
+        const currentPath = location.pathname;
+        const menuPaths = [
+            "/admin/dashboard",
+            "/admin/new_request", 
+            "/admin/multisearch",
+            "/admin/cases-reports"
+        ];
+        
+        // Check if current path matches any menu item
+        const isMenuPage = menuPaths.some(path => currentPath.includes(path));
+        
+        if (isMenuPage) {
+            if (currentPath.includes("dashboard")) setActivePage("index");
+            else if (currentPath.includes("new_request")) setActivePage("new_request");
+            else if (currentPath.includes("multisearch")) setActivePage("multisearch");
+            else if (currentPath.includes("cases-reports")) setActivePage("reports");
+            else setActivePage("index");
+        } else {
+            setActivePage(null);
+        }
+    }, [location.pathname]);
 
     // Click outside dropdown
     useEffect(() => {
@@ -88,6 +117,13 @@ export default function Hd() {
         }, 3000);
     };
 
+    const navItems = [
+        { href: "/admin/dashboard", label: "Dashboard", key: "index", icon: faGaugeHigh },
+        { href: "/admin/new_request", label: "File Upload", key: "new_request", icon: faUpload },
+        { href: "/admin/multisearch", label: "Multi Search", key: "multisearch", icon: faSearch },
+        { href: "/admin/cases-reports", label: "Reports", key: "reports", icon: faChartBar }
+    ];
+    
     return (
         <header
             className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${scrolled ? "shadow-xl bg-gray-900/95 backdrop-blur-lg" : "bg-gray-900"
@@ -99,7 +135,7 @@ export default function Hd() {
                     <img
                         src="/img/logo.png"
                         alt="Logo"
-                        className="h-8 sm:h-10 w-auto rounded-lg hover:scale-105 transition-transform"
+                        className="h-10 sm:h-16 w-auto rounded-lg hover:scale-105 transition-transform"
                         onError={(e) => (e.target.src = "/img/placeholder-logo.png")}
                     />
                     {/* --- Center Welcome Text --- */}
@@ -110,6 +146,28 @@ export default function Hd() {
                         </span>
                     </div>
                 </Link>
+
+                {/* Center Menu - Desktop */}
+                <div className="hidden xl:flex xl:items-center xl:flex-1 xl:justify-center">
+                    <div className="flex items-center space-x-6 bg-gray-800/70 backdrop-blur-sm rounded-xl p-1.5 border border-gray-700">
+                        {navItems.map((item) => (
+                            <Link
+                                to={item.href}
+                                key={item.key}
+                                className={`text-xs lg:text-sm px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 ${activePage === item.key
+                                    ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg transform scale-105"
+                                    : "text-gray-300 hover:bg-gray-700 hover:text-white hover:shadow-md"
+                                    }`}
+                            >
+                                <FontAwesomeIcon
+                                    icon={item.icon}
+                                    className="w-3 h-3 lg:w-4 lg:h-4"
+                                />
+                                <span className="whitespace-nowrap">{item.label}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
 
                 {/* --- Right Side --- */}
                 <div className="flex items-center space-x-3 sm:space-x-4">
