@@ -8,7 +8,7 @@ export default function NewRequest() {
   const [files, setFiles] = useState([]);
   const [drag, setDragActive] = useState(false);
   const [orderSelection, setOrderSelection] = useState({});
-  let base_url = localStorage.getItem('bravo_admin_base_url');
+  let base_url = localStorage.getItem('skydent_admin_base_url');
   const progressIntervalRefs = useRef({});
 
   const handleFiles = async (selectedFiles) => {

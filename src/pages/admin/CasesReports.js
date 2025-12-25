@@ -2,7 +2,7 @@ import { useContext, useState, useEffect, useMemo } from "react";
 import Hd from './Hd';
 import Foot from './Foot';
 import { ThemeContext } from "../../Context/ThemeContext";
-import Datatable from './Datatable';
+import CasesDatatable from './CasesDatatable';
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -69,7 +69,7 @@ export default function Reports() {
         { header: "Unit", accessor: "unit" },
         { header: "Tooth", accessor: "tooth" },
         { header: "Lab Name", accessor: "labname" },
-        { header: "Date", accessor: "order_date" },
+        { header: "Order Date", accessor: "order_date" },
         { header: "Run Self By", accessor: "run_self_by" },
         { header: "Assign To", accessor: "assign_to" },
         { header: "Assign Date", accessor: "assign_date" },
@@ -431,7 +431,7 @@ export default function Reports() {
                             {/* Data Table */}
                             <div className="mt-8">
                                 {/* ✅ CHANGED: Pass filteredData instead of all data */}
-                                <Datatable columns={columns} data={filteredData} rowsPerPage={50} />
+                                <CasesDatatable columns={columns} data={filteredData} rowsPerPage={50} />
                             </div>
                         </div>
                     </div>

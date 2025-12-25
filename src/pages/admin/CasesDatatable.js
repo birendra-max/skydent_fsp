@@ -276,7 +276,7 @@ export default function CasesDatatable({
         }
     };
 
-    
+
     return (
         <>
             <Loder status={status} />
@@ -418,20 +418,13 @@ export default function CasesDatatable({
                                                         ) : col.header === 'Message' ? (
                                                             <div className="flex justify-center items-center relative">
                                                                 <div className="relative group">
-                                                                    <div
-                                                                        className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] shadow-lg"
+                                                                    <img
+                                                                        src="/img/messages.png"
+                                                                        alt="Message"
+                                                                        className="w-9 h-9 cursor-pointer transition-all duration-200 group-hover:scale-110 group-hover:rotate-12"
                                                                         onClick={() => openPopup(`${row.orderid}`)}
-                                                                    >
-                                                                        {/* Professional chat icon */}
-                                                                        <svg
-                                                                            className="w-6 h-6 text-slate-200"
-                                                                            fill="currentColor"
-                                                                            viewBox="0 0 24 24"
-                                                                        >
-                                                                            <path d="M4 4h16v11H8l-4 4V4z" />
-                                                                        </svg>
-                                                                    </div>
-                                                                    <span className="absolute -top-2 -right-2 bg-gradient-to-br from-green-500 to-green-600 text-white text-xs font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-lg ring-2 ring-white/80">
+                                                                    />
+                                                                    <span className=" absolute -top-2 -right-2  bg-gradient-to-br from-red-500 via-red-600 to-red-700  text-white text-[12px] font-semibold  rounded-full min-w-[18px] h-[18px]  flex items-center justify-center  shadow-[0_0_8px_rgba(255,0,0,0.6)]ring-2 ring-white/60 backdrop-blur-sm">
                                                                         {row.totalMessages > 99 ? '99+' : row.totalMessages}
                                                                     </span>
                                                                 </div>

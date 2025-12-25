@@ -29,8 +29,8 @@ export default function Hd() {
 
     // Redirect if not logged in
     useEffect(() => {
-        const data = localStorage.getItem("bravo_admin");
-        const token = localStorage.getItem("bravo_admin_token");
+        const data = localStorage.getItem("skydent_admin");
+        const token = localStorage.getItem("skydent_admin_token");
         if (!data || !token) navigate("/admin");
     }, [navigate]);
 
@@ -135,7 +135,7 @@ export default function Hd() {
                     <img
                         src="/img/logo.png"
                         alt="Logo"
-                        className="h-10 sm:h-16 w-auto rounded-lg hover:scale-105 transition-transform"
+                        className="h-10 sm:h-13 w-auto rounded-lg hover:scale-105 transition-transform"
                         onError={(e) => (e.target.src = "/img/placeholder-logo.png")}
                     />
                     {/* --- Center Welcome Text --- */}
