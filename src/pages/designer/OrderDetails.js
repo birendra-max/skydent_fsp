@@ -374,8 +374,8 @@ export default function OrderDetails() {
     const [designPreferences, setDesignPreferences] = useState(null);
     const [preferencesLoading, setPreferencesLoading] = useState(false);
     const navigate = useNavigate();
-    const base_url = localStorage.getItem("base_url");
-    const token = localStorage.getItem("token");
+    const base_url = localStorage.getItem("skydent_designer_base_url");
+    const token = localStorage.getItem("skydent_designer_token");
     const fileInputRef = useRef(null);
 
     useEffect(() => {

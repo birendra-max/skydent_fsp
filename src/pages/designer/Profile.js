@@ -27,8 +27,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Profile() {
-    let base_url = localStorage.getItem('base_url');
-    const token = localStorage.getItem('token');
+    let base_url = localStorage.getItem('skydent_designer_base_url');
+    const token = localStorage.getItem('skydent_designer_token');
     const { theme } = useContext(ThemeContext);
     const [formStatus, setFormStatus] = useState(0);
     const { designer, setDesigner } = useContext(DesignerContext);

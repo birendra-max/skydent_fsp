@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useContext } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faUser, faTimes, faFile, faPaperclip, faPaperPlane, faDownload,
-    faCrown, faShieldAlt, faUserTie
+    faCrown, faUserTie
 } from "@fortawesome/free-solid-svg-icons";
 import { UserContext } from '../Context/UserContext';
 import { DesignerContext } from '../Context/DesignerContext';

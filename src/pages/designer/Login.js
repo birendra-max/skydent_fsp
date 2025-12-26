@@ -15,8 +15,8 @@ export default function Login() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        const data = localStorage.getItem('designer') ? localStorage.getItem('designer') : "";
-        const token = localStorage.getItem('token') ? localStorage.getItem('token') : "";
+        const data = localStorage.getItem('skydent_designer') ? localStorage.getItem('skydent_designer') : "";
+        const token = localStorage.getItem('skydent_designer_token') ? localStorage.getItem('skydent_designer_token') : "";
 
         if (data !== '' && token !== '') {
             navigate('/designer/home');
@@ -61,8 +61,8 @@ export default function Login() {
 
             if (data.status === "success" && data.message === "Login successfully" && data.designer?.desiid) {
                 setStatus({ type: "success", message: data.message });
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('base_url', data.base_url);
+                localStorage.setItem('skydent_designer_token', data.token);
+                localStorage.setItem('skydent_designer_base_url', data.base_url);
                 setDesigner(data.designer);
                 navigate('/designer/home');
             } else {

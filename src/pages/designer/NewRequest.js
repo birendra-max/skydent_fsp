@@ -10,8 +10,8 @@ export default function NewRequest() {
   const [files, setFiles] = useState([]);
   const [drag, setDragActive] = useState(false);
   const [orderSelection, setOrderSelection] = useState({});
-  const token = localStorage.getItem('token');
-  let base_url = localStorage.getItem('base_url');
+  const token = localStorage.getItem('skydent_designer_token');
+  let base_url = localStorage.getItem('skydent_designer_base_url');
   const progressIntervalRefs = useRef({});
 
   const handleFiles = async (selectedFiles) => {
