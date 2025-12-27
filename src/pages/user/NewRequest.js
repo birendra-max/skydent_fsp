@@ -20,44 +20,52 @@ export default function NewRequest() {
 
   const handleFiles = (selectedFiles) => {
     const fileArray = Array.from(selectedFiles);
-    const zipFiles = fileArray.filter((file) => file.name.endsWith(".zip"));
 
-    if (zipFiles.length !== fileArray.length) {
+    // 1. Separate valid and invalid files upfront
+    const zipFiles = fileArray.filter((file) => file.name.endsWith(".zip"));
+    const invalidFiles = fileArray.filter((file) => !file.name.endsWith(".zip"));
+
+    // 2. Process valid .zip files first (if any exist)
+    if (zipFiles.length > 0) {
+      zipFiles.forEach((file) => {
+        setFiles((prev) => [
+          ...prev,
+          {
+            fileName: file.name,
+            progress: 0,
+            uploadStatus: "Waiting...",
+            orderId: "-",
+            productType: "-",
+            unit: "-",
+            tooth: "-",
+            message: "",
+            file: file,
+          },
+        ]);
+        uploadFile(file);
+      });
+    }
+
+    // 3. Show error for invalid files (if any exist)
+    if (invalidFiles.length > 0) {
+      // Show temporary error message
       setFiles(prev => [...prev, {
-        fileName: "Invalid files detected",
+        fileName: `Invalid files detected (${invalidFiles.length})`,
         progress: 0,
         uploadStatus: "Error",
         orderId: "-",
         productType: "-",
         unit: "-",
         tooth: "-",
-        message: "Only .zip files are allowed!",
+        message: `Only .zip files are allowed! Skipped: ${invalidFiles.map(f => f.name).join(', ')}`,
         isError: true
       }]);
 
+      // Auto-remove the error message after 5 seconds
       setTimeout(() => {
         setFiles(prev => prev.filter(f => !f.isError));
-      }, 3000);
-      return;
+      }, 5000);
     }
-
-    zipFiles.forEach((file) => {
-      setFiles((prev) => [
-        ...prev,
-        {
-          fileName: file.name,
-          progress: 0,
-          uploadStatus: "Waiting...",
-          orderId: "-",
-          productType: "-",
-          unit: "-",
-          tooth: "-",
-          message: "",
-          file: file,
-        },
-      ]);
-      uploadFile(file);
-    });
   };
 
   const token = localStorage.getItem('skydent_user_token');
@@ -161,7 +169,7 @@ export default function NewRequest() {
           );
           reject(new Error(`Server error: ${xhr.status}`));
         }
-        
+
         setUploadRequests(prev => {
           const newRequests = { ...prev };
           delete newRequests[file.name];
@@ -183,7 +191,7 @@ export default function NewRequest() {
           )
         );
         reject(new Error('Network error'));
-        
+
         setUploadRequests(prev => {
           const newRequests = { ...prev };
           delete newRequests[file.name];
@@ -605,14 +613,14 @@ export default function NewRequest() {
                           <label
                             key={option.value}
                             className={`relative flex p-5 rounded-xl border cursor-pointer transition-all duration-200 group ${selectedDuration === option.value
-                                ? option.color === "red"
-                                  ? "border-red-500 bg-white shadow-md"
-                                  : option.color === "yellow"
-                                    ? "border-yellow-500 bg-white shadow-md"
-                                    : "border-green-500 bg-white shadow-md"
-                                : theme === "light"
-                                  ? "border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50"
-                                  : "border-gray-600 bg-gray-800 hover:border-gray-500 hover:bg-gray-700"
+                              ? option.color === "red"
+                                ? "border-red-500 bg-white shadow-md"
+                                : option.color === "yellow"
+                                  ? "border-yellow-500 bg-white shadow-md"
+                                  : "border-green-500 bg-white shadow-md"
+                              : theme === "light"
+                                ? "border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50"
+                                : "border-gray-600 bg-gray-800 hover:border-gray-500 hover:bg-gray-700"
                               }`}
                           >
                             <input
@@ -626,14 +634,14 @@ export default function NewRequest() {
 
                             <div className="flex-shrink-0 mr-4 mt-1">
                               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedDuration === option.value
-                                  ? option.color === "red"
-                                    ? "border-red-500 bg-red-500"
-                                    : option.color === "yellow"
-                                      ? "border-yellow-500 bg-yellow-500"
-                                      : "border-green-500 bg-green-500"
-                                  : theme === "light"
-                                    ? "border-gray-400 bg-white"
-                                    : "border-gray-500 bg-gray-700"
+                                ? option.color === "red"
+                                  ? "border-red-500 bg-red-500"
+                                  : option.color === "yellow"
+                                    ? "border-yellow-500 bg-yellow-500"
+                                    : "border-green-500 bg-green-500"
+                                : theme === "light"
+                                  ? "border-gray-400 bg-white"
+                                  : "border-gray-500 bg-gray-700"
                                 }`}>
                                 {selectedDuration === option.value && (
                                   <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -644,10 +652,10 @@ export default function NewRequest() {
                             <div className="flex-1">
                               <div className="flex items-start space-x-3">
                                 <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all ${selectedDuration === option.value
-                                    ? "bg-white text-black border border-gray-300"
-                                    : theme === "light"
-                                      ? "bg-gray-100 text-gray-500"
-                                      : "bg-gray-700 text-gray-400"
+                                  ? "bg-white text-black border border-gray-300"
+                                  : theme === "light"
+                                    ? "bg-gray-100 text-gray-500"
+                                    : "bg-gray-700 text-gray-400"
                                   }`}>
                                   {option.icon}
                                 </div>
@@ -677,10 +685,10 @@ export default function NewRequest() {
                             {selectedDuration === option.value && (
                               <div className="absolute -top-2 -right-2">
                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center shadow-md ${option.color === "red"
-                                    ? "bg-red-500"
-                                    : option.color === "yellow"
-                                      ? "bg-yellow-500"
-                                      : "bg-green-500"
+                                  ? "bg-red-500"
+                                  : option.color === "yellow"
+                                    ? "bg-yellow-500"
+                                    : "bg-green-500"
                                   }`}>
                                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -706,20 +714,20 @@ export default function NewRequest() {
                       <div>
                         <h3 className={`text-xl font-bold mb-6 ${theme === 'light' ? 'text-black' : 'text-white'}`}>Submit Orders</h3>
                         <div className={`flex items-center p-4 rounded-lg mb-6 text-sm font-medium ${files.some(f => f.uploadStatus.startsWith("Uploading..."))
+                          ? theme === 'light'
+                            ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                            : "bg-yellow-900/20 text-yellow-300 border border-yellow-800"
+                          : !files.some(f => f.uploadStatus === "Success")
                             ? theme === 'light'
-                              ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                              : "bg-yellow-900/20 text-yellow-300 border border-yellow-800"
-                            : !files.some(f => f.uploadStatus === "Success")
+                              ? "bg-red-50 text-red-700 border border-red-200"
+                              : "bg-red-900/20 text-red-300 border border-red-800"
+                            : canSubmit
                               ? theme === 'light'
-                                ? "bg-red-50 text-red-700 border border-red-200"
-                                : "bg-red-900/20 text-red-300 border border-red-800"
-                              : canSubmit
-                                ? theme === 'light'
-                                  ? "bg-green-50 text-green-700 border border-green-200"
-                                  : "bg-green-900/20 text-green-300 border border-green-800"
-                                : theme === 'light'
-                                  ? "bg-gray-50 text-gray-600 border border-gray-200"
-                                  : "bg-gray-800 text-gray-400 border border-gray-700"
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : "bg-green-900/20 text-green-300 border border-green-800"
+                              : theme === 'light'
+                                ? "bg-gray-50 text-gray-600 border border-gray-200"
+                                : "bg-gray-800 text-gray-400 border border-gray-700"
                           }`}>
                           <div className="flex items-center space-x-2">
                             {files.some(f => f.uploadStatus.startsWith("Uploading...")) ? (
@@ -757,10 +765,10 @@ export default function NewRequest() {
                           onClick={handleSubmit}
                           disabled={!canSubmit}
                           className={`w-full font-bold py-4 px-6 rounded-xl text-base transition-all duration-200 ${canSubmit
-                              ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                              : theme === 'light'
-                                ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
-                                : "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700"
+                            ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                            : theme === 'light'
+                              ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                              : "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700"
                             }`}
                         >
                           {isSubmitting ? (
@@ -782,8 +790,8 @@ export default function NewRequest() {
 
                         {files.some(f => f.uploadStatus === "Failed") && canSubmit && !isSubmitting && (
                           <div className={`flex items-center justify-center space-x-2 p-3 rounded-lg text-sm ${theme === 'light'
-                              ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                              : 'bg-yellow-900/20 text-yellow-300 border border-yellow-800'
+                            ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                            : 'bg-yellow-900/20 text-yellow-300 border border-yellow-800'
                             }`}>
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

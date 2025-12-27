@@ -17,43 +17,53 @@ export default function NewRequest() {
   const handleFiles = async (selectedFiles) => {
     const fileArray = Array.from(selectedFiles);
 
-    // Allow both ZIP and STL files based on backend
+    // 1. Separate valid and invalid files upfront
     const validFiles = fileArray.filter((file) =>
       file.name.endsWith(".zip") || file.name.endsWith(".stl")
     );
 
-    if (validFiles.length !== fileArray.length) {
+    const invalidFiles = fileArray.filter((file) =>
+      !(file.name.endsWith(".zip") || file.name.endsWith(".stl"))
+    );
+
+    // 2. Process valid files first (if any exist)
+    if (validFiles.length > 0) {
+      validFiles.forEach((file) => {
+        setFiles((prev) => [
+          ...prev,
+          {
+            fileName: file.name,
+            progress: 0,
+            uploadStatus: "Waiting...",
+            message: "",
+            file: file,
+            matchingOrders: null,
+            showOrderSelection: false,
+            fileSize: file.size,
+          },
+        ]);
+        uploadFile(file);
+      });
+    }
+
+    // 3. Show error for invalid files (if any exist)
+    if (invalidFiles.length > 0) {
+      // Show temporary error message
       setFiles(prev => [...prev, {
-        fileName: "Invalid files detected",
+        fileName: `Invalid files detected (${invalidFiles.length})`,
         progress: 0,
         uploadStatus: "Error",
-        message: "Only .zip or .stl files are allowed!",
+        message: `Only .zip or .stl files are allowed! Skipped: ${invalidFiles.map(f => f.name).join(', ')}`,
         isError: true
       }]);
 
+      // Auto-remove the error message after 5 seconds
       setTimeout(() => {
         setFiles(prev => prev.filter(f => !f.isError));
-      }, 3000);
-      return;
+      }, 5000);
     }
-
-    validFiles.forEach((file) => {
-      setFiles((prev) => [
-        ...prev,
-        {
-          fileName: file.name,
-          progress: 0,
-          uploadStatus: "Waiting...",
-          message: "",
-          file: file,
-          matchingOrders: null,
-          showOrderSelection: false,
-          fileSize: file.size,
-        },
-      ]);
-      uploadFile(file);
-    });
   };
+
 
   const simulateProgress = (fileName) => {
     // Clear any existing interval for this file
