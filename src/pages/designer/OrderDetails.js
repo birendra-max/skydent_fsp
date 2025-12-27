@@ -32,7 +32,7 @@ import { UserContext } from "../../Context/UserContext";
 import { DesignerContext } from "../../Context/DesignerContext";
 
 function Chatbox({ orderid, theme }) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('skydent_designer_token');
     const userCtx = useContext(UserContext);
     const designerCtx = useContext(DesignerContext);
     let userRole = null;
@@ -800,20 +800,42 @@ export default function OrderDetails() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>User Order No</label>
-                                                {isEditing ? (<input type="text" value={editedOrder.user_order_no || ''} onChange={(e) => handleInputChange('user_order_no', e.target.value)} className={`w-full p-4 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.user_order_no || "N/A"}</p>)}
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            {/* User Order No - Always Disabled */}
+                                            <div className="flex flex-col">
+                                                <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                    User Order No
+                                                </label>
+                                                <div className={`w-full p-4 rounded-lg border text-sm ${theme === "light"
+                                                    ? "bg-gray-50 border-gray-300 text-gray-900"
+                                                    : "bg-gray-700 border-gray-600 text-gray-300"}`}>
+                                                    {order?.user_order_no || "N/A"}
+                                                </div>
                                             </div>
-                                            <div>
-                                                <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>User ID</label>
-                                                <p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.userid || "N/A"}</p>
-                                            </div>
-                                        </div>
 
-                                        <div>
-                                            <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>Lab Name</label>
-                                            {isEditing ? (<input type="text" value={editedOrder.labname || ''} onChange={(e) => handleInputChange('labname', e.target.value)} className={`w-full p-4 rounded-lg border text-sm ${theme === "light" ? "bg-white border-gray-300 text-gray-900" : "bg-gray-700 border-gray-600 text-white"}`} />) : (<p className={`p-4 rounded-lg text-sm ${theme === "light" ? "bg-gray-50" : "bg-gray-700"}`}>{order?.labname || "N/A"}</p>)}
+                                            {/* User ID - Always Disabled */}
+                                            <div className="flex flex-col">
+                                                <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                    User ID
+                                                </label>
+                                                <div className={`w-full p-4 rounded-lg border text-sm ${theme === "light"
+                                                    ? "bg-gray-50 border-gray-300 text-gray-900"
+                                                    : "bg-gray-700 border-gray-600 text-gray-300"}`}>
+                                                    {order?.userid || "N/A"}
+                                                </div>
+                                            </div>
+
+                                            {/* Lab Name - Always Disabled */}
+                                            <div className="flex flex-col">
+                                                <label className={`block text-sm font-medium mb-2 ${theme === "light" ? "text-gray-700" : "text-gray-300"}`}>
+                                                    Lab Name
+                                                </label>
+                                                <div className={`w-full p-4 rounded-lg border text-sm ${theme === "light"
+                                                    ? "bg-gray-50 border-gray-300 text-gray-900"
+                                                    : "bg-gray-700 border-gray-600 text-gray-300"}`}>
+                                                    {order?.labname || "N/A"}
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
