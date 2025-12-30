@@ -234,7 +234,6 @@ function Chatbox({ orderid, theme }) {
         e.target.value = '';
     };
 
-
     const triggerFileInput = () => fileInputRef.current?.click();
 
     const handleKeyDown = (e) => {
@@ -354,9 +353,7 @@ function Chatbox({ orderid, theme }) {
                 </div>
             </div>
         </div>
-
     );
-
 }
 
 export default function OrderDetails() {
@@ -378,6 +375,27 @@ export default function OrderDetails() {
     const token = localStorage.getItem("skydent_designer_token");
     const fileInputRef = useRef(null);
 
+    // ✅ FIXED: Move fetchFileHistory outside useEffect so it can be reused
+    const fetchFileHistory = async () => {
+        try {
+            const response = await fetch(`${base_url}/get-file-history`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
+                body: JSON.stringify({ orderid: id }),
+            });
+
+            const resp = await response.json();
+            if (resp.status === "success") {
+                setFileHistory({ 
+                    stl_files: resp.stl_files || [], 
+                    finished_files: resp.finished_files || [] 
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching file history:", error);
+        }
+    };
+
     useEffect(() => {
         async function fetchOrderDetails() {
             try {
@@ -393,29 +411,21 @@ export default function OrderDetails() {
                     setOrder(resp.order);
                     setEditedOrder(resp.order);
                     setSelectedStatus(resp.order.status);
+                    
+                    // ✅ FIXED: Call the reusable function
                     await fetchFileHistory();
+                    
                     if (resp.order?.userid) {
                         fetchUserPreferences(resp.order.userid);
                     }
-                } else setError(resp.message || "Failed to fetch order details");
+                } else {
+                    setError(resp.message || "Failed to fetch order details");
+                }
             } catch (error) {
                 setError("Failed to fetch order details");
             } finally {
                 setLoading(false);
             }
-        }
-
-        async function fetchFileHistory() {
-            try {
-                const response = await fetch(`${base_url}/get-file-history`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
-                    body: JSON.stringify({ orderid: id }),
-                });
-
-                const resp = await response.json();
-                if (resp.status === "success") setFileHistory({ stl_files: resp.stl_files || [], finished_files: resp.finished_files || [] });
-            } catch (error) { }
         }
 
         if (id) fetchOrderDetails();
@@ -462,7 +472,9 @@ export default function OrderDetails() {
                 setOrder((prev) => ({ ...prev, status: selectedStatus }));
                 setEditedOrder((prev) => ({ ...prev, status: selectedStatus }));
                 toast.success("Order status updated successfully!");
-            } else toast.error(resp.message || "Failed to update order status");
+            } else {
+                toast.error(resp.message || "Failed to update order status");
+            }
         } catch (error) {
             toast.error("Error updating order status");
         }
@@ -483,24 +495,26 @@ export default function OrderDetails() {
             toast.dismiss();
             if (resp.status === "success") {
                 toast.success("File deleted successfully!");
+                
+                // ✅ FIXED: Update fileHistory state immediately to reflect deletion
+                setFileHistory(prev => {
+                    const newStlFiles = prev.stl_files.filter(file => file.id !== fileId);
+                    const newFinishedFiles = prev.finished_files.filter(file => file.id !== fileId);
+                    
+                    return {
+                        stl_files: newStlFiles,
+                        finished_files: newFinishedFiles
+                    };
+                });
+                
+                // Also fetch from server to ensure consistency
                 await fetchFileHistory();
-            } else toast.error(resp.message || "Failed to delete file");
+            } else {
+                toast.error(resp.message || "Failed to delete file");
+            }
         } catch (error) {
             toast.error("Error deleting file");
         }
-    };
-
-    const fetchFileHistory = async () => {
-        try {
-            const response = await fetch(`${base_url}/get-file-history`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
-                body: JSON.stringify({ orderid: id }),
-            });
-
-            const resp = await response.json();
-            if (resp.status === "success") setFileHistory({ stl_files: resp.stl_files || [], finished_files: resp.finished_files || [] });
-        } catch (error) { }
     };
 
     const handleFileUpload = async (event) => {
@@ -616,7 +630,9 @@ export default function OrderDetails() {
                     setEditedOrder(resp.order);
                 }
                 setIsEditing(false);
-            } else toast.error(resp.message || "Failed to update order details");
+            } else {
+                toast.error(resp.message || "Failed to update order details");
+            }
         } catch (error) {
             toast.error("Error updating order details");
         }
@@ -748,33 +764,44 @@ export default function OrderDetails() {
                                         <div className="overflow-y-auto flex-grow" style={{ maxHeight: '400px' }}>
                                             <table className="w-full">
                                                 <tbody>
-                                                    {[...fileHistory.stl_files, ...fileHistory.finished_files].map((file, index) => {
-                                                        const isStlFile = file.type === 'stl' || file.file_type === 'stl' || (file.fname && file.fname.toLowerCase().endsWith('.stl'));
-                                                        const fileIcon = isStlFile ? faCube : faArchive;
-                                                        const fileType = isStlFile ? 'STL' : 'Finished';
+                                                    {fileHistory.stl_files.length === 0 && fileHistory.finished_files.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan="2" className="py-8 text-center">
+                                                                <div className="flex flex-col items-center justify-center py-4">
+                                                                    <FontAwesomeIcon icon={faFileAlt} className="text-3xl mb-3 opacity-50" />
+                                                                    <p className={`text-lg ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>No files uploaded yet</p>
+                                                                    <p className={`text-sm mt-1 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>Upload your first file to get started</p>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        <>
+                                                            {[...fileHistory.stl_files, ...fileHistory.finished_files].map((file, index) => {
+                                                                const isStlFile = file.type === 'stl' || file.file_type === 'stl' || (file.fname && file.fname.toLowerCase().endsWith('.stl'));
+                                                                const fileIcon = isStlFile ? faCube : faArchive;
+                                                                const fileType = isStlFile ? 'STL' : 'Finished';
 
-                                                        return (
-                                                            <tr key={file.id || index} className={`border-b ${theme === "light" ? "border-gray-100 hover:bg-gray-50" : "border-gray-700 hover:bg-gray-700"}`}>
-                                                                <td className="py-3 px-4 w-[80%]">
-                                                                    <div className="flex items-start gap-3">
-                                                                        <div className="mt-1"><FontAwesomeIcon icon={fileIcon} className={`text-sm ${isStlFile ? 'text-blue-500' : 'text-green-500'}`} /></div>
-                                                                        <div>
-                                                                            <p className={`font-semibold text-[14px] ${theme === "light" ? "text-gray-900" : "text-white"}`} title={file.fname}>{file.fname.toLowerCase()}</p>
-                                                                            <p className={`text-xs mt-1 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}><FontAwesomeIcon icon={faClock} className="mr-1 text-xs" />Uploaded: {file.upload_date || 'N/A'}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="py-3 px-4">
-                                                                    <div className="flex gap-2">
-                                                                        <button onClick={() => { const filePath = file.url || file.path || file.file_path; if (filePath) downloadFile(file.fname, filePath); else toast.error("File path not found!"); }} className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-md font-semibold transition-all"><FontAwesomeIcon icon={faDownload} /></button>
-                                                                        <button onClick={() => { const fileType = file.type || file.file_type || (isStlFile ? 'stl' : 'finished'); handleDeleteFile(file.id, fileType); }} className="flex items-center gap-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-md font-semibold transition-all"><FontAwesomeIcon icon={faTrash} /></button>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                    {fileHistory.stl_files.length === 0 && fileHistory.finished_files.length === 0 && (
-                                                        <tr><td colSpan="3" className="py-8 text-center"><div className="flex flex-col items-center justify-center py-4"><FontAwesomeIcon icon={faFileAlt} className="text-3xl mb-3 opacity-50" /><p className={`text-lg ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>No files uploaded yet</p><p className={`text-sm mt-1 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>Upload your first file to get started</p></div></td></tr>
+                                                                return (
+                                                                    <tr key={file.id || index} className={`border-b ${theme === "light" ? "border-gray-100 hover:bg-gray-50" : "border-gray-700 hover:bg-gray-700"}`}>
+                                                                        <td className="py-3 px-4 w-[80%]">
+                                                                            <div className="flex items-start gap-3">
+                                                                                <div className="mt-1"><FontAwesomeIcon icon={fileIcon} className={`text-sm ${isStlFile ? 'text-blue-500' : 'text-green-500'}`} /></div>
+                                                                                <div>
+                                                                                    <p className={`font-semibold text-[14px] ${theme === "light" ? "text-gray-900" : "text-white"}`} title={file.fname}>{file.fname.toLowerCase()}</p>
+                                                                                    <p className={`text-xs mt-1 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}><FontAwesomeIcon icon={faClock} className="mr-1 text-xs" />Uploaded: {file.upload_date || 'N/A'}</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="py-3 px-4">
+                                                                            <div className="flex gap-2">
+                                                                                <button onClick={() => { const filePath = file.url || file.path || file.file_path; if (filePath) downloadFile(file.fname, filePath); else toast.error("File path not found!"); }} className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-md font-semibold transition-all"><FontAwesomeIcon icon={faDownload} /></button>
+                                                                                <button onClick={() => { const fileType = file.type || file.file_type || (isStlFile ? 'stl' : 'finished'); handleDeleteFile(file.id, fileType); }} className="flex items-center gap-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-md font-semibold transition-all"><FontAwesomeIcon icon={faTrash} /></button>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </>
                                                     )}
                                                 </tbody>
                                             </table>
