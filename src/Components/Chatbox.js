@@ -211,7 +211,7 @@ export default function Chatbox({ orderid }) {
                         // Filter out any duplicates
                         const existingIds = new Set(prev.map(m => m.id));
                         const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id));
-                        
+
                         if (uniqueNewMessages.length > 0) {
                             // Update last message ID
                             lastMessageIdRef.current = Math.max(...uniqueNewMessages.map(m => m.id));
@@ -288,7 +288,7 @@ export default function Chatbox({ orderid }) {
             if (data.status === 'success') {
                 // Determine alignment based on user role
                 const isRight = userRole === 'designer' || userRole === 'admin';
-                
+
                 const newMsg = {
                     id: data.data.id,
                     orderid: orderid,
@@ -308,7 +308,7 @@ export default function Chatbox({ orderid }) {
                 setMessages(prev => [...prev, newMsg]);
                 lastMessageIdRef.current = data.data.id;
                 setNewMessage('');
-                
+
                 // Trigger immediate poll to get any other new messages
                 setTimeout(() => fetchNewMessages(), 500);
             } else {
@@ -378,7 +378,7 @@ export default function Chatbox({ orderid }) {
         }
 
         try {
-            const base_url = localStorage.getItem("skydent_user_base_url");
+            const base_url = localStorage.getItem("skydent_user_base_url") || localStorage.getItem("skydent_designer_base_url") || localStorage.getItem("skydent_admin_base_url");
             const encodedPath = encodeURIComponent(url);
             const finalUrl = `${base_url}/download?path=${encodedPath}`;
 
@@ -443,7 +443,7 @@ export default function Chatbox({ orderid }) {
     };
 
     const getChatHeaderTitle = () => {
-        if (userRole === 'client') return 'Designer Team';
+        if (userRole === 'client') return `${orderid}`;
         if (userRole === 'designer') return `Order: ${orderid}`;
         if (userRole === 'admin') return `Order: ${orderid}`;
         return `Chat - Order: ${orderid}`;
