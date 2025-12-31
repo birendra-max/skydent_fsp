@@ -2,24 +2,25 @@ import { logoutUser } from "./adminauth";
 
 let isLoggingOut = false;
 
-export async function fetchWithAuth(endpoint, options = {}) {
+export async function fetchWithAuth(endpoint, options = {}, timeout = 15000) {
     let token = localStorage.getItem("skydent_admin_token");
-    let base_url = localStorage.getItem('skydent_admin_base_url');
+    let base_url = localStorage.getItem("skydent_admin_base_url");
 
     if (!token || token === "null" || token === "undefined" || token.trim() === "") {
-        console.warn("Invalid token found in localStorage:", token);
         token = null;
     }
 
     if (!base_url || base_url === "null" || base_url === "undefined" || base_url.trim() === "") {
-        console.warn("Invalid base Url not found in localStorage:", base_url);
-        base_url = null;
+        throw new Error("Base URL missing");
     }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
 
     const headers = {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        'X-Tenant': 'skydent',
+        "X-Tenant": "skydent",
         ...options.headers,
     };
 
@@ -27,6 +28,7 @@ export async function fetchWithAuth(endpoint, options = {}) {
         const response = await fetch(base_url + endpoint, {
             ...options,
             headers,
+            signal: controller.signal,
         });
 
         if (response.status === 401 || response.status === 403) {
@@ -38,31 +40,16 @@ export async function fetchWithAuth(endpoint, options = {}) {
             return null;
         }
 
-        const data = await response.json().catch(() => null);
-        if (
-            data?.error &&
-            (data.error === "Invalid or expired token" ||
-                data.message === "Token expired")
-        ) {
-            if (!isLoggingOut) {
-                isLoggingOut = true;
-                alert("Invalid or expired token. Please log in again.");
-                logoutUser();
-            }
+        return await response.json();
+    } catch (err) {
+        if (err.name === "AbortError") {
+            console.warn("Request timed out:", endpoint);
             return null;
         }
 
-        return data;
-    } catch (err) {
         console.error("API error:", err);
-        if (!isLoggingOut) {
-            isLoggingOut = true;
-            logoutUser();
-        }
         return null;
     } finally {
-        for (let key in headers) {
-            delete headers[key];
-        }
+        clearTimeout(timer);
     }
 }
