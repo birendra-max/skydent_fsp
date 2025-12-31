@@ -430,32 +430,7 @@ export default function NewRequest() {
     });
   };
 
-  // Cancel upload function
-  const cancelUpload = (fileId) => {
-    const controller = uploadControllers.current[fileId];
-    if (controller) {
-      if (controller.abort) controller.abort();
-      if (controller.xhr) controller.xhr.abort();
-      delete uploadControllers.current[fileId];
-    }
-
-    setFiles((prev) =>
-      prev.map((f) =>
-        f.id === fileId
-          ? {
-            ...f,
-            uploadStatus: "Cancelled",
-            progress: 0,
-            message: "Upload cancelled by user",
-            isUploading: false,
-            currentUploadIndex: 0,
-            totalUploads: 0
-          }
-          : f
-      )
-    );
-  };
-
+ 
   const handleOrderSelection = (fileId, orderId, isChecked) => {
     setOrderSelection(prev => {
       const currentSelection = prev[fileId] || { selectedOrders: [] };
