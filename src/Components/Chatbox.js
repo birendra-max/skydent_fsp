@@ -65,7 +65,7 @@ export default function Chatbox({ orderid }) {
     const chatBodyRef = useRef(null);
     const chatboxRef = useRef(null);
     const textareaRef = useRef(null);
-    const eventSourceRef = useRef(null);
+    const pollingIntervalRef = useRef(null);
     const lastMessageIdRef = useRef(0);
     const posRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
     const recentlySentMessagesRef = useRef(new Set());
@@ -85,9 +85,10 @@ export default function Chatbox({ orderid }) {
         lastMessageIdRef.current = 0;
         recentlySentMessagesRef.current.clear();
 
-        if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-            eventSourceRef.current = null;
+        // Clear any existing polling interval
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
         }
 
         if (orderid && token) {
@@ -110,6 +111,7 @@ export default function Chatbox({ orderid }) {
 
             if (data.status === 'success' && data.data) {
                 const formatted = data.data.map(msg => {
+                    // Client messages always LEFT, Designer/Admin messages always RIGHT
                     const isRight = msg.user_type === 'Admin' || msg.user_type === 'Designer';
 
                     return {
@@ -135,12 +137,113 @@ export default function Chatbox({ orderid }) {
                     lastMessageIdRef.current = Math.max(...formatted.map(m => m.id));
                 }
 
-                startSSEConnection();
+                // Start polling for new messages
+                startPolling();
             }
         } catch (error) {
-            startSSEConnection();
+            console.error("Error loading chat history:", error);
+            // Start polling anyway
+            startPolling();
         }
     };
+
+    const startPolling = () => {
+        // Clear any existing interval first
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+        }
+
+        // Set up polling every 3 seconds
+        pollingIntervalRef.current = setInterval(fetchNewMessages, 3000);
+        setIsConnected(true);
+    };
+
+    const fetchNewMessages = async () => {
+        if (!orderid || !token) return;
+
+        try {
+            // Fetch new messages since the last message ID
+            const response = await fetch(
+                `${config.API_BASE_URL}/chat/get-chat-history/${orderid}?lastId=${lastMessageIdRef.current}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'X-Tenant': 'skydent'
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                setIsConnected(false);
+                return;
+            }
+
+            const data = await response.json();
+
+            if (data.status === 'success' && data.data) {
+                // Filter to only get messages newer than our last message ID
+                const newMessages = data.data
+                    .filter(msg => msg.id > lastMessageIdRef.current)
+                    .map(msg => {
+                        // Client messages always LEFT, Designer/Admin messages always RIGHT
+                        const isRight = msg.user_type === 'Admin' || msg.user_type === 'Designer';
+
+                        return {
+                            id: msg.id,
+                            orderid: msg.orderid,
+                            text: msg.message,
+                            timestamp: msg.message_date,
+                            user_type: msg.user_type,
+                            user_name: msg.user_name || msg.user_type,
+                            alignment: isRight ? 'right' : 'left',
+                            file_path: msg.file_path || null,
+                            filename: msg.attachment || null,
+                            hasAttachment: !!msg.file_path,
+                            isAdmin: msg.user_type === 'Admin',
+                            isDesigner: msg.user_type === 'Designer',
+                            isClient: msg.user_type === 'Client'
+                        };
+                    });
+
+                if (newMessages.length > 0) {
+                    // Update messages state
+                    setMessages(prev => {
+                        // Filter out any duplicates
+                        const existingIds = new Set(prev.map(m => m.id));
+                        const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id));
+                        
+                        if (uniqueNewMessages.length > 0) {
+                            // Update last message ID
+                            lastMessageIdRef.current = Math.max(...uniqueNewMessages.map(m => m.id));
+                            return [...prev, ...uniqueNewMessages];
+                        }
+                        return prev;
+                    });
+
+                    setIsConnected(true);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching new messages:", error);
+            setIsConnected(false);
+        }
+    };
+
+    useEffect(() => {
+        if (chatBodyRef.current) {
+            chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    // Cleanup polling interval on component unmount
+    useEffect(() => {
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
+        };
+    }, []);
 
     const formatTimestamp = (dateString) => {
         if (!dateString) return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -159,99 +262,6 @@ export default function Chatbox({ orderid }) {
         if (userRole === 'admin') return 'Admin';
         return 'Designer';
     };
-
-    const startSSEConnection = () => {
-        if (!orderid || !token || eventSourceRef.current) return;
-
-        const url = `${config.API_BASE_URL}/chat/stream-chat/${orderid}?lastId=${lastMessageIdRef.current}&tenant=skydent`;
-
-        try {
-            eventSourceRef.current = new EventSource(url);
-
-            eventSourceRef.current.onopen = () => {
-                setIsConnected(true);
-            };
-
-            eventSourceRef.current.onmessage = (event) => {
-                if (event.data === ': heartbeat') return;
-
-                try {
-                    const data = JSON.parse(event.data);
-
-                    if (data.messages && Array.isArray(data.messages)) {
-                        const newMessages = data.messages.map(msg => {
-                            const isRight = msg.user_type === 'Admin' || msg.user_type === 'Designer';
-
-                            return {
-                                id: msg.id,
-                                orderid: msg.orderid,
-                                text: msg.message,
-                                timestamp: formatTimestamp(msg.message_date),
-                                user_type: msg.user_type,
-                                user_name: msg.user_name || msg.user_type,
-                                alignment: isRight ? 'right' : 'left',
-                                file_path: msg.file_path || null,
-                                filename: msg.attachment || null,
-                                hasAttachment: !!msg.file_path,
-                                isAdmin: msg.user_type === 'Admin',
-                                isDesigner: msg.user_type === 'Designer',
-                                isClient: msg.user_type === 'Client'
-                            };
-                        });
-
-                        setMessages(prev => {
-                            const existingIds = new Set(prev.map(m => m.id));
-                            const unique = newMessages.filter(m => !existingIds.has(m.id));
-
-                            if (unique.length > 0) {
-                                lastMessageIdRef.current = Math.max(...unique.map(m => m.id));
-                                return [...prev, ...unique];
-                            }
-                            return prev;
-                        });
-                    }
-                } catch (err) { }
-            };
-
-            eventSourceRef.current.addEventListener('connected', () => {
-                setIsConnected(true);
-            });
-
-            eventSourceRef.current.addEventListener('end', () => {
-                eventSourceRef.current?.close();
-                setIsConnected(false);
-            });
-
-            eventSourceRef.current.onerror = () => {
-                setIsConnected(false);
-
-                setTimeout(() => {
-                    if (eventSourceRef.current) {
-                        eventSourceRef.current.close();
-                        eventSourceRef.current = null;
-                    }
-                    startSSEConnection();
-                }, 3000);
-            };
-
-        } catch (error) {
-            setIsConnected(false);
-        }
-    };
-
-    useEffect(() => {
-        if (chatBodyRef.current) {
-            chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
-        }
-    }, [messages]);
-
-    useEffect(() => {
-        return () => {
-            if (eventSourceRef.current) {
-                eventSourceRef.current.close();
-            }
-        };
-    }, []);
 
     const sendMessage = async () => {
         if (!newMessage.trim() || !orderid || !userId) return;
@@ -276,8 +286,31 @@ export default function Chatbox({ orderid }) {
             const data = await response.json();
 
             if (data.status === 'success') {
+                // Determine alignment based on user role
+                const isRight = userRole === 'designer' || userRole === 'admin';
+                
+                const newMsg = {
+                    id: data.data.id,
+                    orderid: orderid,
+                    text: messageText,
+                    timestamp: new Date().toISOString(),
+                    user_type: getUserTypeForApi(),
+                    user_name: userName,
+                    alignment: isRight ? 'right' : 'left',
+                    file_path: null,
+                    filename: null,
+                    hasAttachment: false,
+                    isAdmin: userRole === 'admin',
+                    isDesigner: userRole === 'designer',
+                    isClient: userRole === 'client'
+                };
+
+                setMessages(prev => [...prev, newMsg]);
                 lastMessageIdRef.current = data.data.id;
                 setNewMessage('');
+                
+                // Trigger immediate poll to get any other new messages
+                setTimeout(() => fetchNewMessages(), 500);
             } else {
                 alert(`Failed to send message: ${data.message}`);
             }
@@ -313,6 +346,9 @@ export default function Chatbox({ orderid }) {
                 if (result.status !== 'success') {
                     alert(`Upload failed: ${result.message}`);
                 }
+
+                // Trigger immediate poll to show the uploaded file
+                setTimeout(() => fetchNewMessages(), 500);
 
                 setTimeout(() => {
                     recentlySentMessagesRef.current.delete(fileKey);
@@ -392,18 +428,17 @@ export default function Chatbox({ orderid }) {
     };
 
     const getMessageColor = (userType, isRight) => {
-        if (userType === 'Admin') {
-            return isRight
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-br-none'
-                : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-bl-none';
-        } else if (userType === 'Designer') {
-            return isRight
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-br-none'
-                : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-bl-none';
+        // Simple logic: right messages (Designer/Admin) get one color, left messages (Client) get another
+        if (isRight) {
+            // Designer/Admin messages on right side
+            if (userType === 'Admin') {
+                return 'bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-br-none';
+            } else {
+                return 'bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-br-none';
+            }
         } else {
-            return isRight
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-br-none'
-                : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-bl-none';
+            // Client messages on left side
+            return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-bl-none';
         }
     };
 
@@ -434,7 +469,7 @@ export default function Chatbox({ orderid }) {
                             {getChatHeaderTitle()}
                         </h4>
                         <div className="flex items-center gap-1">
-                            <div className={`w-2 h-2 rounded-full bg-green-400`}></div>
+                            <div className={`w-2 h-2 rounded-full bg-green-400 animate-pulse`}></div>
                             <span className="text-xs text-gray-300">
                                 Connected
                             </span>
@@ -505,7 +540,7 @@ export default function Chatbox({ orderid }) {
                                     isDesigner ? 'text-green-200' :
                                         'text-blue-200'
                                     }`}>
-                                    {msg.timestamp}
+                                    {formatTimestamp(msg.timestamp)}
                                 </span>
                             </div>
                         );
