@@ -59,6 +59,8 @@ export default function NewRequest() {
             showOrderSelection: false,
             fileSize: file.size,
             isUploading: false,
+            currentUploadIndex: 0,
+            totalUploads: 0
           },
         ]);
         uploadFile(file, fileId);
@@ -96,7 +98,9 @@ export default function NewRequest() {
             progress: 0,
             showOrderSelection: false,
             message: "Preparing upload...",
-            isUploading: true
+            isUploading: true,
+            currentUploadIndex: 0,
+            totalUploads: selectedOrderIds ? selectedOrderIds.length : 1
           }
           : f
       )
@@ -118,12 +122,12 @@ export default function NewRequest() {
 
     try {
       const xhr = new XMLHttpRequest();
-      xhr.timeout = 0; // No timeout for large files
+      xhr.timeout = 0;
 
-      // Track real upload progress
+      // Track only upload progress
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100);
+          const uploadProgress = Math.round((event.loaded / event.total) * 100);
           const uploadedMB = (event.loaded / (1024 * 1024)).toFixed(2);
           const totalMB = (event.total / (1024 * 1024)).toFixed(2);
 
@@ -132,8 +136,8 @@ export default function NewRequest() {
               f.id === fileId
                 ? {
                   ...f,
-                  progress: progress,
-                  message: `Uploading: ${uploadedMB}MB / ${totalMB}MB (${progress}%)`,
+                  progress: uploadProgress,
+                  message: `Uploading: ${uploadedMB}MB / ${totalMB}MB (${uploadProgress}%)`,
                   uploadStatus: "Uploading..."
                 }
                 : f
@@ -143,6 +147,21 @@ export default function NewRequest() {
       });
 
       xhr.addEventListener('load', () => {
+        // File upload is complete, show 100% immediately
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId
+              ? {
+                ...f,
+                progress: 100,
+                uploadStatus: "Processing...",
+                message: "File upload complete, processing response..."
+              }
+              : f
+          )
+        );
+
+        // Process server response (this happens after upload is done)
         try {
           const result = JSON.parse(xhr.responseText);
 
@@ -153,7 +172,6 @@ export default function NewRequest() {
                   ? {
                     ...f,
                     uploadStatus: "Success",
-                    progress: 100,
                     message: result.message || "File uploaded successfully",
                     fileLink: result.file_link || "",
                     isUploading: false
@@ -168,7 +186,6 @@ export default function NewRequest() {
                   ? {
                     ...f,
                     uploadStatus: "Multiple Orders Found",
-                    progress: 100,
                     message: result.message,
                     matchingOrders: result.matches,
                     showOrderSelection: true,
@@ -187,7 +204,6 @@ export default function NewRequest() {
                 ? {
                   ...f,
                   uploadStatus: "Failed",
-                  progress: 100,
                   message: error.message || "Error processing upload",
                   isUploading: false
                 }
@@ -197,22 +213,6 @@ export default function NewRequest() {
         }
       });
 
-      xhr.addEventListener('timeout', () => {
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.id === fileId
-              ? {
-                ...f,
-                uploadStatus: "Failed",
-                progress: 100,
-                message: "Upload timeout - connection too slow or file too large",
-                isUploading: false
-              }
-              : f
-          )
-        );
-      });
-
       xhr.addEventListener('error', () => {
         setFiles((prev) =>
           prev.map((f) =>
@@ -220,7 +220,7 @@ export default function NewRequest() {
               ? {
                 ...f,
                 uploadStatus: "Failed",
-                progress: 100,
+                progress: 0,
                 message: "Network error. Please check your connection.",
                 isUploading: false
               }
@@ -250,7 +250,6 @@ export default function NewRequest() {
       xhr.setRequestHeader('X-Tenant', 'skydent');
       xhr.send(formData);
 
-      // Store XHR reference for cancellation
       controller.xhr = xhr;
 
     } catch (error) {
@@ -274,124 +273,161 @@ export default function NewRequest() {
 
   const uploadToOrderFileEndpoint = async (file, fileId, selectedOrderIds, controller) => {
     try {
-      let completedCount = 0;
       const totalOrders = selectedOrderIds.length;
-
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === fileId
-            ? {
-              ...f,
-              progress: 0,
-              message: `Starting upload to ${totalOrders} order(s)...`,
-              isUploading: true
-            }
-            : f
-        )
-      );
-
-      const uploadPromises = selectedOrderIds.map(async (orderId, index) => {
-        return new Promise((resolve, reject) => {
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("orderid", orderId);
-          formData.append('desiid', designer.desiid);
-
-          const fileType = file.name.endsWith('.stl') ? 'stl' : 'finished';
-          formData.append("type", fileType);
-
-          const xhr = new XMLHttpRequest();
-
-          // Track progress for each individual order upload
-          xhr.upload.addEventListener('progress', (event) => {
-            if (event.lengthComputable) {
-              const fileProgress = Math.round((event.loaded / event.total) * 100);
-              const uploadedMB = (event.loaded / (1024 * 1024)).toFixed(2);
-              const totalMB = (event.total / (1024 * 1024)).toFixed(2);
-              const orderWeight = 100 / totalOrders;
-              const baseProgress = (completedCount * orderWeight);
-              const currentOrderProgress = (fileProgress / 100) * orderWeight;
-              const totalProgress = baseProgress + currentOrderProgress;
-
-              setFiles((prev) =>
-                prev.map((f) =>
-                  f.id === fileId
-                    ? {
-                      ...f,
-                      progress: totalProgress,
-                      message: `Order ${index + 1}/${totalOrders}: ${uploadedMB}MB / ${totalMB}MB (${fileProgress}%)`
-                    }
-                    : f
-                )
-              );
-            }
-          });
-
-          xhr.addEventListener('load', () => {
-            completedCount++;
-            try {
-              const result = JSON.parse(xhr.responseText);
-              resolve(result);
-            } catch (error) {
-              reject(error);
-            }
-          });
-
-          xhr.addEventListener('error', () => reject(new Error("Network error")));
-          xhr.addEventListener('timeout', () => reject(new Error("Timeout")));
-          xhr.addEventListener('abort', () => reject(new Error("Cancelled")));
-
-          xhr.open('POST', `${base_url}/upload-order-file`);
-          xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-          xhr.setRequestHeader('X-Tenant', 'skydent');
-          xhr.timeout = 0;
-          xhr.send(formData);
-        });
-      });
-
-      const results = await Promise.all(uploadPromises);
-      const allSuccessful = results.every(result => result.status === "success");
-
-      if (allSuccessful) {
+      
+      // Upload files sequentially (one after another)
+      for (let index = 0; index < selectedOrderIds.length; index++) {
+        const orderId = selectedOrderIds[index];
+        
+        // Reset progress for each new order upload
         setFiles((prev) =>
           prev.map((f) =>
             f.id === fileId
               ? {
                 ...f,
-                uploadStatus: "Success",
-                progress: 100,
-                message: `File uploaded successfully to ${totalOrders} order(s)`,
-                fileLink: results[0].file_link || "",
-                isUploading: false
+                progress: 0,
+                currentUploadIndex: index + 1,
+                message: `Starting upload to order ${index + 1}/${totalOrders}...`
               }
               : f
           )
         );
-      } else {
-        const errorMessages = results
-          .filter(result => result.status !== "success")
-          .map(result => result.message)
-          .join(', ');
 
-        throw new Error(`Some uploads failed: ${errorMessages}`);
+        const result = await uploadSingleOrderFile(file, orderId, fileId, controller);
+        
+        if (result.status !== "success") {
+          throw new Error(`Failed to upload to order ${orderId}: ${result.message}`);
+        }
+        
+        // Current order upload completed successfully
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId
+              ? {
+                ...f,
+                progress: 100,
+                message: `Order ${index + 1}/${totalOrders} uploaded successfully`
+              }
+              : f
+          )
+        );
+        
+        // Small delay before next upload (optional)
+        if (index < selectedOrderIds.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
       }
-    } catch (error) {
+
+      // All uploads completed successfully
       setFiles((prev) =>
         prev.map((f) =>
           f.id === fileId
             ? {
               ...f,
-              uploadStatus: "Failed",
+              uploadStatus: "Success",
               progress: 100,
-              message: error.message || "Error uploading file to selected orders",
+              message: `File uploaded successfully to ${totalOrders} order(s)`,
               isUploading: false
             }
             : f
         )
       );
+    } catch (error) {
+      if (error.message === "Cancelled") {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId
+              ? {
+                ...f,
+                uploadStatus: "Cancelled",
+                progress: 0,
+                message: "Upload cancelled by user",
+                isUploading: false,
+                currentUploadIndex: 0,
+                totalUploads: 0
+              }
+              : f
+          )
+        );
+      } else {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId
+              ? {
+                ...f,
+                uploadStatus: "Failed",
+                progress: 100, // File was uploaded
+                message: error.message || "Error uploading file to selected orders",
+                isUploading: false
+              }
+              : f
+          )
+        );
+      }
     } finally {
       delete uploadControllers.current[fileId];
     }
+  };
+
+  // Helper function to upload single order file
+  const uploadSingleOrderFile = (file, orderId, fileId, controller) => {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("orderid", orderId);
+      formData.append('desiid', designer.desiid);
+      
+      const fileType = file.name.endsWith('.stl') ? 'stl' : 'finished';
+      formData.append("type", fileType);
+
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const uploadProgress = Math.round((event.loaded / event.total) * 100);
+          const uploadedMB = (event.loaded / (1024 * 1024)).toFixed(2);
+          const totalMB = (event.total / (1024 * 1024)).toFixed(2);
+
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileId
+                ? {
+                  ...f,
+                  progress: uploadProgress,
+                  message: `Order ${f.currentUploadIndex}/${f.totalUploads}: Uploading ${uploadedMB}MB / ${totalMB}MB (${uploadProgress}%)`
+                }
+                : f
+            )
+          );
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        try {
+          const result = JSON.parse(xhr.responseText);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        reject(new Error("Network error"));
+      });
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error("Cancelled"));
+      });
+
+      xhr.open('POST', `${base_url}/upload-order-file`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.setRequestHeader('X-Tenant', 'skydent');
+      xhr.timeout = 0;
+      xhr.send(formData);
+
+      // Store XHR for cancellation
+      controller.xhr = xhr;
+    });
   };
 
   // Cancel upload function
@@ -411,7 +447,9 @@ export default function NewRequest() {
             uploadStatus: "Cancelled",
             progress: 0,
             message: "Upload cancelled by user",
-            isUploading: false
+            isUploading: false,
+            currentUploadIndex: 0,
+            totalUploads: 0
           }
           : f
       )
@@ -460,8 +498,10 @@ export default function NewRequest() {
             uploadStatus: "Uploading...",
             progress: 0,
             showOrderSelection: false,
-            message: `Uploading to ${selection.selectedOrders.length} selected order(s)...`,
-            isUploading: true
+            message: `Starting upload to ${selection.selectedOrders.length} order(s)...`,
+            isUploading: true,
+            currentUploadIndex: 0,
+            totalUploads: selection.selectedOrders.length
           }
           : f
       )
@@ -530,7 +570,7 @@ export default function NewRequest() {
       : 'hover:bg-gray-700 text-white';
   };
 
-  // Progress Bar Component with Cancel button
+  // Progress Bar Component
   const ProgressBar = ({ file }) => {
     const getBarStyle = () => {
       switch (file.uploadStatus) {
@@ -543,28 +583,33 @@ export default function NewRequest() {
         case "Multiple Orders Found":
           return "from-yellow-500 to-yellow-400";
         case "Uploading...":
-          return "from-blue-600 to-blue-400";
+        case "Processing...":
+          return file.totalUploads > 1 
+            ? "from-purple-600 to-purple-400" 
+            : "from-blue-600 to-blue-400";
         default:
           return "from-gray-400 to-gray-300";
       }
     };
 
+    const showCancelButton = file.uploadStatus === "Uploading..." || file.uploadStatus === "Processing...";
+
     return (
       <div className="w-full max-w-xs">
         <div className="flex items-center gap-4">
-          {/* Progress Container */}
           <div
             className={`relative flex-1 h-3 rounded-full overflow-hidden ${theme === "light" ? "bg-gray-200" : "bg-gray-700"
               }`}
           >
-            {/* Progress Fill */}
             <div
               className={`
               h-full rounded-full
               bg-gradient-to-r ${getBarStyle()}
               transition-all duration-300 ease-out
-              ${file.uploadStatus === "Uploading..."
-                  ? "shadow-[0_0_10px_rgba(59,130,246,0.7)]"
+              ${file.uploadStatus === "Uploading..." || file.uploadStatus === "Processing..."
+                  ? file.totalUploads > 1 
+                    ? "shadow-[0_0_10px_rgba(168,85,247,0.7)]" 
+                    : "shadow-[0_0_10px_rgba(59,130,246,0.7)]"
                   : ""
                 }
             `}
@@ -572,7 +617,6 @@ export default function NewRequest() {
             />
           </div>
 
-          {/* Percentage and Cancel button */}
           <div className="flex items-center gap-2">
             <span
               className={`text-sm font-semibold min-w-[50px] text-right ${theme === "light" ? "text-gray-800" : "text-gray-200"
@@ -583,7 +627,6 @@ export default function NewRequest() {
           </div>
         </div>
 
-        {/* Status Text */}
         {file.message && (
           <div
             className={`mt-1 text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"
@@ -596,7 +639,7 @@ export default function NewRequest() {
     );
   };
 
-  // Order Selection Component (extracted for clarity)
+  // Order Selection Component
   const OrderSelection = ({ file }) => {
     const selection = orderSelection[file.id] || { selectedOrders: [] };
 
@@ -659,7 +702,7 @@ export default function NewRequest() {
     );
   };
 
-  // Status badge component - Updated with cancel functionality
+  // Status badge component
   const StatusBadge = ({ status, message, fileLink, file, showOrderSelection }) => {
     const getStatusColor = () => {
       if (status === "Success") {
@@ -676,6 +719,11 @@ export default function NewRequest() {
         return theme === 'light'
           ? "bg-blue-100 text-blue-800 border-blue-200"
           : "bg-blue-900/30 text-blue-400 border-blue-800";
+      }
+      if (status === "Processing...") {
+        return theme === 'light'
+          ? "bg-purple-100 text-purple-800 border-purple-200"
+          : "bg-purple-900/30 text-purple-400 border-purple-800";
       }
       if (status === "Multiple Orders Found") {
         return theme === 'light'
@@ -809,7 +857,6 @@ export default function NewRequest() {
                         }
                       `}
                     >
-                      {/* Icon */}
                       <svg
                         className="w-4 h-4"
                         fill="none"
@@ -819,7 +866,6 @@ export default function NewRequest() {
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                       </svg>
-
                       Upload New Files
                     </button>
                   </div>
@@ -843,17 +889,19 @@ export default function NewRequest() {
                         </thead>
                         <tbody className={`divide-y ${theme === 'light' ? 'divide-gray-200' : 'divide-gray-700'}`}>
                           {files
-                            .filter(file => !file.isError) // Filter out error messages
-                            .map((file, idx) => (
+                            .filter(file => !file.isError)
+                            .map((file) => (
                               <tr key={file.id} className={getTableRowClass()}>
                                 <td className="px-6 py-4">
                                   <div className="flex items-center space-x-3">
                                     <div className={`w-2 h-2 rounded-full ${file.uploadStatus === "Success" ? "bg-green-500" :
                                       file.uploadStatus === "Failed" || file.uploadStatus === "Cancelled" ? "bg-red-500" :
-                                        file.uploadStatus === "Uploading..." ? "bg-blue-500" :
-                                          file.uploadStatus === "Error" ? "bg-red-500" :
-                                            file.uploadStatus === "Multiple Orders Found" ? "bg-yellow-500" :
-                                              "bg-gray-400"
+                                        file.uploadStatus === "Uploading..." ? 
+                                          file.totalUploads > 1 ? "bg-purple-500" : "bg-blue-500" :
+                                        file.uploadStatus === "Processing..." ? "bg-purple-500" :
+                                        file.uploadStatus === "Error" ? "bg-red-500" :
+                                        file.uploadStatus === "Multiple Orders Found" ? "bg-yellow-500" :
+                                          "bg-gray-400"
                                       }`}></div>
                                     <span className="text-sm font-medium truncate max-w-xs">
                                       {file.fileName}
