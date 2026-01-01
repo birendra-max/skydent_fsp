@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useContext, useRef, useCallback } from "react";
+import React,{ useState, useMemo, useEffect, useContext, useRef, useCallback } from "react";
 import Loder from "../../Components/Loder";
 import Chatbox from "../../Components/Chatbox";
 import { ThemeContext } from "../../Context/ThemeContext";
@@ -15,8 +15,8 @@ import {
     faTimes
 } from '@fortawesome/free-solid-svg-icons';
 
-// ✅ Create a separate component for the popup
-const RedesignPopup = ({
+// ✅ Create a separate component for the popup with memoization
+const RedesignPopup = React.memo(({
     theme,
     showRedesignPopup,
     pendingRedesignOrders,
@@ -27,6 +27,14 @@ const RedesignPopup = ({
     setShowRedesignPopup
 }) => {
     const textareaRef = useRef(null);
+    const [localMessage, setLocalMessage] = useState("");
+
+    // Initialize local state when popup opens
+    useEffect(() => {
+        if (showRedesignPopup) {
+            setLocalMessage(redesignMessage || "");
+        }
+    }, [showRedesignPopup, redesignMessage]);
 
     // Auto-focus when popup opens
     useEffect(() => {
@@ -34,11 +42,27 @@ const RedesignPopup = ({
             const timer = setTimeout(() => {
                 if (textareaRef.current) {
                     textareaRef.current.focus();
+                    textareaRef.current.selectionStart = textareaRef.current.value.length;
+                    textareaRef.current.selectionEnd = textareaRef.current.value.length;
                 }
             }, 10);
             return () => clearTimeout(timer);
         }
     }, [showRedesignPopup]);
+
+    // Debounced update to parent state
+    const updateParentMessage = useCallback(
+        debounce((message) => {
+            setRedesignMessage(message);
+        }, 300),
+        [setRedesignMessage]
+    );
+
+    const handleMessageChange = useCallback((e) => {
+        const value = e.target.value;
+        setLocalMessage(value);
+        updateParentMessage(value);
+    }, [updateParentMessage]);
 
     const handleClosePopup = useCallback(() => {
         if (!isSubmitting) {
@@ -90,8 +114,8 @@ const RedesignPopup = ({
                         </label>
                         <textarea
                             ref={textareaRef}
-                            value={redesignMessage}
-                            onChange={(e) => setRedesignMessage(e.target.value)}
+                            value={localMessage}
+                            onChange={handleMessageChange}
                             placeholder="Enter reason for redesign or instructions..."
                             className={`w-full p-3 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500'}`}
                             rows="4"
@@ -111,8 +135,8 @@ const RedesignPopup = ({
                     </button>
                     <button
                         onClick={handleRedesignSubmit}
-                        disabled={isSubmitting || !redesignMessage.trim()}
-                        className={`px-4 py-2 rounded font-medium flex items-center gap-2 ${isSubmitting || !redesignMessage.trim()
+                        disabled={isSubmitting || !localMessage.trim()}
+                        className={`px-4 py-2 rounded font-medium flex items-center gap-2 ${isSubmitting || !localMessage.trim()
                             ? theme === 'dark' ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             : 'bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700'
                             }`}
@@ -133,6 +157,19 @@ const RedesignPopup = ({
             </div>
         </div>
     );
+});
+
+// Simple debounce utility function
+const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 };
 
 export default function Datatable({
@@ -149,7 +186,6 @@ export default function Datatable({
     const [rowsPerPage, setRowsPerPage] = useState(rowsPerPageOptions[0]);
     const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
     const [orderid, setOrderid] = useState(null);
-    const [deliveryType, setDeliveryType] = useState("Rush");
 
     // ✅ NEW STATES for multi-select & dropdown
     const [selectedRows, setSelectedRows] = useState([]);
@@ -161,6 +197,9 @@ export default function Datatable({
     const [pendingRedesignOrders, setPendingRedesignOrders] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Memoize data to prevent unnecessary re-renders
+    const memoizedData = useMemo(() => data || [], [data]);
+
     // ✅ Control loader based on parent's loading prop
     useEffect(() => {
         if (!loading) {
@@ -170,17 +209,18 @@ export default function Datatable({
         }
     }, [loading]);
 
-    // Filter & Sort
+    // Filter & Sort - optimized with useMemo
     const filteredData = useMemo(() => {
-        let filtered = data || [];
+        let filtered = memoizedData;
 
         if (search) {
+            const searchLower = search.toLowerCase();
             filtered = filtered.filter((row) =>
-                columns.some((col) =>
-                    String(row[col.accessor] ?? "")
-                        .toLowerCase()
-                        .includes(search.toLowerCase())
-                )
+                columns.some((col) => {
+                    const value = row[col.accessor];
+                    return value != null && 
+                           String(value).toLowerCase().includes(searchLower);
+                })
             );
         }
 
@@ -189,8 +229,8 @@ export default function Datatable({
                 const aVal = a[sortConfig.key];
                 const bVal = b[sortConfig.key];
 
-                if (aVal === null || aVal === undefined) return 1;
-                if (bVal === null || bVal === undefined) return -1;
+                if (aVal == null) return 1;
+                if (bVal == null) return -1;
 
                 const isNumeric = !isNaN(aVal) && !isNaN(bVal);
 
@@ -207,7 +247,7 @@ export default function Datatable({
         }
 
         return filtered;
-    }, [search, data, columns, sortConfig]);
+    }, [search, memoizedData, columns, sortConfig]);
 
     const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
 
@@ -216,33 +256,34 @@ export default function Datatable({
         return filteredData.slice(start, start + rowsPerPage);
     }, [currentPage, filteredData, rowsPerPage]);
 
-    const handleSearch = (e) => {
+    // Memoize all callbacks
+    const handleSearch = useCallback((e) => {
         setSearch(e.target.value);
         setCurrentPage(1);
-    };
+    }, []);
 
-    const handlePageChange = (page) => {
+    const handlePageChange = useCallback((page) => {
         if (page < 1 || page > totalPages) return;
         setCurrentPage(page);
-    };
+    }, [totalPages]);
 
-    const handleSort = (key) => {
-        let direction = "asc";
-        if (sortConfig.key === key && sortConfig.direction === "asc") {
-            direction = "desc";
-        } else if (sortConfig.key === key && sortConfig.direction === "desc") {
-            setSortConfig({ key: null, direction: "asc" });
-            return;
-        }
-        setSortConfig({ key, direction });
-    };
+    const handleSort = useCallback((key) => {
+        setSortConfig(prev => {
+            if (prev.key === key && prev.direction === "asc") {
+                return { key, direction: "desc" };
+            } else if (prev.key === key && prev.direction === "desc") {
+                return { key: null, direction: "asc" };
+            }
+            return { key, direction: "asc" };
+        });
+    }, []);
 
-    const handleRowsPerPageChange = (e) => {
+    const handleRowsPerPageChange = useCallback((e) => {
         setRowsPerPage(parseInt(e.target.value));
         setCurrentPage(1);
-    };
+    }, []);
 
-    const getPageNumbers = (totalPages, currentPage) => {
+    const getPageNumbers = useCallback((totalPages, currentPage) => {
         const maxButtons = 5;
         const pages = [];
 
@@ -258,53 +299,54 @@ export default function Datatable({
         if (endPage < totalPages) pages.push("...", totalPages);
 
         return pages;
-    };
+    }, []);
 
-    function openPopup(id) {
+    const openPopup = useCallback((id) => {
         setOrderid(id);
-        document.getElementById('chatbox').style.display = "block"
-    }
+        document.getElementById('chatbox').style.display = "block";
+    }, []);
 
-    const sendRedesign = async (orderId, message = "") => {
+    const sendRedesign = useCallback(async (orderIds, message) => {
         try {
-            const res = await fetchWithAuth(`send-for-redesign/${orderId}`, {
+            const response = await fetchWithAuth("send-for-redesign", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ message }),
+                body: JSON.stringify({
+                    orders: orderIds,
+                    message: message
+                }),
             });
 
-            // Backend returns JSON → res contains {status, message}
-            return res;
-
+            return response;
         } catch (error) {
             return {
                 status: "error",
                 message: "Server error. Please try again later."
             };
         }
-    };
+    }, []);
 
-    // ✅ Multi-select logic
-    const toggleSelectRow = (id) =>
+    // ✅ Multi-select logic - memoized
+    const toggleSelectRow = useCallback((id) =>
         setSelectedRows((prev) =>
             prev.includes(id)
                 ? prev.filter((x) => x !== id)
                 : [...prev, id]
-        );
+        ), []);
 
-    const toggleSelectAll = () => {
+    const toggleSelectAll = useCallback(() => {
         const visibleIds = paginatedData.map((r) => r.orderid);
         if (paginatedData.every((r) => selectedRows.includes(r.orderid))) {
             setSelectedRows(selectedRows.filter((id) => !visibleIds.includes(id)));
         } else {
             setSelectedRows([...new Set([...selectedRows, ...visibleIds])]);
         }
-    };
+    }, [paginatedData, selectedRows]);
 
-    // ✅ Open redesign popup
-    const openRedesignPopup = () => {
+    // ✅ Open redesign popup - memoized
+    const openRedesignPopup = useCallback(() => {
         if (!selectedRows.length) {
             alert("Please select at least one case to proceed with the redesign request.");
             return;
@@ -312,7 +354,7 @@ export default function Datatable({
 
         // Filter valid orders
         const validOrders = selectedRows.filter(id => {
-            const row = data.find((x) => x.orderid === id);
+            const row = memoizedData.find((x) => x.orderid === id);
             return row && row.status !== "New" && row.status !== "Redesign";
         });
 
@@ -324,10 +366,10 @@ export default function Datatable({
         setPendingRedesignOrders(validOrders);
         setRedesignMessage("");
         setShowRedesignPopup(true);
-    };
+    }, [selectedRows, memoizedData]);
 
-    // ✅ Submit redesign with message
-    const handleRedesignSubmit = async () => {
+    // ✅ Submit redesign with message - optimized
+    const handleRedesignSubmit = useCallback(async () => {
         if (!redesignMessage.trim()) {
             alert("Please enter a message for the redesign request.");
             return;
@@ -335,18 +377,14 @@ export default function Datatable({
 
         setIsSubmitting(true);
 
-        let redesignIds = [];
-        let newOrderIds = [];
-        let successIds = [];
-        let failMessages = [];
+        const newOrderIds = [];
+        const redesignIds = [];
+        const validOrders = [];
 
         for (let id of pendingRedesignOrders) {
-            const r = data.find((x) => x.orderid === id);
+            const r = memoizedData.find((x) => x.orderid === id);
 
-            if (!r) {
-                failMessages.push(`Order ${id}: Record not found`);
-                continue;
-            }
+            if (!r) continue;
 
             if (r.status === "New") {
                 newOrderIds.push(id);
@@ -358,69 +396,59 @@ export default function Datatable({
                 continue;
             }
 
-            // 🚀 Call backend
-            const res = await sendRedesign(id, redesignMessage);
-
-            if (res.status === "success") {
-                successIds.push(id);
-            } else {
-                failMessages.push(`Order ${id}: ${res.message}`);
-            }
+            validOrders.push(id);
         }
+
+        if (newOrderIds.length === pendingRedesignOrders.length) {
+            setIsSubmitting(false);
+            const msg = newOrderIds.length === 1
+                ? `Order ${newOrderIds[0]} cannot be sent for redesign because it is a new order.`
+                : `All selected orders cannot be sent for redesign because they are new orders.`;
+            alert(msg);
+            return;
+        }
+
+        if (validOrders.length === 0) {
+            setIsSubmitting(false);
+            const msg = redesignIds.length === 1
+                ? `Order ${redesignIds[0]} is already in redesign process.`
+                : `All selected orders are already in redesign process.`;
+            alert(msg);
+            return;
+        }
+
+        const res = await sendRedesign(validOrders, redesignMessage);
 
         setIsSubmitting(false);
         setShowRedesignPopup(false);
         setRedesignMessage("");
         setSelectedRows([]);
 
-        let finalMsg = "";
-
-        if (newOrderIds.length === pendingRedesignOrders.length) {
-            finalMsg = newOrderIds.length === 1
-                ? `Order ${newOrderIds[0]} cannot be sent for redesign because it is a new order.`
-                : `All selected orders cannot be sent for redesign because they are new orders.`;
-            alert(finalMsg);
-            return;
+        if (res.status === "success") {
+            let successMsg = res.message || "Orders sent for redesign successfully.";
+            
+            if (newOrderIds.length > 0) {
+                successMsg += "\n\nNote: " + (newOrderIds.length === 1
+                    ? `Order ${newOrderIds[0]} was skipped as it's a new order.`
+                    : `Orders ${newOrderIds.join(', ')} were skipped as they are new orders.`);
+            }
+            
+            if (redesignIds.length > 0) {
+                successMsg += "\n\nNote: " + (redesignIds.length === 1
+                    ? `Order ${redesignIds[0]} was skipped as it's already in redesign.`
+                    : `Orders ${redesignIds.join(', ')} were skipped as they are already in redesign.`);
+            }
+            
+            alert(successMsg);
+            window.location.reload();
+        } else {
+            alert(res.message || "Failed to send orders for redesign.");
         }
-
-        if (newOrderIds.length) {
-            finalMsg += newOrderIds.map(id =>
-                `Order ${id} cannot be sent for redesign because it is a new order.`
-            ).join("\n") + "\n\n";
-        }
-
-        if (redesignIds.length === pendingRedesignOrders.length - newOrderIds.length) {
-            finalMsg += redesignIds.length === 1
-                ? `Order ${redesignIds[0]} is already in redesign process.`
-                : `All selected orders are already in redesign process.`;
-            alert(finalMsg);
-            return;
-        }
-
-        if (redesignIds.length) {
-            finalMsg += redesignIds.map(id =>
-                `Order ${id} is already in redesign process.`
-            ).join("\n") + "\n\n";
-        }
-
-        if (successIds.length) {
-            finalMsg += successIds.length === 1
-                ? `Order ${successIds[0]} has been forwarded to the design team for redesign.\n\n`
-                : `All selected orders have been forwarded to the design team for redesign.\n\n`;
-        }
-
-        if (failMessages.length) {
-            finalMsg += "Failed Requests:\n" + failMessages.join("\n");
-        }
-
-        alert(finalMsg.trim());
-        window.location.reload();
-    };
-
+    }, [redesignMessage, pendingRedesignOrders, memoizedData, sendRedesign]);
 
     const base_url = localStorage.getItem('skydent_user_base_url');
 
-    const handleBulkDownload = async () => {
+    const handleBulkDownload = useCallback(async () => {
         if (!selectedRows.length) {
             alert("Please select at least one record to proceed with the download.");
             return;
@@ -429,7 +457,7 @@ export default function Datatable({
         let missingFiles = [];
 
         for (const id of selectedRows) {
-            const row = data.find((r) => r.orderid === id);
+            const row = memoizedData.find((r) => r.orderid === id);
             if (!row) continue;
 
             try {
@@ -494,43 +522,42 @@ export default function Datatable({
         if (missingFiles.length > 0) {
             alert(`Files not found for order IDs: ${missingFiles.join(", ")}`);
         }
-    };
+    }, [selectedRows, memoizedData, fileType, base_url]);
 
-
-    // Theme-based styling functions
-    const getBackgroundClass = () => {
+    // Theme-based styling functions - memoized
+    const getBackgroundClass = useMemo(() => {
         return theme === 'dark'
             ? 'bg-gray-900 text-white mt-4'
             : 'bg-gradient-to-br from-slate-50 to-blue-50 text-gray-800 mt-4';
-    };
+    }, [theme]);
 
-    const getTableHeaderClass = () => {
+    const getTableHeaderClass = useMemo(() => {
         return theme === 'dark'
             ? 'bg-gradient-to-r from-gray-800 to-gray-700 text-white border-b border-gray-600'
             : 'bg-gradient-to-r from-cyan-800 to-cyan-900 text-white border-b border-blue-500';
-    };
+    }, [theme]);
 
-    const getTableRowClass = (idx) => {
+    const getTableRowClass = useCallback((idx) => {
         if (theme === 'dark') {
             return idx % 2 === 0 ? 'bg-gray-800 hover:bg-gray-750 text-white' : 'bg-gray-700 hover:bg-gray-650 text-white';
         } else {
             return idx % 2 === 0 ? 'bg-white hover:bg-blue-50 text-gray-800' : 'bg-gray-50 hover:bg-blue-50 text-gray-800';
         }
-    };
+    }, [theme]);
 
-    const getInputClass = () => {
+    const getInputClass = useMemo(() => {
         return theme === 'dark'
             ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
             : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
-    };
+    }, [theme]);
 
-    const getSelectClass = () => {
+    const getSelectClass = useMemo(() => {
         return theme === 'dark'
             ? 'bg-gray-700 border-gray-600 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
             : 'bg-white border-gray-300 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
-    };
+    }, [theme]);
 
-    const getButtonClass = (isActive = false) => {
+    const getButtonClass = useCallback((isActive = false) => {
         if (theme === 'dark') {
             return `px-3 py-2 rounded-lg font-medium transition-all duration-200 ${isActive
                 ? 'bg-blue-600 text-white shadow-lg'
@@ -542,19 +569,29 @@ export default function Datatable({
                 : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
                 }`;
         }
-    };
+    }, [theme]);
 
-    const getDisabledButtonClass = () => {
+    const getDisabledButtonClass = useMemo(() => {
         return theme === 'dark'
             ? 'px-3 py-2 rounded-lg bg-gray-800 text-gray-500 border border-gray-700 cursor-not-allowed'
             : 'px-3 py-2 rounded-lg bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed';
-    };
+    }, [theme]);
 
-    const getNoDataClass = () => {
+    const getNoDataClass = useMemo(() => {
         return theme === 'dark'
             ? 'bg-gray-800 text-gray-300 border border-gray-700'
             : 'bg-white text-gray-600 border border-gray-200';
-    };
+    }, [theme]);
+
+    const handleFileTypeChange = useCallback((e) => {
+        setFileType(e.target.value);
+    }, []);
+
+    // Handle popup close
+    const handlePopupClose = useCallback(() => {
+        setShowRedesignPopup(false);
+        setRedesignMessage("");
+    }, []);
 
     return (
         <>
@@ -570,13 +607,13 @@ export default function Datatable({
                 setRedesignMessage={setRedesignMessage}
                 isSubmitting={isSubmitting}
                 handleRedesignSubmit={handleRedesignSubmit}
-                setShowRedesignPopup={setShowRedesignPopup}
+                setShowRedesignPopup={handlePopupClose}
             />
 
             {status === "hide" && (
-                <section className={`p-4 rounded-xl ${getBackgroundClass()}`}>
+                <section className={`p-4 rounded-xl ${getBackgroundClass}`}>
                     {(!Array.isArray(columns) || columns.length === 0) && (
-                        <div className={`p-8 text-center rounded-xl border ${getNoDataClass()}`}>
+                        <div className={`p-8 text-center rounded-xl border ${getNoDataClass}`}>
                             <FontAwesomeIcon icon={faFolderOpen} size="2x" className="mb-3 text-blue-500 opacity-60" />
                             <p className="text-lg font-medium">⚠️ No columns provided.</p>
                         </div>
@@ -595,7 +632,7 @@ export default function Datatable({
                                         <select
                                             value={rowsPerPage}
                                             onChange={handleRowsPerPageChange}
-                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass()}`}
+                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass}`}
                                         >
                                             {rowsPerPageOptions.map((option) => (
                                                 <option key={option} value={option}>
@@ -609,8 +646,8 @@ export default function Datatable({
                                     <div className={`flex items-center gap-3 px-4 py-2`}>
                                         <select
                                             value={fileType}
-                                            onChange={(e) => setFileType(e.target.value)}
-                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass()}`}
+                                            onChange={handleFileTypeChange}
+                                            className={`px-3 py-2 rounded-lg border text-sm focus:outline-none transition-all ${getSelectClass}`}
                                         >
                                             {/* <option value="initial">Initial Files</option> */}
                                             <option value="stl">STL Files</option>
@@ -645,7 +682,7 @@ export default function Datatable({
                                         placeholder="Search across all columns..."
                                         value={search}
                                         onChange={handleSearch}
-                                        className={`pl-10 pr-4 py-2 w-80 rounded-lg border text-sm focus:outline-none transition-all ${getInputClass()}`}
+                                        className={`pl-10 pr-4 py-2 w-80 rounded-lg border text-sm focus:outline-none transition-all ${getInputClass}`}
                                     />
                                 </div>
                             </div>
@@ -655,7 +692,7 @@ export default function Datatable({
                                 <div className="overflow-x-auto">
                                     <table className="w-full border-collapse">
                                         <thead>
-                                            <tr className={getTableHeaderClass()}>
+                                            <tr className={getTableHeaderClass}>
                                                 {/* Checkbox Column */}
                                                 <th className="p-4 text-center border-r border-gray-500/30 w-16">
                                                     <input
@@ -697,7 +734,7 @@ export default function Datatable({
                                             {error || paginatedData.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={columns.length + 1} className="p-8 text-center">
-                                                        <div className={`flex flex-col items-center justify-center p-8 rounded-lg ${getNoDataClass()}`}>
+                                                        <div className={`flex flex-col items-center justify-center p-8 rounded-lg ${getNoDataClass}`}>
                                                             <FontAwesomeIcon icon={faFolderOpen} size="3x" className="mb-4 text-blue-500 opacity-60" />
                                                             <p className="text-lg font-medium mb-2">
                                                                 {error ? "No Data found" : "No records found"}
@@ -807,7 +844,7 @@ export default function Datatable({
                                         <button
                                             onClick={() => handlePageChange(currentPage - 1)}
                                             disabled={currentPage === 1}
-                                            className={currentPage === 1 ? getDisabledButtonClass() : getButtonClass()}
+                                            className={currentPage === 1 ? getDisabledButtonClass : getButtonClass()}
                                         >
                                             Previous
                                         </button>
@@ -819,7 +856,7 @@ export default function Datatable({
                                                     typeof page === "number" && currentPage === page
                                                         ? getButtonClass(true)
                                                         : page === "..."
-                                                            ? getDisabledButtonClass()
+                                                            ? getDisabledButtonClass
                                                             : getButtonClass()
                                                 }
                                                 onClick={() => typeof page === "number" && handlePageChange(page)}
@@ -832,7 +869,7 @@ export default function Datatable({
                                         <button
                                             onClick={() => handlePageChange(currentPage + 1)}
                                             disabled={currentPage === totalPages}
-                                            className={currentPage === totalPages ? getDisabledButtonClass() : getButtonClass()}
+                                            className={currentPage === totalPages ? getDisabledButtonClass : getButtonClass()}
                                         >
                                             Next
                                         </button>
