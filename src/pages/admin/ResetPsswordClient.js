@@ -18,9 +18,6 @@ export default function ResetPsswordClient() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const token = localStorage.getItem("token");
-    const base_url = localStorage.getItem("base_url");
-
     const columns = [
         { header: "Client Id", accessor: "userid" },
         { header: "Name", accessor: "name" },

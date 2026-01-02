@@ -37,7 +37,7 @@ export default function RushCases() {
 
                 // data is already the parsed JSON response
                 if (data && data.status === 'success') {
-                    setData(data.new_cases);
+                    setData(data);
                 } else {
                     setData([]);
                     setError("No data found ! in the server")

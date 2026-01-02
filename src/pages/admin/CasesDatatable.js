@@ -10,31 +10,65 @@ import Chatbox from '../../Components/Chatbox';
 export default function CasesDatatable({
     columns = [],
     data = [],
-    rowsPerPageOptions = [50, 100, 200, 500],
+    rowsPerPageOptions = [50, 100, 200, 500, 'All'], // ✅ Added 'All' option
     loading = false,
     error = null,
-    onSelectionChange = () => { }   // ✅ ADD THIS
+    onSelectionChange = () => { }
 }) {
     const { theme } = useContext(ThemeContext);
     const [status, setStatus] = useState("show");
     const [search, setSearch] = useState("");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(rowsPerPageOptions[0]);
     const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
     const [orderid, setOrderid] = useState(null);
-
-    // ✅ NEW STATES for multi-select & dropdown
     const [selectedRows, setSelectedRows] = useState([]);
     const [fileType, setFileType] = useState("finish");
+    const [isFetchingPage, setIsFetchingPage] = useState(false);
+    const [tableData, setTableData] = useState({ cases: [], pagination: {} });
+    const base_url = localStorage.getItem('skydent_admin_base_url');
+
+    useEffect(() => {
+        if (data && data.cases) {
+            setTableData(data);
+        } else if (data && data.data && data.data.cases) {
+            setTableData(data.data);
+        }
+    }, [data]);
 
     useEffect(() => {
         onSelectionChange(selectedRows);
     }, [selectedRows]);
 
+    const casesData = tableData?.cases || [];
+    const paginationInfo = tableData?.pagination || {
+        totalRecords: 0,
+        recordsFetched: 0,
+        perPage: rowsPerPageOptions[0],
+        currentPage: 1,
+        totalPages: 1,
+        previousPage: null,
+        nextPage: null
+    };
 
-    // Filter & Sort
+    const {
+        totalRecords,
+        recordsFetched,
+        perPage,
+        currentPage,
+        totalPages,
+        previousPage,
+        nextPage
+    } = paginationInfo;
+
+    useEffect(() => {
+        if (!loading && !isFetchingPage) {
+            setStatus("hide");
+        } else {
+            setStatus("show");
+        }
+    }, [loading, isFetchingPage]);
+
     const filteredData = useMemo(() => {
-        let filtered = data || [];
+        let filtered = casesData;
 
         if (search) {
             filtered = filtered.filter((row) =>
@@ -69,32 +103,132 @@ export default function CasesDatatable({
         }
 
         return filtered;
-    }, [search, data, columns, sortConfig]);
+    }, [search, casesData, columns, sortConfig]);
 
-    const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
+    const fetchPage = async (url) => {
+        if (!url || isFetchingPage) return;
 
-    const paginatedData = useMemo(() => {
-        const start = (currentPage - 1) * rowsPerPage;
-        return filteredData.slice(start, start + rowsPerPage);
-    }, [currentPage, filteredData, rowsPerPage]);
+        setIsFetchingPage(true);
+        setStatus("show");
+        const token = localStorage.getItem('skydent_admin_token')
+        try {
+            // Use base_url if provided URL is relative
+            let fullUrl = url;
+            if (base_url && !url.startsWith('http://') && !url.startsWith('https://')) {
+                fullUrl = `${base_url}${url}`;
+            }
 
-    // ✅ Control loader based on parent's loading prop
-    useEffect(() => {
-        if (!loading) {
+            const response = await fetch(fullUrl, {
+                headers: {
+                    'X-Tenant': 'skydent',
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.status === 401) {
+                localStorage.removeItem('skydent_admin_token');
+                window.location.href = '/login';
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const newData = await response.json();
+
+            if (newData && newData.data) {
+                setTableData(newData.data);
+            } else if (newData && newData.cases) {
+                setTableData(newData);
+            }
+
+            setSelectedRows([]);
+        } catch (error) {
+            console.error("Failed to fetch:", error);
+            alert("Failed to load page");
+        } finally {
+            setIsFetchingPage(false);
             setStatus("hide");
-        } else {
-            setStatus("show");
         }
-    }, [loading]);
+    };
+
+    const handlePreviousPage = () => {
+        if (previousPage) fetchPage(previousPage);
+    };
+
+    const handleNextPage = () => {
+        if (nextPage) fetchPage(nextPage);
+    };
+
+    const handlePageNumberClick = (pageNum) => {
+        if (pageNum === currentPage || pageNum < 1 || pageNum > totalPages) return;
+
+        // Use base_url for constructing URLs
+        const baseEndpoint = base_url ? `${base_url}/get-all-cases` : '';
+
+        if (nextPage || previousPage) {
+            try {
+                // Use existing URL pattern from pagination
+                const existingUrl = nextPage || previousPage;
+                const urlObj = new URL(existingUrl, window.location.origin);
+
+                urlObj.searchParams.set('page_orders', pageNum);
+
+                if (perPage && perPage !== 'All') {
+                    urlObj.searchParams.set('per_page', perPage);
+                } else if (perPage === 'All') {
+                    urlObj.searchParams.set('per_page', totalRecords);
+                }
+
+                fetchPage(urlObj.toString());
+            } catch (error) {
+                console.error('Error constructing URL:', error);
+                const url = `${baseEndpoint}?page_orders=${pageNum}&per_page=${perPage === 'All' ? totalRecords : perPage}`;
+                fetchPage(url);
+            }
+        } else {
+            const url = `${baseEndpoint}?page_orders=${pageNum}&per_page=${perPage === 'All' ? totalRecords : perPage}`;
+            fetchPage(url);
+        }
+    };
+
+    const handleRowsPerPageChange = (e) => {
+        const value = e.target.value;
+
+        if (value === 'All') {
+            // For "All" option, fetch with a very large per_page value
+            if (nextPage) {
+                const urlObj = new URL(nextPage, window.location.origin);
+                urlObj.searchParams.delete('per_page');
+                // Use totalRecords to fetch all data
+                urlObj.searchParams.set('per_page', totalRecords);
+                urlObj.searchParams.set('page_orders', 1);
+                fetchPage(urlObj.toString());
+            } else if (casesData.length > 0) {
+                const endpoint = base_url ? `${base_url}/get-all-cases` : '';
+                const url = `${endpoint}?page_orders=1&per_page=${totalRecords}`;
+                fetchPage(url);
+            }
+        } else {
+            const newPerPage = parseInt(value);
+            if (nextPage) {
+                const urlObj = new URL(nextPage, window.location.origin);
+                urlObj.searchParams.delete('per_page');
+                urlObj.searchParams.set('per_page', newPerPage);
+                urlObj.searchParams.set('page_orders', 1);
+                fetchPage(urlObj.toString());
+            } else if (casesData.length > 0) {
+                const endpoint = base_url ? `${base_url}/get-all-cases` : '';
+                const url = `${endpoint}?page_orders=1&per_page=${newPerPage}`;
+                fetchPage(url);
+            }
+        }
+    };
 
     const handleSearch = (e) => {
         setSearch(e.target.value);
-        setCurrentPage(1);
-    };
-
-    const handlePageChange = (page) => {
-        if (page < 1 || page > totalPages) return;
-        setCurrentPage(page);
     };
 
     const handleSort = (key) => {
@@ -108,12 +242,7 @@ export default function CasesDatatable({
         setSortConfig({ key, direction });
     };
 
-    const handleRowsPerPageChange = (e) => {
-        setRowsPerPage(parseInt(e.target.value));
-        setCurrentPage(1);
-    };
-
-    const getPageNumbers = (totalPages, currentPage) => {
+    const getPageNumbers = () => {
         const maxButtons = 5;
         const pages = [];
 
@@ -133,10 +262,9 @@ export default function CasesDatatable({
 
     function openPopup(id) {
         setOrderid(id);
-        document.getElementById('chatbox').style.display = "block"
+        document.getElementById('chatbox').style.display = "block";
     }
 
-    // Theme-based styling functions
     const getBackgroundClass = () => {
         return theme === 'dark'
             ? 'bg-gray-900 text-white p-4 rounded-2xl shadow-lg'
@@ -207,7 +335,6 @@ export default function CasesDatatable({
             : 'bg-gray-100 text-gray-600';
     };
 
-    // ✅ Multi-select logic
     const toggleSelectRow = (id) =>
         setSelectedRows((prev) =>
             prev.includes(id)
@@ -215,16 +342,14 @@ export default function CasesDatatable({
                 : [...prev, id]
         );
 
-
     const toggleSelectAll = () => {
-        const visibleIds = paginatedData.map((r) => r.orderid);
-        if (paginatedData.every((r) => selectedRows.includes(r.orderid))) {
+        const visibleIds = casesData.map((r) => r.orderid);
+        if (casesData.every((r) => selectedRows.includes(r.orderid))) {
             setSelectedRows(selectedRows.filter((id) => !visibleIds.includes(id)));
         } else {
             setSelectedRows([...new Set([...selectedRows, ...visibleIds])]);
         }
     };
-
 
     const handleBulkDownload = () => {
         if (!selectedRows.length) return alert("Please select at least one record!");
@@ -233,7 +358,7 @@ export default function CasesDatatable({
         let downloadedCount = 0;
 
         selectedRows.forEach((id) => {
-            const row = data.find((r) => r.orderid === id);
+            const row = casesData.find((r) => r.orderid === id);
             if (!row) return;
 
             let path = null;
@@ -242,11 +367,15 @@ export default function CasesDatatable({
             else if (fileType === "stl") path = row.stl_file_path;
             else if (fileType === "finish") path = row.finish_file_path;
 
-            // ✅ Check if valid path exists
             if (path && path.trim() !== "") {
                 try {
-                    // ✅ Use your symbol-safe download logic
-                    const parts = path.split("/");
+                    // Use base_url for file paths if they are relative
+                    let fullPath = path;
+                    if (base_url && !path.startsWith('http://') && !path.startsWith('https://') && !path.startsWith('blob:')) {
+                        fullPath = `${base_url}${path}`;
+                    }
+
+                    const parts = fullPath.split("/");
                     const encodedFile = encodeURIComponent(parts.pop());
                     const encodedUrl = parts.join("/") + "/" + encodedFile;
 
@@ -268,7 +397,6 @@ export default function CasesDatatable({
             }
         });
 
-        // ✅ Final alert summary
         if (missingFiles.length > 0) {
             alert(`File not available for these record(s): ${missingFiles.join(", ")}`);
         } else if (downloadedCount === 0) {
@@ -276,12 +404,14 @@ export default function CasesDatatable({
         }
     };
 
+    // ✅ Determine current perPage value for select
+    const currentPerPageValue = perPage === totalRecords || perPage;
 
     return (
         <>
             <Loder status={status} />
             <Chatbox orderid={orderid} />
-            {/* Table is only shown after loader is hidden */}
+
             {status === "hide" && (
                 <section
                     style={{ padding: "20px" }}
@@ -295,18 +425,17 @@ export default function CasesDatatable({
 
                     {Array.isArray(columns) && columns.length > 0 && (
                         <>
-                            {/* Search + Rows per page */}
                             <div
                                 style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}
                             >
                                 <div className="flex justify-around items-center gap-4">
-                                    {/* Rows per page dropdown */}
                                     <label className={theme === "dark" ? "text-white" : "text-gray-800"}>
                                         Rows per page:{" "}
                                         <select
-                                            value={rowsPerPage}
+                                            value={currentPerPageValue}
                                             onChange={handleRowsPerPageChange}
                                             className={`p-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 ${getSelectClass()}`}
+                                            disabled={isFetchingPage}
                                         >
                                             {rowsPerPageOptions.map((option) => (
                                                 <option key={option} value={option}>
@@ -317,15 +446,15 @@ export default function CasesDatatable({
                                     </label>
 
                                     <button
-                                        onClick={() => exportToExcel(data, "Reports")}
-                                        className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-800 text-white text-sm font-medium rounded-md border border-green-600 transition-all duration-200 shadow-sm hover:shadow-md">
+                                        onClick={() => exportToExcel(casesData, "Reports")}
+                                        className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-800 text-white text-sm font-medium rounded-md border border-green-600 transition-all duration-200 shadow-sm hover:shadow-md"
+                                        disabled={isFetchingPage}>
                                         <FontAwesomeIcon icon={faDownload} className="text-white text-base" />
                                         Download Report
                                     </button>
 
                                 </div>
 
-                                {/* Search bar */}
                                 <div>
                                     <input
                                         type="text"
@@ -333,16 +462,14 @@ export default function CasesDatatable({
                                         value={search}
                                         onChange={handleSearch}
                                         className={`p-2 w-64 rounded border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${getInputClass()}`}
+                                        disabled={isFetchingPage}
                                     />
                                 </div>
                             </div>
 
-
-                            {/* Table */}
                             <table id="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
                                 <thead>
                                     <tr className={getTableHeaderClass()}>
-                                        {/* ✅ Fixed checkbox column only */}
                                         <th style={{
                                             border: "1px solid #ddd",
                                             width: "10vh",
@@ -353,9 +480,10 @@ export default function CasesDatatable({
                                         }} className="border border-gray-300">
                                             <input
                                                 type="checkbox"
-                                                checked={paginatedData.length > 0 && paginatedData.every((r) => selectedRows.includes(r.orderid))}
+                                                checked={casesData.length > 0 && casesData.every((r) => selectedRows.includes(r.orderid))}
                                                 onChange={toggleSelectAll}
                                                 style={{ transform: "scale(1.3)", cursor: "pointer" }}
+                                                disabled={isFetchingPage}
                                             />
                                         </th>
 
@@ -377,10 +505,9 @@ export default function CasesDatatable({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {paginatedData.length > 0 ? (
-                                        paginatedData.map((row, idx) => (
+                                    {filteredData.length > 0 ? (
+                                        filteredData.map((row, idx) => (
                                             <tr key={idx} className={getTableRowClass(idx)}>
-                                                {/* ✅ Fixed checkbox cell only */}
                                                 <td style={{
                                                     border: "1px solid #ddd",
                                                     textAlign: "center",
@@ -394,6 +521,7 @@ export default function CasesDatatable({
                                                         checked={selectedRows.includes(row.orderid)}
                                                         onChange={() => toggleSelectRow(row.orderid)}
                                                         style={{ transform: "scale(1.3)", cursor: "pointer" }}
+                                                        disabled={isFetchingPage}
                                                     />
                                                 </td>
 
@@ -413,18 +541,24 @@ export default function CasesDatatable({
                                                     >
                                                         {col.header === 'Order Id' ? (
                                                             <div>
-                                                                <Link to={`/designer/orderDeatails/${row.orderid}`} className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-bold" > {row.orderid} </Link>
+                                                                <div className="text-sm text-black" > {row.orderid} </div>
                                                             </div>
                                                         ) : col.header === 'Message' ? (
                                                             <div className="flex justify-center items-center relative">
                                                                 <div className="relative group">
-                                                                    <img
-                                                                        src="/img/messages.png"
-                                                                        alt="Message"
-                                                                        className="w-9 h-9 cursor-pointer transition-all duration-200 group-hover:scale-110 group-hover:rotate-12"
+                                                                    <div
+                                                                        className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] shadow-lg"
                                                                         onClick={() => openPopup(`${row.orderid}`)}
-                                                                    />
-                                                                    <span className=" absolute -top-2 -right-2  bg-gradient-to-br from-red-500 via-red-600 to-red-700  text-white text-[12px] font-semibold  rounded-full min-w-[18px] h-[18px]  flex items-center justify-center  shadow-[0_0_8px_rgba(255,0,0,0.6)]ring-2 ring-white/60 backdrop-blur-sm">
+                                                                    >
+                                                                        <svg
+                                                                            className="w-6 h-6 text-slate-200"
+                                                                            fill="currentColor"
+                                                                            viewBox="0 0 24 24"
+                                                                        >
+                                                                            <path d="M4 4h16v11H8l-4 4V4z" />
+                                                                        </svg>
+                                                                    </div>
+                                                                    <span className="absolute -top-2 -right-2 bg-gradient-to-br from-green-500 to-green-600 text-white text-xs font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-lg ring-2 ring-white/80">
                                                                         {row.totalMessages > 99 ? '99+' : row.totalMessages}
                                                                     </span>
                                                                 </div>
@@ -471,9 +605,7 @@ export default function CasesDatatable({
                                                             </div>
                                                         ) : (
                                                             row[col.accessor] ?? "-"
-                                                        )
-                                                        }
-
+                                                        )}
                                                     </td>
                                                 ))}
                                             </tr>
@@ -481,34 +613,34 @@ export default function CasesDatatable({
                                     ) : (
                                         <tr>
                                             <td
-                                                colSpan={columns.length}
+                                                colSpan={columns.length + 1}
                                                 className={`pl-40 p-5 text-center`}
                                             >
                                                 <FontAwesomeIcon icon={faFolderOpen} size="lg" className="me-2 text-blue-500" />
-                                                No records found.
+                                                {search ? "No matching records found." : "No records found."}
                                             </td>
                                         </tr>
                                     )}
                                 </tbody>
                             </table>
 
-                            {/* Pagination */}
-                            {paginatedData.length > 0 && (
+                            {casesData.length > 0 && perPage !== 'All' && totalPages > 1 && (
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "15px" }}>
                                     <div className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
-                                        Showing {paginatedData.length} of {filteredData.length} entries
+                                        Showing {recordsFetched} of {totalRecords} entries
+                                        (Page {currentPage} of {totalPages})
                                     </div>
 
                                     <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                                         <button
-                                            onClick={() => handlePageChange(currentPage - 1)}
-                                            disabled={currentPage === 1}
-                                            style={currentPage === 1 ? getDisabledButtonStyle() : getPaginationButtonStyle()}
+                                            onClick={handlePreviousPage}
+                                            disabled={!previousPage || isFetchingPage}
+                                            style={!previousPage ? getDisabledButtonStyle() : getPaginationButtonStyle()}
                                         >
                                             Prev
                                         </button>
 
-                                        {getPageNumbers(totalPages, currentPage).map((page, i) => (
+                                        {getPageNumbers().map((page, i) => (
                                             <button
                                                 key={i}
                                                 style={
@@ -516,17 +648,17 @@ export default function CasesDatatable({
                                                         ? getPaginationButtonStyle(true)
                                                         : getPaginationButtonStyle()
                                                 }
-                                                onClick={() => typeof page === "number" && handlePageChange(page)}
-                                                disabled={page === "..."}
+                                                onClick={() => typeof page === "number" && handlePageNumberClick(page)}
+                                                disabled={page === "..." || isFetchingPage}
                                             >
                                                 {page}
                                             </button>
                                         ))}
 
                                         <button
-                                            onClick={() => handlePageChange(currentPage + 1)}
-                                            disabled={currentPage === totalPages}
-                                            style={currentPage === totalPages ? getDisabledButtonStyle() : getPaginationButtonStyle()}
+                                            onClick={handleNextPage}
+                                            disabled={!nextPage || isFetchingPage}
+                                            style={!nextPage ? getDisabledButtonStyle() : getPaginationButtonStyle()}
                                         >
                                             Next
                                         </button>
@@ -534,7 +666,14 @@ export default function CasesDatatable({
                                 </div>
                             )}
 
-                            {/* ✅ Floating Toolbar */}
+                            {casesData.length > 0 && perPage === 'All' && (
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "15px" }}>
+                                    <div className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
+                                        Showing all {totalRecords} entries
+                                    </div>
+                                </div>
+                            )}
+
                             {selectedRows.length > 0 && (
                                 <div
                                     className={`fixed bottom-5 left-1/2 transform -translate-x-1/2 z-9999 flex items-center gap-4 px-6 py-3 rounded-xl shadow-lg ${theme === "dark"
@@ -567,7 +706,6 @@ export default function CasesDatatable({
                                     </button>
                                 </div>
                             )}
-
                         </>
                     )}
                 </section>

@@ -135,7 +135,7 @@ export default function Hd() {
                     <img
                         src="/img/logo.png"
                         alt="Logo"
-                        className="h-10 sm:h-13 w-auto rounded-lg hover:scale-105 transition-transform"
+                        className="h-10 sm:h-16 w-auto rounded-lg hover:scale-105 transition-transform"
                         onError={(e) => (e.target.src = "/img/placeholder-logo.png")}
                     />
                     {/* --- Center Welcome Text --- */}

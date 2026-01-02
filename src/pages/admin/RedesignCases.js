@@ -37,7 +37,7 @@ export default function RedesignCases() {
 
                 // data is already the parsed JSON response
                 if (data && data.status === 'success') {
-                    setData(data.new_cases);
+                    setData(data);
                 } else {
                     setData([]);
                     setError("No data found ! in the server")
@@ -82,7 +82,7 @@ export default function RedesignCases() {
                         </p>
                     </div>
                     {/* 📊 Client Table */}
-                    <CasesDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error}/>
+                    <CasesDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
                 </div>
             </main>
             <Foot />

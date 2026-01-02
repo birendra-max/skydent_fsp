@@ -30,7 +30,7 @@ export default function InitialFile() {
             setLoading(true);
             setError(null);
             const res = await fetchWithAuth("/get-initial-file", { method: "GET" });
-            if (res && res.status === "success") setData(res.initial);
+            if (res && res.status === "success") setData(res.data);
             else {
                 setData([]);
                 setError("No data found ! in the server")

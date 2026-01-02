@@ -13,25 +13,79 @@ import {
 export default function CommanDatatable({
     columns = [],
     data = [],
-    rowsPerPageOptions = [50, 100, 200, 500],
+    rowsPerPageOptions = [50, 100, 200, 500, 'All'],
     loading = false,
-    error = null
+    error = null,
+    onSelectionChange = () => { }
 }) {
     const { theme } = useContext(ThemeContext);
     const [status, setStatus] = useState("show");
     const [search, setSearch] = useState("");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(rowsPerPageOptions[0]);
     const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
     const [orderid, setOrderid] = useState(null);
-
-    // ✅ NEW STATES for multi-select & dropdown
     const [selectedRows, setSelectedRows] = useState([]);
     const [fileType, setFileType] = useState("finish");
+    const [isFetchingPage, setIsFetchingPage] = useState(false);
+    const [tableData, setTableData] = useState({ cases: [], pagination: {} });
+    const base_url = localStorage.getItem('skydent_admin_base_url');
 
-    // Filter & Sort
+    // ✅ Initialize table data from props (like CasesDatatable)
+    useEffect(() => {
+        if (data && data.cases) {
+            setTableData(data);
+        } else if (data && data.data && data.data.cases) {
+            setTableData(data.data);
+        } else if (Array.isArray(data)) {
+            setTableData({
+                cases: data,
+                pagination: {
+                    totalRecords: data.length,
+                    recordsFetched: data.length,
+                    perPage: rowsPerPageOptions[0],
+                    currentPage: 1,
+                    totalPages: 1,
+                    previousPage: null,
+                    nextPage: null
+                }
+            });
+        }
+    }, [data]);
+
+    useEffect(() => {
+        onSelectionChange(selectedRows);
+    }, [selectedRows]);
+
+    const casesData = tableData?.cases || [];
+    const paginationInfo = tableData?.pagination || {
+        totalRecords: 0,
+        recordsFetched: 0,
+        perPage: rowsPerPageOptions[0],
+        currentPage: 1,
+        totalPages: 1,
+        previousPage: null,
+        nextPage: null
+    };
+
+    const {
+        totalRecords,
+        recordsFetched,
+        perPage,
+        currentPage,
+        totalPages,
+        previousPage,
+        nextPage
+    } = paginationInfo;
+
+    useEffect(() => {
+        if (!loading && !isFetchingPage) {
+            setStatus("hide");
+        } else {
+            setStatus("show");
+        }
+    }, [loading, isFetchingPage]);
+
     const filteredData = useMemo(() => {
-        let filtered = data || [];
+        let filtered = casesData;
 
         if (search) {
             filtered = filtered.filter((row) =>
@@ -66,32 +120,172 @@ export default function CommanDatatable({
         }
 
         return filtered;
-    }, [search, data, columns, sortConfig]);
+    }, [search, casesData, columns, sortConfig]);
 
-    const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
+    // ✅ Server-side pagination fetch (like CasesDatatable)
+    const fetchPage = async (url) => {
+        if (!url || isFetchingPage) return;
 
-    const paginatedData = useMemo(() => {
-        const start = (currentPage - 1) * rowsPerPage;
-        return filteredData.slice(start, start + rowsPerPage);
-    }, [currentPage, filteredData, rowsPerPage]);
+        setIsFetchingPage(true);
+        setStatus("show");
 
-    // ✅ Control loader based on parent's loading prop
-    useEffect(() => {
-        if (!loading) {
+        try {
+            // Use base_url if provided URL is relative
+            let fullUrl = url;
+            if (base_url && !url.startsWith('http://') && !url.startsWith('https://')) {
+                fullUrl = `${base_url}${url}`;
+            }
+
+            const response = await fetch(fullUrl, {
+                headers: {
+                    'X-Tenant': 'skydent',
+                    'Authorization': `Bearer ${localStorage.getItem('skydent_admin_token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.status === 401) {
+                localStorage.removeItem('skydent_admin_token');
+                window.location.href = '/login';
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const newData = await response.json();
+
+            if (newData && newData.data) {
+                setTableData(newData.data);
+            } else if (newData && newData.cases) {
+                setTableData(newData);
+            }
+
+            setSelectedRows([]);
+        } catch (error) {
+            console.error("Failed to fetch:", error);
+            alert("Failed to load page");
+        } finally {
+            setIsFetchingPage(false);
             setStatus("hide");
-        } else {
-            setStatus("show");
         }
-    }, [loading]);
-    
-    const handleSearch = (e) => {
-        setSearch(e.target.value);
-        setCurrentPage(1);
     };
 
-    const handlePageChange = (page) => {
-        if (page < 1 || page > totalPages) return;
-        setCurrentPage(page);
+    const handlePreviousPage = () => {
+        if (previousPage) fetchPage(previousPage);
+    };
+
+    const handleNextPage = () => {
+        if (nextPage) fetchPage(nextPage);
+    };
+
+    const handlePageNumberClick = (pageNum) => {
+        if (pageNum === currentPage || pageNum < 1 || pageNum > totalPages) return;
+
+        // Determine base URL
+        let baseUrl;
+        if (nextPage || previousPage) {
+            baseUrl = nextPage || previousPage;
+        } else {
+            // Use base_url for constructing endpoint
+            const path = window.location.pathname;
+            let endpoint = 'get-all-cases';
+            if (path.includes('initial-file')) endpoint = 'get-initial-file';
+            else if (path.includes('stl-file')) endpoint = 'get-stl-file';
+            else if (path.includes('finished-file')) endpoint = 'get-finished-file';
+
+            // Use base_url if available
+            if (base_url) {
+                baseUrl = `${base_url}/${endpoint}`;
+            }
+        }
+
+        if (typeof baseUrl === 'string') {
+            try {
+                const urlObj = new URL(baseUrl, window.location.origin);
+
+                // Use correct page parameter
+                if (baseUrl.includes('page=')) {
+                    urlObj.searchParams.set('page', pageNum);
+                } else if (baseUrl.includes('page_orders=')) {
+                    urlObj.searchParams.set('page_orders', pageNum);
+                } else {
+                    // Default to page parameter
+                    urlObj.searchParams.set('page', pageNum);
+                }
+
+                if (perPage && perPage !== 'All') {
+                    urlObj.searchParams.set('per_page', perPage);
+                } else if (perPage === 'All') {
+                    urlObj.searchParams.set('per_page', totalRecords);
+                }
+
+                fetchPage(urlObj.toString());
+            } catch (error) {
+                console.error('Error constructing URL:', error);
+                // Fallback using base_url
+                const endpoint = window.location.pathname.includes('initial-file') ? 'get-initial-file' :
+                    window.location.pathname.includes('stl-file') ? 'get-stl-file' :
+                        window.location.pathname.includes('finished-file') ? 'get-finished-file' :
+                            'get-all-cases';
+
+                let url;
+                if (base_url) {
+                    url = `${base_url}/${endpoint}?page=${pageNum}&per_page=${perPage === 'All' ? totalRecords : perPage}`;
+                }
+                fetchPage(url);
+            }
+        }
+    };
+
+    const handleRowsPerPageChange = (e) => {
+        const value = e.target.value;
+
+        if (value === 'All') {
+            if (nextPage || previousPage) {
+                const baseUrl = nextPage || previousPage;
+                try {
+                    const urlObj = new URL(baseUrl, window.location.origin);
+                    urlObj.searchParams.delete('per_page');
+                    urlObj.searchParams.set('per_page', totalRecords);
+                    // Reset to first page
+                    if (urlObj.searchParams.has('page')) {
+                        urlObj.searchParams.set('page', 1);
+                    }
+                    if (urlObj.searchParams.has('page_orders')) {
+                        urlObj.searchParams.set('page_orders', 1);
+                    }
+                    fetchPage(urlObj.toString());
+                } catch (error) {
+                    console.error('Error constructing URL:', error);
+                }
+            }
+        } else {
+            const newPerPage = parseInt(value);
+            if (nextPage || previousPage) {
+                const baseUrl = nextPage || previousPage;
+                try {
+                    const urlObj = new URL(baseUrl, window.location.origin);
+                    urlObj.searchParams.delete('per_page');
+                    urlObj.searchParams.set('per_page', newPerPage);
+                    // Reset to first page
+                    if (urlObj.searchParams.has('page')) {
+                        urlObj.searchParams.set('page', 1);
+                    }
+                    if (urlObj.searchParams.has('page_orders')) {
+                        urlObj.searchParams.set('page_orders', 1);
+                    }
+                    fetchPage(urlObj.toString());
+                } catch (error) {
+                    console.error('Error constructing URL:', error);
+                }
+            }
+        }
+    };
+
+    const handleSearch = (e) => {
+        setSearch(e.target.value);
     };
 
     const handleSort = (key) => {
@@ -105,12 +299,7 @@ export default function CommanDatatable({
         setSortConfig({ key, direction });
     };
 
-    const handleRowsPerPageChange = (e) => {
-        setRowsPerPage(parseInt(e.target.value));
-        setCurrentPage(1);
-    };
-
-    const getPageNumbers = (totalPages, currentPage) => {
+    const getPageNumbers = () => {
         const maxButtons = 5;
         const pages = [];
 
@@ -127,6 +316,11 @@ export default function CommanDatatable({
 
         return pages;
     };
+
+    function openPopup(id) {
+        setOrderid(id);
+        document.getElementById('chatbox').style.display = "block";
+    }
 
     // Theme-based styling functions
     const getBackgroundClass = () => {
@@ -199,29 +393,6 @@ export default function CommanDatatable({
             : 'bg-gray-100 text-gray-600';
     };
 
-
-    const sendRedesign = async (orderId, status) => {
-        if (status.toLowerCase() === 'completed') {
-            try {
-                const data = await fetchWithAuth(`send-for-redesign/${orderId}`, {
-                    method: "GET",
-                });
-
-                // data is already the parsed JSON response
-                if (data.status === 'success') {
-                    alert(data.message);
-                } else {
-                    console.log(data.message);
-                }
-            } catch (error) {
-                console.error("Error fetching cases:", error);
-            }
-        } else {
-            alert(`${orderId} is not completed yet! You can't send it for redesign.`);
-        }
-    };
-
-    // ✅ Multi-select logic
     const toggleSelectRow = (id) =>
         setSelectedRows((prev) =>
             prev.includes(id)
@@ -229,16 +400,14 @@ export default function CommanDatatable({
                 : [...prev, id]
         );
 
-
     const toggleSelectAll = () => {
-        const visibleIds = paginatedData.map((r) => r.orderid);
-        if (paginatedData.every((r) => selectedRows.includes(r.orderid))) {
+        const visibleIds = casesData.map((r) => r.orderid);
+        if (casesData.every((r) => selectedRows.includes(r.orderid))) {
             setSelectedRows(selectedRows.filter((id) => !visibleIds.includes(id)));
         } else {
             setSelectedRows([...new Set([...selectedRows, ...visibleIds])]);
         }
     };
-
 
     const handleBulkDownload = () => {
         if (!selectedRows.length) return alert("Please select at least one record!");
@@ -247,16 +416,24 @@ export default function CommanDatatable({
         let downloadedCount = 0;
 
         selectedRows.forEach((id) => {
-            const row = data.find((r) => r.orderid === id);
+            const row = casesData.find((r) => r.orderid === id);
             if (!row) return;
 
-            let path = row.file_path;
+            let path = null;
 
-            // ✅ Check if valid path exists
+            if (fileType === "initial") path = row.file_path;
+            else if (fileType === "stl") path = row.stl_file_path;
+            else if (fileType === "finish") path = row.finish_file_path;
+
             if (path && path.trim() !== "") {
                 try {
-                    // ✅ Use your symbol-safe download logic
-                    const parts = path.split("/");
+                    // Use base_url for file paths if they are relative
+                    let fullPath = path;
+                    if (base_url && !path.startsWith('http://') && !path.startsWith('https://') && !path.startsWith('blob:')) {
+                        fullPath = `${base_url}${path}`;
+                    }
+
+                    const parts = fullPath.split("/");
                     const encodedFile = encodeURIComponent(parts.pop());
                     const encodedUrl = parts.join("/") + "/" + encodedFile;
 
@@ -277,6 +454,7 @@ export default function CommanDatatable({
                 missingFiles.push(id);
             }
         });
+
         if (missingFiles.length > 0) {
             alert(`File not available for these record(s): ${missingFiles.join(", ")}`);
         } else if (downloadedCount === 0) {
@@ -286,26 +464,34 @@ export default function CommanDatatable({
 
     const handleDelete = async (orderid, fname) => {
         try {
-            const resp = await fetchWithAuth('/delete-file', {
+            // Use fetchWithAuth with base_url support
+            let deleteUrl = '/delete-file';
+            if (base_url && !deleteUrl.startsWith('http')) {
+                deleteUrl = `${base_url}${deleteUrl}`;
+            }
+
+            const resp = await fetch(deleteUrl, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    'Authorization': `Bearer ${localStorage.getItem('skydent_admin_token')}`,
+                    'X-Tenant': 'skydent'
                 },
                 body: JSON.stringify({ orderid, filename: fname })
             });
 
-            return resp; // ✅ Return the response so caller can handle it
+            const result = await resp.json();
+            return result;
         } catch (err) {
             console.error("Error deleting file:", err);
             return { status: 'error', message: `Error deleting file for order ${orderid}` };
         }
     };
 
-
     const handleBulkDelete = async () => {
         if (!selectedRows.length) return alert("Please select at least one record!");
 
-        const selectedRowsData = data.filter(row => selectedRows.includes(row.orderid));
+        const selectedRowsData = casesData.filter(row => selectedRows.includes(row.orderid));
         const confirmMessage = `Are you sure you want to delete files for ${selectedRows.length} selected records?\n\nSelected Order IDs: ${selectedRows.join(", ")}`;
 
         if (!window.confirm(confirmMessage)) return;
@@ -339,13 +525,14 @@ export default function CommanDatatable({
         setSelectedRows([]);
     };
 
-
+    // ✅ Determine current perPage value for select
+    const currentPerPageValue = perPage === totalRecords || perPage;
 
     return (
         <>
             <Loder status={status} />
             <Chatbox orderid={orderid} />
-            {/* Table is only shown after loader is hidden */}
+
             {status === "hide" && (
                 <section
                     style={{ padding: "20px" }}
@@ -359,18 +546,17 @@ export default function CommanDatatable({
 
                     {Array.isArray(columns) && columns.length > 0 && (
                         <>
-                            {/* Search + Rows per page */}
                             <div
                                 style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}
                             >
                                 <div className="flex justify-around items-center gap-4">
-                                    {/* Rows per page dropdown */}
                                     <label className={theme === "dark" ? "text-white" : "text-gray-800"}>
                                         Rows per page:{" "}
                                         <select
-                                            value={rowsPerPage}
+                                            value={currentPerPageValue}
                                             onChange={handleRowsPerPageChange}
                                             className={`p-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-400 ${getSelectClass()}`}
+                                            disabled={isFetchingPage}
                                         >
                                             {rowsPerPageOptions.map((option) => (
                                                 <option key={option} value={option}>
@@ -381,15 +567,15 @@ export default function CommanDatatable({
                                     </label>
 
                                     <button
-                                        onClick={() => exportToExcel(data, "Reports")}
-                                        className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-800 text-white text-sm font-medium rounded-md border border-green-600 transition-all duration-200 shadow-sm hover:shadow-md">
+                                        onClick={() => exportToExcel(casesData, "Reports")}
+                                        className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-800 text-white text-sm font-medium rounded-md border border-green-600 transition-all duration-200 shadow-sm hover:shadow-md"
+                                        disabled={isFetchingPage}>
                                         <FontAwesomeIcon icon={faDownload} className="text-white text-base" />
                                         Download Report
                                     </button>
 
                                 </div>
 
-                                {/* Search bar */}
                                 <div>
                                     <input
                                         type="text"
@@ -397,17 +583,16 @@ export default function CommanDatatable({
                                         value={search}
                                         onChange={handleSearch}
                                         className={`p-2 w-64 rounded border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${getInputClass()}`}
+                                        disabled={isFetchingPage}
                                     />
                                 </div>
                             </div>
 
-
-                            {/* Table */}
                             <table id="datatable" style={{ width: "100%", borderCollapse: "collapse" }}>
                                 <thead>
                                     <tr className={getTableHeaderClass()}>
-                                        {/* ✅ Fixed checkbox column only */}
                                         <th style={{
+                                            border: "1px solid #ddd",
                                             width: "10vh",
                                             minWidth: "10vh",
                                             maxWidth: "10vh",
@@ -416,9 +601,10 @@ export default function CommanDatatable({
                                         }} className="border border-gray-300">
                                             <input
                                                 type="checkbox"
-                                                checked={paginatedData.length > 0 && paginatedData.every((r) => selectedRows.includes(r.orderid))}
+                                                checked={casesData.length > 0 && casesData.every((r) => selectedRows.includes(r.orderid))}
                                                 onChange={toggleSelectAll}
                                                 style={{ transform: "scale(1.3)", cursor: "pointer" }}
+                                                disabled={isFetchingPage}
                                             />
                                         </th>
 
@@ -440,11 +626,11 @@ export default function CommanDatatable({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {paginatedData.length > 0 ? (
-                                        paginatedData.map((row, idx) => (
+                                    {filteredData.length > 0 ? (
+                                        filteredData.map((row, idx) => (
                                             <tr key={idx} className={getTableRowClass(idx)}>
-                                                {/* ✅ Fixed checkbox cell only */}
                                                 <td style={{
+                                                    border: "1px solid #ddd",
                                                     textAlign: "center",
                                                     padding: "8px",
                                                     width: "40px",
@@ -456,6 +642,7 @@ export default function CommanDatatable({
                                                         checked={selectedRows.includes(row.orderid)}
                                                         onChange={() => toggleSelectRow(row.orderid)}
                                                         style={{ transform: "scale(1.3)", cursor: "pointer" }}
+                                                        disabled={isFetchingPage}
                                                     />
                                                 </td>
 
@@ -473,7 +660,33 @@ export default function CommanDatatable({
                                                             textAlign: "center",
                                                         }}
                                                     >
-                                                        {col.header === 'Status' ? (
+                                                        {col.header === 'Order Id' ? (
+                                                            <div>
+                                                                <div className="text-sm text-black" >
+                                                                    {row.orderid}
+                                                                </div>
+                                                            </div>
+                                                        ) : col.header === 'Message' ? (
+                                                            <div className="flex justify-center items-center relative">
+                                                                <div className="relative group">
+                                                                    <div
+                                                                        className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] shadow-lg"
+                                                                        onClick={() => openPopup(`${row.orderid}`)}
+                                                                    >
+                                                                        <svg
+                                                                            className="w-6 h-6 text-slate-200"
+                                                                            fill="currentColor"
+                                                                            viewBox="0 0 24 24"
+                                                                        >
+                                                                            <path d="M4 4h16v11H8l-4 4V4z" />
+                                                                        </svg>
+                                                                    </div>
+                                                                    <span className="absolute -top-2 -right-2 bg-gradient-to-br from-green-500 to-green-600 text-white text-xs font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-lg ring-2 ring-white/80">
+                                                                        {row.totalMessages > 99 ? '99+' : row.totalMessages || 0}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ) : col.header === 'Status' ? (
                                                             <div className="flex justify-center items-center">
                                                                 {(() => {
                                                                     let statusColor = '';
@@ -506,7 +719,7 @@ export default function CommanDatatable({
 
                                                                     return (
                                                                         <span
-                                                                            className={`px-3 py-1 text-xs font-bold rounded-full shadow-md ${statusColor} ${textColor}`}
+                                                                            className={`px-2 py-1 text-[12px] font-bold text-nowrap rounded-full shadow-md ${statusColor} ${textColor}`}
                                                                         >
                                                                             {row.status ? row.status : 'Unknown'}
                                                                         </span>
@@ -514,7 +727,7 @@ export default function CommanDatatable({
                                                                 })()}
                                                             </div>
                                                         ) : col.header === 'File' ? (
-                                                            Number(row.file_deleted) === 0 ? (
+                                                            Number(row.file_deleted) === 0 && row.file_path !== null ? (
                                                                 <span className="px-2 py-1 bg-green-100 text-green-700 text-sm font-bold rounded-full">
                                                                     Available
                                                                 </span>
@@ -525,9 +738,7 @@ export default function CommanDatatable({
                                                             )
                                                         ) : (
                                                             row[col.accessor] ?? "-"
-                                                        )
-                                                        }
-
+                                                        )}
                                                     </td>
                                                 ))}
                                             </tr>
@@ -535,34 +746,34 @@ export default function CommanDatatable({
                                     ) : (
                                         <tr>
                                             <td
-                                                colSpan={columns.length}
+                                                colSpan={columns.length + 1}
                                                 className={`pl-40 p-5 text-center`}
                                             >
                                                 <FontAwesomeIcon icon={faFolderOpen} size="lg" className="me-2 text-blue-500" />
-                                                No records found.
+                                                {search ? "No matching records found." : "No records found."}
                                             </td>
                                         </tr>
                                     )}
                                 </tbody>
                             </table>
 
-                            {/* Pagination */}
-                            {paginatedData.length > 0 && (
+                            {casesData.length > 0 && perPage !== 'All' && totalPages > 1 && (
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "15px" }}>
                                     <div className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
-                                        Showing {paginatedData.length} of {filteredData.length} entries
+                                        Showing {recordsFetched} of {totalRecords} entries
+                                        (Page {currentPage} of {totalPages})
                                     </div>
 
                                     <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                                         <button
-                                            onClick={() => handlePageChange(currentPage - 1)}
-                                            disabled={currentPage === 1}
-                                            style={currentPage === 1 ? getDisabledButtonStyle() : getPaginationButtonStyle()}
+                                            onClick={handlePreviousPage}
+                                            disabled={!previousPage || isFetchingPage}
+                                            style={!previousPage ? getDisabledButtonStyle() : getPaginationButtonStyle()}
                                         >
                                             Prev
                                         </button>
 
-                                        {getPageNumbers(totalPages, currentPage).map((page, i) => (
+                                        {getPageNumbers().map((page, i) => (
                                             <button
                                                 key={i}
                                                 style={
@@ -570,17 +781,17 @@ export default function CommanDatatable({
                                                         ? getPaginationButtonStyle(true)
                                                         : getPaginationButtonStyle()
                                                 }
-                                                onClick={() => typeof page === "number" && handlePageChange(page)}
-                                                disabled={page === "..."}
+                                                onClick={() => typeof page === "number" && handlePageNumberClick(page)}
+                                                disabled={page === "..." || isFetchingPage}
                                             >
                                                 {page}
                                             </button>
                                         ))}
 
                                         <button
-                                            onClick={() => handlePageChange(currentPage + 1)}
-                                            disabled={currentPage === totalPages}
-                                            style={currentPage === totalPages ? getDisabledButtonStyle() : getPaginationButtonStyle()}
+                                            onClick={handleNextPage}
+                                            disabled={!nextPage || isFetchingPage}
+                                            style={!nextPage ? getDisabledButtonStyle() : getPaginationButtonStyle()}
                                         >
                                             Next
                                         </button>
@@ -588,7 +799,14 @@ export default function CommanDatatable({
                                 </div>
                             )}
 
-                            {/* ✅ Floating Toolbar */}
+                            {casesData.length > 0 && perPage === 'All' && (
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "15px" }}>
+                                    <div className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
+                                        Showing all {totalRecords} entries
+                                    </div>
+                                </div>
+                            )}
+
                             {selectedRows.length > 0 && (
                                 <div
                                     className={`fixed bottom-5 left-1/2 transform -translate-x-1/2 z-9999 flex items-center gap-4 px-6 py-3 rounded-xl shadow-lg ${theme === "dark"
@@ -599,6 +817,19 @@ export default function CommanDatatable({
                                     <span className="font-semibold">
                                         ✅ {selectedRows.length} selected
                                     </span>
+
+                                    <select
+                                        value={fileType}
+                                        onChange={(e) => setFileType(e.target.value)}
+                                        className={`p-2 rounded-md border focus:outline-none focus:ring-2 focus:ring-blue-400 ${theme === "dark"
+                                            ? "bg-gray-700 border-gray-600 text-white"
+                                            : "bg-white border-gray-300 text-gray-800"
+                                            }`}
+                                    >
+                                        <option value="initial">Initial Files</option>
+                                        <option value="stl">STL Files</option>
+                                        <option value="finish">Finished Files</option>
+                                    </select>
 
                                     <button
                                         onClick={handleBulkDownload}
@@ -615,7 +846,6 @@ export default function CommanDatatable({
                                     </button>
                                 </div>
                             )}
-
                         </>
                     )}
                 </section>

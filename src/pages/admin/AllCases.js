@@ -37,7 +37,8 @@ export default function AllCases() {
 
                 // data is already the parsed JSON response
                 if (data && data.status === 'success') {
-                    setData(data.all_cases);
+                    console.log(data);
+                    setData(data);
                 } else {
                     setData([]);
                     setError("No data found ! in the server")

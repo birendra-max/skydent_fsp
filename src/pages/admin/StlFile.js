@@ -15,7 +15,6 @@ export default function StlFile() {
     const [error, setError] = useState(null);
 
     const columns = [
-        { header: "Row Id", accessor: "id" },
         { header: "Order Id", accessor: "orderid" },
         { header: "File Name", accessor: "fname" },
         { header: "Upload By", accessor: "uploaded_by" },
@@ -28,7 +27,8 @@ export default function StlFile() {
             setLoading(true);
             setError(null);
             const res = await fetchWithAuth("/get-stl-file", { method: "GET" });
-            if (res && res.status === "success") setData(res.stl);
+            console.log(res);
+            if (res && res.status === "success") setData(res.data);
             else {
                 setData([]);
                 setError("No data found ! in the server")

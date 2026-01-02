@@ -15,7 +15,6 @@ export default function FinishedFile() {
     const [error, setError] = useState(null);
 
     const columns = [
-        { header: "Row Id", accessor: "id" },
         { header: "Order Id", accessor: "orderid" },
         { header: "File Name", accessor: "fname" },
         { header: "Upload By", accessor: "uploaded_by" },
@@ -29,7 +28,8 @@ export default function FinishedFile() {
             setError(null); setLoading(true);
             setError(null);
             const res = await fetchWithAuth("/get-finished-file", { method: "GET" });
-            if (res && res.status === "success") setData(res.finished);
+            console.log(res);
+            if (res && res.status === "success") setData(res.data);
             else {
                 setData([]);
                 setError("No data found ! in the server")
@@ -71,7 +71,7 @@ export default function FinishedFile() {
                                 icon={faFolderOpen}
                                 className="text-blue-500"
                             />
-                            STL Files
+                            Finished Files
                         </h1>
                         <p
                             className={`mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-500"
