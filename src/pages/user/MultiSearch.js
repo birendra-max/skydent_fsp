@@ -87,7 +87,22 @@ export default function MultiSearch() {
         { value: '7', label: 'Canceled', count: 0 },
     ];
 
-    // Filter data based on all criteria
+    // Parse date string to Date object
+    const parseOrderDateOnly = (dateStr) => {
+        if (!dateStr) return null;
+        const [datePart] = dateStr.split(' ');
+        const [day, monthStr, year] = datePart.split('-');
+        
+        const months = {
+            Jan: 0, Feb: 1, Mar: 2, Apr: 3,
+            May: 4, Jun: 5, Jul: 6, Aug: 7,
+            Sep: 8, Oct: 9, Nov: 10, Dec: 11
+        };
+        
+        return new Date(Number(year), months[monthStr], Number(day));
+    };
+
+    // MAIN FIX: Apply all filters completely independently
     const applyFilters = () => {
         if (!allData.length) {
             setFilteredData([]);
@@ -96,7 +111,7 @@ export default function MultiSearch() {
 
         let filtered = [...allData];
 
-        // Apply status filter
+        // STATUS FILTER - works independently
         if (selectedFilter !== '1') {
             const statusMap = {
                 '2': 'New',
@@ -110,47 +125,31 @@ export default function MultiSearch() {
             filtered = filtered.filter(item => item.status === targetStatus);
         }
 
-        // Apply order ID range filter
-        if (orderIdFrom) {
-            filtered = filtered.filter(item => {
-                const orderId = parseInt(item.orderid);
-                const fromId = parseInt(orderIdFrom);
-                return orderId >= fromId;
-            });
+        // ORDER ID RANGE FILTER - works independently
+        // Filter by "Order ID From" if provided
+        if (orderIdFrom && orderIdFrom.trim() !== '') {
+            const fromId = parseInt(orderIdFrom);
+            if (!isNaN(fromId)) {
+                filtered = filtered.filter(item => {
+                    const orderId = parseInt(item.orderid);
+                    return !isNaN(orderId) && orderId >= fromId;
+                });
+            }
         }
 
-        if (orderIdTo) {
-            filtered = filtered.filter(item => {
-                const orderId = parseInt(item.orderid);
-                const toId = parseInt(orderIdTo);
-                return orderId <= toId;
-            });
+        // Filter by "Order ID To" if provided
+        if (orderIdTo && orderIdTo.trim() !== '') {
+            const toId = parseInt(orderIdTo);
+            if (!isNaN(toId)) {
+                filtered = filtered.filter(item => {
+                    const orderId = parseInt(item.orderid);
+                    return !isNaN(orderId) && orderId <= toId;
+                });
+            }
         }
 
-        const parseOrderDateOnly = (dateStr) => {
-            if (!dateStr) return null;
-
-            // "14-Mar-2023 07:32:31am"
-            const [datePart] = dateStr.split(' '); // ignore time
-
-            const [day, monthStr, year] = datePart.split('-');
-
-            const months = {
-                Jan: 0, Feb: 1, Mar: 2, Apr: 3,
-                May: 4, Jun: 5, Jul: 6, Aug: 7,
-                Sep: 8, Oct: 9, Nov: 10, Dec: 11
-            };
-
-            return new Date(
-                Number(year),
-                months[monthStr],
-                Number(day)
-            ); // time = 00:00:00
-        };
-
-
-        // Start Date filter
-        if (startDate) {
+        // DATE RANGE FILTER - works independently
+        if (startDate && startDate.trim() !== '') {
             const start = new Date(startDate);
             start.setHours(0, 0, 0, 0);
 
@@ -160,17 +159,15 @@ export default function MultiSearch() {
             });
         }
 
-        // End Date filter
-        if (endDate) {
+        if (endDate && endDate.trim() !== '') {
             const end = new Date(endDate);
-            end.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999); // Include entire end day
 
             filtered = filtered.filter(item => {
                 const itemDate = parseOrderDateOnly(item.order_date);
                 return itemDate && itemDate <= end;
             });
         }
-
 
         setFilteredData(filtered);
     };
@@ -180,24 +177,24 @@ export default function MultiSearch() {
         applyFilters();
     };
 
-    // Handle filter button click
+    // Handle filter button click - works independently
     const handleFilterClick = (filterValue) => {
         setSelectedFilter(filterValue);
-        // We'll apply all filters in useEffect
+        // Filter will be applied automatically by useEffect
     };
 
-    // Handle reset filters
+    // Handle reset filters - completely clear everything
     const handleResetFilters = () => {
         setStartDate('');
         setEndDate('');
         setOrderIdFrom('');
         setOrderIdTo('');
         setSelectedFilter('1');
-        // Reset will show all data
+        // Show all data immediately
         setFilteredData(allData);
     };
 
-    // Handle order ID input validation
+    // Handle order ID input
     const handleOrderIdFromChange = (e) => {
         const value = e.target.value.replace(/[^0-9]/g, '');
         setOrderIdFrom(value);
@@ -208,7 +205,7 @@ export default function MultiSearch() {
         setOrderIdTo(value);
     };
 
-    // Update filter counts based on allData
+    // Update filter counts
     const updatedFilterButtons = useMemo(() => {
         if (!allData.length) return filterButtons;
 
@@ -234,43 +231,10 @@ export default function MultiSearch() {
         });
     }, [allData]);
 
-    const getHeaderClass = () => {
-        return theme === 'light'
-            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100 text-gray-800'
-            : 'bg-gradient-to-r from-gray-800 to-blue-900/20 border-gray-700 text-white';
-    };
-
-    const getStatusBadgeClass = (status) => {
-        const baseClasses = "px-2 py-1 rounded-full text-xs font-medium";
-
-        const statusConfig = {
-            'New': theme === 'light'
-                ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                : 'bg-blue-900/30 text-blue-300 border border-blue-700',
-            'In Progress': theme === 'light'
-                ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                : 'bg-yellow-900/30 text-yellow-300 border border-yellow-700',
-            'QC Required': theme === 'light'
-                ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                : 'bg-purple-900/30 text-purple-300 border border-purple-700',
-            'On Hold': theme === 'light'
-                ? 'bg-orange-100 text-orange-800 border border-orange-200'
-                : 'bg-orange-900/30 text-orange-300 border border-orange-700',
-            'Designed Completed': theme === 'light'
-                ? 'bg-green-100 text-green-800 border border-green-200'
-                : 'bg-green-900/30 text-green-300 border border-green-700',
-            'Canceled': theme === 'light'
-                ? 'bg-red-100 text-red-800 border border-red-200'
-                : 'bg-red-900/30 text-red-300 border border-red-700',
-        };
-
-        return `${baseClasses} ${statusConfig[status] || statusConfig['New']}`;
-    };
-
-    // Apply filters whenever any filter criteria changes
+    // Apply filters whenever ANY filter changes
     useEffect(() => {
         applyFilters();
-    }, [selectedFilter, allData]); // Removed other dependencies to prevent excessive filtering
+    }, [selectedFilter, startDate, endDate, orderIdFrom, orderIdTo, allData]);
 
     // Initial data fetch
     useEffect(() => {
@@ -283,7 +247,7 @@ export default function MultiSearch() {
 
                 if (data && data.status === 'success') {
                     setAllData(data.new_cases);
-                    setFilteredData(data.new_cases); // Initially show all data
+                    setFilteredData(data.new_cases);
                 } else {
                     setAllData([]);
                     setFilteredData([]);
@@ -300,6 +264,17 @@ export default function MultiSearch() {
         fetchAllCases();
     }, []);
 
+    // Get active filter count
+    const getActiveFilterCount = () => {
+        let count = 0;
+        if (selectedFilter !== '1') count++;
+        if (startDate) count++;
+        if (endDate) count++;
+        if (orderIdFrom) count++;
+        if (orderIdTo) count++;
+        return count;
+    };
+
     return (
         <>
             <Hd />
@@ -307,8 +282,11 @@ export default function MultiSearch() {
                 <div className="px-2 sm:px-6 lg:px-2">
                     <div className="w-full max-w-full">
 
-                        {/* Enhanced Header Section */}
-                        <header className={`rounded-xl border shadow-sm my-6 px-6 py-4 ${getHeaderClass()}`}>
+                        {/* Header Section */}
+                        <header className={`rounded-xl border shadow-sm my-6 px-6 py-4 ${theme === 'light' 
+                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100 text-gray-800'
+                            : 'bg-gradient-to-r from-gray-800 to-blue-900/20 border-gray-700 text-white'
+                        }`}>
                             <div className="container mx-auto">
                                 <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
                                     <div className="text-center sm:text-left">
@@ -343,15 +321,22 @@ export default function MultiSearch() {
                         </header>
 
                         {/* Main Card Container */}
-                        <div className={`rounded-xl ${themeClasses.card}  p-6 mb-8`}>
+                        <div className={`rounded-xl ${themeClasses.card} mb-8`}>
 
                             {/* Search Section */}
                             <div className="mb-8">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className={`text-xl font-semibold ${themeClasses.text.primary} flex items-center`}>
-                                        <FontAwesomeIcon icon={faSearch} className="w-5 h-5 mr-3 text-blue-500" />
-                                        Search & Filter
-                                    </h2>
+                                <div className="flex items-center justify-between mb-6 p-4">
+                                    <div className="flex items-center">
+                                        <h2 className={`text-xl font-semibold ${themeClasses.text.primary} flex items-center mr-4`}>
+                                            <FontAwesomeIcon icon={faSearch} className="w-5 h-5 mr-3 text-blue-500" />
+                                            Search & Filter
+                                        </h2>
+                                        {getActiveFilterCount() > 0 && (
+                                            <span className="px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
+                                                {getActiveFilterCount()} active filter(s)
+                                            </span>
+                                        )}
+                                    </div>
                                     <button
                                         onClick={handleResetFilters}
                                         className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${theme === 'light'
@@ -360,7 +345,7 @@ export default function MultiSearch() {
                                             }`}
                                     >
                                         <FontAwesomeIcon icon={faSync} className="w-4 h-4" />
-                                        <span>Reset</span>
+                                        <span>Reset All</span>
                                     </button>
                                 </div>
 
@@ -430,7 +415,7 @@ export default function MultiSearch() {
                                             />
                                         </div>
 
-                                        {/* Button */}
+                                        {/* Apply Button */}
                                         <div className="min-w-[180px] pb-1">
                                             <button
                                                 onClick={handleSearchClick}
@@ -455,22 +440,22 @@ export default function MultiSearch() {
                                     {/* Tips */}
                                     <div className="mt-3 text-left">
                                         <p className={`text-xs ${themeClasses.text.muted}`}>
-                                            Tip: Use filters to search within your {allData.length} orders.
+                                            Tip: All filters work independently. Use date OR order ID OR both. Status filter works with any combination.
                                         </p>
                                     </div>
                                 </div>
 
                             </div>
 
-                            {/* Enhanced Filter Section */}
-                            <div className="mb-8">
+                            {/* Quick Filter Section */}
+                            <div className="mb-8 p-4">
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className={`text-lg font-semibold ${themeClasses.text.primary} flex items-center`}>
                                         <FontAwesomeIcon icon={faFilter} className="w-4 h-4 mr-2 text-blue-500" />
-                                        Quick Filters
+                                        Quick Status Filters
                                     </h3>
                                     <span className={`text-sm ${themeClasses.text.muted}`}>
-                                        {filteredData.length} of {allData.length} orders shown
+                                        Showing {filteredData.length} of {allData.length} orders
                                     </span>
                                 </div>
 

@@ -29,6 +29,7 @@ export default function Reports() {
     const [allData, setAllData] = useState([]); // Store all data from backend
     const [filteredData, setFilteredData] = useState([]); // Store filtered data for display
     const [activeFilterType, setActiveFilterType] = useState('time'); // 'time' or 'custom'
+    const [customSearchActive, setCustomSearchActive] = useState(false); // Track if custom search is active
 
     // Professional theme-based classes
     const getThemeClasses = () => {
@@ -91,13 +92,12 @@ export default function Reports() {
         { value: '4', label: 'All Time', icon: faFilter },
     ];
 
-    // Universal date parser that works across all browsers
+    // Universal date parser
     const parseOrderDateOnly = (dateStr) => {
         if (!dateStr) return null;
 
         try {
-            // Format: "14-Mar-2023 07:32:31am" or similar
-            const [datePart] = dateStr.split(' '); // ignore time
+            const [datePart] = dateStr.split(' ');
             
             const [day, monthStr, year] = datePart.split('-');
 
@@ -109,20 +109,14 @@ export default function Reports() {
             
             const monthIndex = months[monthStr];
             if (monthIndex === undefined) {
-                // Try parsing as ISO format or other formats
                 const parsedDate = new Date(dateStr);
-                if (isNaN(parsedDate.getTime())) {
-                    return null;
-                }
-                // Reset time to midnight for date-only comparison
+                if (isNaN(parsedDate.getTime())) return null;
                 parsedDate.setHours(0, 0, 0, 0);
                 return parsedDate;
             }
             
-            // Create date using Date.UTC to avoid timezone issues
             const date = new Date(Date.UTC(Number(year), monthIndex, Number(day)));
             date.setHours(0, 0, 0, 0);
-            
             return date;
         } catch (error) {
             console.error("Error parsing date:", dateStr, error);
@@ -130,7 +124,7 @@ export default function Reports() {
         }
     };
 
-    // Helper function to get start of day (midnight) for a date
+    // Helper function to get start of day
     const getStartOfDay = (date) => {
         const newDate = new Date(date);
         newDate.setHours(0, 0, 0, 0);
@@ -147,7 +141,6 @@ export default function Reports() {
         let filtered = [...allData];
         const today = getStartOfDay(new Date());
 
-        // ===== Time period filter =====
         switch (selectedFilter) {
             case '1': { // Today
                 filtered = filtered.filter(item => {
@@ -160,7 +153,6 @@ export default function Reports() {
             case '2': { // Last 7 Days
                 const weekAgo = new Date(today);
                 weekAgo.setDate(weekAgo.getDate() - 7);
-                weekAgo.setHours(0, 0, 0, 0);
 
                 filtered = filtered.filter(item => {
                     const itemDate = parseOrderDateOnly(item.order_date);
@@ -172,7 +164,6 @@ export default function Reports() {
             case '3': { // Last 30 Days
                 const monthAgo = new Date(today);
                 monthAgo.setDate(monthAgo.getDate() - 30);
-                monthAgo.setHours(0, 0, 0, 0);
 
                 filtered = filtered.filter(item => {
                     const itemDate = parseOrderDateOnly(item.order_date);
@@ -183,14 +174,15 @@ export default function Reports() {
 
             case '4': // All Time
             default:
-                // No filtering needed for All Time
+                // No filtering needed
                 break;
         }
 
         setFilteredData(filtered);
+        setCustomSearchActive(false);
     };
 
-    // Apply CUSTOM filters (Order ID range OR Date range)
+    // Apply CUSTOM filters (Order ID range OR Date range) - COMPLETELY INDEPENDENT
     const applyCustomFilters = () => {
         if (!allData.length) {
             setFilteredData([]);
@@ -199,43 +191,76 @@ export default function Reports() {
 
         let filtered = [...allData];
 
-        // ===== Order ID filter =====
-        if (orderIdFrom) {
-            const fromId = parseInt(orderIdFrom);
-            filtered = filtered.filter(item => {
-                const itemId = parseInt(item.orderid);
-                return !isNaN(itemId) && itemId >= fromId;
-            });
+        // Check if ANY custom filter is active
+        const hasOrderIdFilter = orderIdFrom || orderIdTo;
+        const hasDateFilter = startDate || endDate;
+        
+        // If no custom filters, show all data
+        if (!hasOrderIdFilter && !hasDateFilter) {
+            setFilteredData(allData);
+            setCustomSearchActive(false);
+            return;
         }
 
-        if (orderIdTo) {
-            const toId = parseInt(orderIdTo);
-            filtered = filtered.filter(item => {
-                const itemId = parseInt(item.orderid);
-                return !isNaN(itemId) && itemId <= toId;
-            });
+        // Apply Order ID filters (if any)
+        if (hasOrderIdFilter) {
+            if (orderIdFrom) {
+                const fromId = parseInt(orderIdFrom);
+                if (!isNaN(fromId)) {
+                    filtered = filtered.filter(item => {
+                        const itemId = parseInt(item.orderid);
+                        return !isNaN(itemId) && itemId >= fromId;
+                    });
+                }
+            }
+
+            if (orderIdTo) {
+                const toId = parseInt(orderIdTo);
+                if (!isNaN(toId)) {
+                    filtered = filtered.filter(item => {
+                        const itemId = parseInt(item.orderid);
+                        return !isNaN(itemId) && itemId <= toId;
+                    });
+                }
+            }
         }
 
-        // ===== Custom Date Range (DATE ONLY) =====
-        if (startDate) {
-            const start = getStartOfDay(new Date(startDate));
+        // Apply Date filters (if any) - OR logic with Order ID
+        if (hasDateFilter) {
+            let dateFiltered = [...allData]; // Start fresh from all data
             
-            filtered = filtered.filter(item => {
-                const itemDate = parseOrderDateOnly(item.order_date);
-                return itemDate && itemDate >= start;
-            });
-        }
+            if (startDate) {
+                const start = getStartOfDay(new Date(startDate));
+                dateFiltered = dateFiltered.filter(item => {
+                    const itemDate = parseOrderDateOnly(item.order_date);
+                    return itemDate && itemDate >= start;
+                });
+            }
 
-        if (endDate) {
-            const end = getStartOfDay(new Date(endDate));
-            
-            filtered = filtered.filter(item => {
-                const itemDate = parseOrderDateOnly(item.order_date);
-                return itemDate && itemDate <= end;
-            });
+            if (endDate) {
+                const end = getStartOfDay(new Date(endDate));
+                dateFiltered = dateFiltered.filter(item => {
+                    const itemDate = parseOrderDateOnly(item.order_date);
+                    return itemDate && itemDate <= end;
+                });
+            }
+
+            // If BOTH Order ID and Date filters are provided, use AND logic
+            // If only one type is provided, use that filter alone
+            if (hasOrderIdFilter && hasDateFilter) {
+                // AND logic: items must match BOTH filters
+                const orderIdFilteredItems = new Set(filtered.map(item => item.orderid));
+                filtered = dateFiltered.filter(item => orderIdFilteredItems.has(item.orderid));
+            } else if (!hasOrderIdFilter && hasDateFilter) {
+                // Only date filter
+                filtered = dateFiltered;
+            }
+            // If only orderId filter, filtered is already set
         }
 
         setFilteredData(filtered);
+        setCustomSearchActive(true);
+        setActiveFilterType('custom');
     };
 
     // Handle search button click for custom filters
@@ -244,23 +269,29 @@ export default function Reports() {
         applyCustomFilters();
     };
 
-    // Handle filter button click for time filters
+    // Handle filter button click for time filters - RESETS custom search
     const handleFilterClick = (filterValue) => {
         setSelectedFilter(filterValue);
         setActiveFilterType('time');
+        setCustomSearchActive(false);
+        // Reset custom search inputs
+        setOrderIdFrom('');
+        setOrderIdTo('');
+        setStartDate('');
+        setEndDate('');
+        
+        // Apply time filter immediately
+        applyTimeFilters();
     };
 
     // Handle download report
     const handleDownloadReport = () => {
         if (filteredData.length > 0) {
             const fileName = `report_${new Date().toISOString().split('T')[0]}.csv`;
-
-            // Simple CSV export
             const headers = columns.map(col => col.header).join(',');
             const csvData = filteredData.map(row =>
                 columns.map(col => {
                     const value = row[col.accessor] || '';
-                    // Escape quotes and wrap in quotes
                     return `"${String(value).replace(/"/g, '""')}"`;
                 }).join(',')
             ).join('\n');
@@ -280,7 +311,7 @@ export default function Reports() {
         }
     };
 
-    // Handle reset filters
+    // Handle reset filters - go back to default (All Time)
     const handleResetFilters = () => {
         setStartDate('');
         setEndDate('');
@@ -288,18 +319,32 @@ export default function Reports() {
         setOrderIdTo('');
         setSelectedFilter('4');
         setActiveFilterType('time');
+        setCustomSearchActive(false);
         setFilteredData(allData);
     };
 
-    // Handle order ID input validation
+    // Handle order ID input - mark as custom search when typing
     const handleOrderIdFromChange = (e) => {
         const value = e.target.value.replace(/[^0-9]/g, '');
         setOrderIdFrom(value);
+        setCustomSearchActive(true);
     };
 
     const handleOrderIdToChange = (e) => {
         const value = e.target.value.replace(/[^0-9]/g, '');
         setOrderIdTo(value);
+        setCustomSearchActive(true);
+    };
+
+    // Handle date changes - mark as custom search
+    const handleStartDateChange = (e) => {
+        setStartDate(e.target.value);
+        setCustomSearchActive(true);
+    };
+
+    const handleEndDateChange = (e) => {
+        setEndDate(e.target.value);
+        setCustomSearchActive(true);
     };
 
     const getHeaderClass = () => {
@@ -308,23 +353,23 @@ export default function Reports() {
             : 'bg-gradient-to-r from-gray-800 to-blue-900/20 border-gray-700 text-white';
     };
 
-    // Apply filters whenever selectedFilter changes (for time filters)
+    // Apply time filters when selectedFilter changes (only if custom search is NOT active)
     useEffect(() => {
-        if (activeFilterType === 'time') {
+        if (activeFilterType === 'time' && !customSearchActive) {
             applyTimeFilters();
         }
     }, [selectedFilter]);
 
-    // Apply filters when custom filter inputs change
+    // Apply custom filters when custom search inputs change (debounced)
     useEffect(() => {
-        if (activeFilterType === 'custom') {
+        if (customSearchActive) {
             const timeoutId = setTimeout(() => {
                 applyCustomFilters();
             }, 300);
 
             return () => clearTimeout(timeoutId);
         }
-    }, [startDate, endDate, orderIdFrom, orderIdTo, activeFilterType]);
+    }, [orderIdFrom, orderIdTo, startDate, endDate, customSearchActive]);
 
     // Initial data fetch
     useEffect(() => {
@@ -353,6 +398,16 @@ export default function Reports() {
 
         fetchAllCases();
     }, []);
+
+    // Determine current active filter mode
+    const getActiveFilterInfo = () => {
+        if (customSearchActive) {
+            return "Custom Search Active";
+        } else {
+            const activeFilter = filterButtons.find(f => f.value === selectedFilter);
+            return activeFilter ? `${activeFilter.label} Filter Active` : "No Filter Active";
+        }
+    };
 
     return (
         <>
@@ -397,15 +452,22 @@ export default function Reports() {
                         </header>
 
                         {/* Main Card Container */}
-                        <div className={`rounded-xl ${themeClasses.card} p-6 mb-8`}>
+                        <div className={`rounded-xl ${themeClasses.card} mb-8`}>
 
                             {/* Search Section */}
                             <div className="mb-8">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className={`text-xl font-semibold ${themeClasses.text.primary} flex items-center`}>
-                                        <FontAwesomeIcon icon={faSearch} className="w-5 h-5 mr-3 text-blue-500" />
-                                        Report Criteria
-                                    </h2>
+                                <div className="flex items-center justify-between mb-6 p-4">
+                                    <div className="flex items-center">
+                                        <h2 className={`text-xl font-semibold ${themeClasses.text.primary} flex items-center mr-4`}>
+                                            <FontAwesomeIcon icon={faSearch} className="w-5 h-5 mr-3 text-blue-500" />
+                                            Custom Search
+                                        </h2>
+                                        {customSearchActive && (
+                                            <span className="px-2 py-1 text-xs bg-blue-500 text-white rounded-full">
+                                                Custom Search Active
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="flex space-x-3">
                                         <button
                                             onClick={handleResetFilters}
@@ -415,7 +477,7 @@ export default function Reports() {
                                                 }`}
                                         >
                                             <FontAwesomeIcon icon={faSync} className="w-4 h-4" />
-                                            <span>Reset</span>
+                                            <span>Reset All</span>
                                         </button>
                                         <button
                                             onClick={handleDownloadReport}
@@ -478,7 +540,7 @@ export default function Reports() {
                                             <input
                                                 type="date"
                                                 value={startDate}
-                                                onChange={(e) => setStartDate(e.target.value)}
+                                                onChange={handleStartDateChange}
                                                 className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${themeClasses.input}`}
                                             />
                                         </div>
@@ -492,7 +554,7 @@ export default function Reports() {
                                             <input
                                                 type="date"
                                                 value={endDate}
-                                                onChange={(e) => setEndDate(e.target.value)}
+                                                onChange={handleEndDateChange}
                                                 className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${themeClasses.input}`}
                                             />
                                         </div>
@@ -513,7 +575,7 @@ export default function Reports() {
                                                 ) : (
                                                     <>
                                                         <FontAwesomeIcon icon={faFileAlt} className="w-4 h-4" />
-                                                        <span>Apply Filters</span>
+                                                        <span>Apply Search</span>
                                                     </>
                                                 )}
                                             </button>
@@ -523,23 +585,25 @@ export default function Reports() {
                                     {/* Search Tips */}
                                     <div className="mt-4 text-left">
                                         <p className={`text-xs ${themeClasses.text.muted}`}>
-                                            Tip: Use Order ID range <b>OR</b> date filters to refine your report.
+                                            <b>Mode: {getActiveFilterInfo()}</b> | 
+                                            Use Order ID range <b>OR</b> date filters for custom search. 
                                             Showing {filteredData.length} of {allData.length} records.
+                                            {customSearchActive && " (Custom search active - time filters disabled)"}
                                         </p>
                                     </div>
                                 </div>
 
                             </div>
 
-                            {/* Enhanced Filter Section */}
-                            <div className="mb-8">
+                            {/* Time Period Section - COMPLETELY SEPARATE */}
+                            <div className="mb-8 p-4">
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className={`text-lg font-semibold ${themeClasses.text.primary} flex items-center`}>
                                         <FontAwesomeIcon icon={faFilter} className="w-4 h-4 mr-2 text-blue-500" />
-                                        Time Period
+                                        Quick Time Period Filters
                                     </h3>
                                     <span className={`text-sm ${themeClasses.text.muted}`}>
-                                        {filteredData.length} of {allData.length} records shown
+                                        Clicking any button will reset custom search
                                     </span>
                                 </div>
 
@@ -550,19 +614,26 @@ export default function Reports() {
                                                 key={button.value}
                                                 onClick={() => handleFilterClick(button.value)}
                                                 disabled={isLoading}
-                                                className={`cursor-pointer px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3 min-w-[120px] cursor-pointer ${selectedFilter === button.value && activeFilterType === 'time'
+                                                className={`cursor-pointer px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3 min-w-[120px] cursor-pointer ${selectedFilter === button.value && !customSearchActive
                                                     ? `${themeClasses.button.filterActive} transform scale-105`
                                                     : themeClasses.button.filterInactive
                                                     } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
                                             >
                                                 <FontAwesomeIcon
                                                     icon={button.icon}
-                                                    className={`w-4 h-4 ${selectedFilter === button.value && activeFilterType === 'time' ? 'text-white' : 'text-blue-500'
+                                                    className={`w-4 h-4 ${selectedFilter === button.value && !customSearchActive ? 'text-white' : 'text-blue-500'
                                                         }`}
                                                 />
                                                 <span className="font-medium">{button.label}</span>
                                             </button>
                                         ))}
+                                    </div>
+                                    <div className="mt-3 text-center">
+                                        <p className={`text-xs ${themeClasses.text.muted}`}>
+                                            {customSearchActive 
+                                                ? "⚠️ Time filters disabled while custom search is active"
+                                                : "Time filters work independently from custom search"}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
