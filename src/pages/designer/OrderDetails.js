@@ -386,9 +386,9 @@ export default function OrderDetails() {
 
             const resp = await response.json();
             if (resp.status === "success") {
-                setFileHistory({ 
-                    stl_files: resp.stl_files || [], 
-                    finished_files: resp.finished_files || [] 
+                setFileHistory({
+                    stl_files: resp.stl_files || [],
+                    finished_files: resp.finished_files || []
                 });
             }
         } catch (error) {
@@ -411,10 +411,10 @@ export default function OrderDetails() {
                     setOrder(resp.order);
                     setEditedOrder(resp.order);
                     setSelectedStatus(resp.order.status);
-                    
+
                     // ✅ FIXED: Call the reusable function
                     await fetchFileHistory();
-                    
+
                     if (resp.order?.userid) {
                         fetchUserPreferences(resp.order.userid);
                     }
@@ -495,18 +495,18 @@ export default function OrderDetails() {
             toast.dismiss();
             if (resp.status === "success") {
                 toast.success("File deleted successfully!");
-                
+
                 // ✅ FIXED: Update fileHistory state immediately to reflect deletion
                 setFileHistory(prev => {
                     const newStlFiles = prev.stl_files.filter(file => file.id !== fileId);
                     const newFinishedFiles = prev.finished_files.filter(file => file.id !== fileId);
-                    
+
                     return {
                         stl_files: newStlFiles,
                         finished_files: newFinishedFiles
                     };
                 });
-                
+
                 // Also fetch from server to ensure consistency
                 await fetchFileHistory();
             } else {
@@ -655,7 +655,7 @@ export default function OrderDetails() {
                     <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}>
                             <div className="p-6">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                                     <div>
                                         <label className="font-bold text-lg">Order ID: </label>
                                         <span className="text-xl font-bold text-blue-600">{order?.orderid}</span>
@@ -665,6 +665,10 @@ export default function OrderDetails() {
                                         <span className={`ml-2 px-4 py-2 rounded-full text-sm font-bold ${order?.status === 'Completed' ? 'bg-green-500 text-white' : order?.status === 'Cancel' || order?.status === 'Cancelled' ? 'bg-red-500 text-white' : 'bg-yellow-500 text-gray-900'}`}>
                                             {order?.status === 'progress' ? 'In Progress' : order?.status}
                                         </span>
+                                    </div>
+                                    <div>
+                                        <label className="font-bold text-lg">Run Self By: </label>
+                                        <span className="text-xl font-bold text-blue-600">{order?.run_self_by}</span>
                                     </div>
                                     <div className="text-right">
                                         <button onClick={() => navigate(-1)} className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg cursor-pointer">
@@ -777,7 +781,7 @@ export default function OrderDetails() {
                                                     ) : (
                                                         <>
                                                             {[...fileHistory.stl_files, ...fileHistory.finished_files].map((file, index) => {
-                                                                const isStlFile = file.type === 'stl' || file.file_type === 'stl' || (file.fname && file.fname.toLowerCase().endsWith('.stl'));
+                                                                const isStlFile = file.type === 'stl' || file.file_type === 'stl' || (file.fname && file.fname.endsWith('.stl'));
                                                                 const fileIcon = isStlFile ? faCube : faArchive;
                                                                 const fileType = isStlFile ? 'STL' : 'Finished';
 
@@ -787,7 +791,7 @@ export default function OrderDetails() {
                                                                             <div className="flex items-start gap-3">
                                                                                 <div className="mt-1"><FontAwesomeIcon icon={fileIcon} className={`text-sm ${isStlFile ? 'text-blue-500' : 'text-green-500'}`} /></div>
                                                                                 <div>
-                                                                                    <p className={`font-semibold text-[14px] ${theme === "light" ? "text-gray-900" : "text-white"}`} title={file.fname}>{file.fname.toLowerCase()}</p>
+                                                                                    <p className={`font-semibold text-[14px] ${theme === "light" ? "text-gray-900" : "text-white"}`} title={file.fname}>{file.fname}</p>
                                                                                     <p className={`text-xs mt-1 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}><FontAwesomeIcon icon={faClock} className="mr-1 text-xs" />Uploaded: {file.upload_date || 'N/A'}</p>
                                                                                 </div>
                                                                             </div>

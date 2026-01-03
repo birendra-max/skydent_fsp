@@ -2,25 +2,24 @@ import { logoutUser } from "./userauth";
 
 let isLoggingOut = false;
 
-export async function fetchWithAuth(endpoint, options = {}, timeout = 15000) {
+export async function fetchWithAuth(endpoint, options = {}) {
     let token = localStorage.getItem("skydent_user_token");
-    let base_url = localStorage.getItem("skydent_user_base_url");
+    let base_url = localStorage.getItem('skydent_user_base_url');
 
     if (!token || token === "null" || token === "undefined" || token.trim() === "") {
+        console.warn("Invalid token found in localStorage:", token);
         token = null;
     }
 
     if (!base_url || base_url === "null" || base_url === "undefined" || base_url.trim() === "") {
-        throw new Error("Base URL missing");
+        console.warn("Invalid base Urlnot found in localStorage:", base_url);
+        base_url = null;
     }
-
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
 
     const headers = {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        "X-Tenant": "skydent",
+        'X-Tenant': 'skydent',
         ...options.headers,
     };
 
@@ -28,7 +27,6 @@ export async function fetchWithAuth(endpoint, options = {}, timeout = 15000) {
         const response = await fetch(base_url + endpoint, {
             ...options,
             headers,
-            signal: controller.signal,
         });
 
         if (response.status === 401 || response.status === 403) {
@@ -40,16 +38,32 @@ export async function fetchWithAuth(endpoint, options = {}, timeout = 15000) {
             return null;
         }
 
-        return await response.json();
-    } catch (err) {
-        if (err.name === "AbortError") {
-            console.warn("Request aborted due to timeout:", endpoint);
+        const data = await response.json().catch(() => null);
+
+        if (
+            data?.error &&
+            (data.error === "Invalid or expired token" ||
+                data.message === "Token expired")
+        ) {
+            if (!isLoggingOut) {
+                isLoggingOut = true;
+                alert("Invalid or expired token. Please log in again.");
+                logoutUser();
+            }
             return null;
         }
 
+        return data;
+    } catch (err) {
         console.error("API error:", err);
+        if (!isLoggingOut) {
+            isLoggingOut = true;
+            logoutUser();
+        }
         return null;
     } finally {
-        clearTimeout(id);
+        for (let key in headers) {
+            delete headers[key];
+        }
     }
 }

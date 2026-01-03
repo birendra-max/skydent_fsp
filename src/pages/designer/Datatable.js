@@ -234,7 +234,7 @@ export default function Datatable({
                 if (record.status === 'New' || record.status === 'Redesign') {
                     const resp = await fetchWithAuth(`/update-pending`, {
                         method: "POST",
-                        body: JSON.stringify({ desi_id: designer.desiid, orderid: id })
+                        body: JSON.stringify({ desi_name: designer.name, orderid: id })
                     });
                     if (resp.status === 'success') {
                         successCount++;
@@ -569,7 +569,7 @@ export default function Datatable({
                                                                         })()}
                                                                     </div>
                                                                 ) : (
-                                                                    <div 
+                                                                    <div
                                                                         className="break-words whitespace-normal"
                                                                         title={row[col.accessor] ?? "-"}
                                                                     >
