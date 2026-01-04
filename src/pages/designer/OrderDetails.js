@@ -522,54 +522,88 @@ export default function OrderDetails() {
         if (!files || files.length === 0) return;
 
         toast.loading(`Uploading ${files.length} file(s)...`);
+
         let successCount = 0;
-        let errorCount = 0;
+        let errorMessages = [];
 
         for (const file of files) {
-            const fileName = file.name.toLowerCase();
+            const fileNameLower = file.name.toLowerCase();
             let fileType = '';
 
-            if (fileName.endsWith('.stl')) fileType = 'stl';
-            else if (fileName.endsWith('.zip') || fileName.endsWith('.rar') || fileName.endsWith('.7z')) fileType = 'finished';
-            else {
-                toast.error(`${file.name}: Invalid file type. Only .stl, .zip, .rar, or .7z files allowed!`);
-                errorCount++;
+            if (fileNameLower.endsWith('.stl')) {
+                fileType = 'stl';
+            } else if (
+                fileNameLower.endsWith('.zip') ||
+                fileNameLower.endsWith('.rar') ||
+                fileNameLower.endsWith('.7z')
+            ) {
+                fileType = 'finished';
+            } else {
+                errorMessages.push(
+                    `${file.name}: Invalid file type. Only .stl, .zip, .rar, .7z allowed`
+                );
                 continue;
             }
 
             setUploading(true);
+
             const formData = new FormData();
             formData.append("file", file);
             formData.append("orderid", id);
             formData.append("type", fileType);
-            formData.append('desiid', designer.desiid);
+            formData.append("desiid", designer.desiid);
 
             try {
                 const response = await fetch(`${base_url}/upload-order-file`, {
                     method: "POST",
-                    headers: { "Authorization": `Bearer ${token}`, 'X-Tenant': 'skydent' },
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "X-Tenant": "skydent",
+                    },
                     body: formData,
                 });
 
-                const result = await response.json();
-                if (result.status === "success") successCount++;
-                else {
-                    errorCount++;
-                    toast.error(`${file.name}: ${result.message || "Upload failed"}`);
+                let result = {};
+                try {
+                    result = await response.json();
+                } catch {
+                    result = { message: "Invalid server response" };
                 }
+
+                if (!response.ok) {
+                    errorMessages.push(
+                        `${file.name}: ${result.message || "Upload failed"}`
+                    );
+                    continue;
+                }
+
+                if (result.status !== "success") {
+                    errorMessages.push(
+                        `${file.name}: ${result.message || "Upload failed"}`
+                    );
+                    continue;
+                }
+
+                successCount++;
+
             } catch (error) {
-                errorCount++;
-                toast.error(`${file.name}: Upload error!`);
+                errorMessages.push(
+                    `${file.name}: Network / server error`
+                );
             }
         }
 
         setUploading(false);
         toast.dismiss();
         if (successCount > 0) {
-            toast.success(`${successCount} file(s) uploaded successfully!`);
+            toast.success(`${successCount} file(s) uploaded successfully`);
             await fetchFileHistory();
         }
-        if (errorCount > 0) toast.error(`${errorCount} file(s) failed to upload`);
+
+        if (errorMessages.length > 0) {
+            errorMessages.forEach(msg => toast.error(msg));
+        }
+
         event.target.value = '';
     };
 
