@@ -33,12 +33,24 @@ import { UserContext } from "../../Context/UserContext";
 import { DesignerContext } from "../../Context/DesignerContext";
 
 function Chatbox({ orderid, theme }) {
-    const token = localStorage.getItem('skydent_designer_token');
+    const userToken = localStorage.getItem('skydent_user_token');
+    const adminToken = localStorage.getItem('skydent_admin_token');
+    const designerToken = localStorage.getItem('skydent_designer_token');
+    const token = userToken || adminToken || designerToken;
+
     const userCtx = useContext(UserContext);
     const designerCtx = useContext(DesignerContext);
+
     let userRole = null;
     if (userCtx?.user) userRole = 'client';
     else if (designerCtx?.designer) userRole = 'designer';
+    else {
+        // Check localStorage for admin
+        try {
+            const storedAdmin = localStorage.getItem('skydent_admin') ? JSON.parse(localStorage.getItem('skydent_admin')) : null;
+            if (storedAdmin?.id) userRole = 'admin';
+        } catch (e) { }
+    }
 
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
@@ -46,7 +58,7 @@ function Chatbox({ orderid, theme }) {
     const fileInputRef = useRef(null);
     const chatBodyRef = useRef(null);
     const textareaRef = useRef(null);
-    const eventSourceRef = useRef(null);
+    const pollingIntervalRef = useRef(null);
     const lastMessageIdRef = useRef(0);
 
     useEffect(() => {
@@ -61,9 +73,9 @@ function Chatbox({ orderid, theme }) {
         setNewMessage('');
         lastMessageIdRef.current = 0;
 
-        if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-            eventSourceRef.current = null;
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
         }
 
         if (orderid && token) loadChatHistory();
@@ -72,15 +84,21 @@ function Chatbox({ orderid, theme }) {
     const loadChatHistory = async () => {
         try {
             const response = await fetch(`${config.API_BASE_URL}/chat/get-chat-history/${orderid}`, {
-                headers: { 'Authorization': `Bearer ${token}`, 'X-Tenant': 'skydent' }
+                headers: { 'X-Tenant': 'skydent' }
             });
             const data = await response.json();
 
             if (data.status === 'success' && data.data) {
                 const formatted = data.data.map(msg => {
+                    // Client messages -> LEFT, Designer/Admin messages -> RIGHT
                     const isClient = msg.user_type === 'Client';
                     const isDesigner = msg.user_type === 'Designer';
-                    const showRight = (userRole === 'client' && isClient) || (userRole === 'designer' && isDesigner);
+                    const isAdmin = msg.user_type === 'Admin';
+
+                    // Show right if: (client viewing own message) OR (designer viewing designer message) OR (admin viewing any non-client message)
+                    const showRight = (userRole === 'client' && isClient) ||
+                        (userRole === 'designer' && isDesigner) ||
+                        (userRole === 'admin' && !isClient);
 
                     return {
                         id: msg.id,
@@ -95,78 +113,76 @@ function Chatbox({ orderid, theme }) {
 
                 setMessages(formatted);
                 if (formatted.length > 0) lastMessageIdRef.current = Math.max(...formatted.map(m => m.id));
-                startSSEConnection();
+                startPolling();
             }
         } catch (error) {
-            startSSEConnection();
+            startPolling();
         }
     };
 
-    const startSSEConnection = () => {
-        if (!orderid || !token || eventSourceRef.current) return;
+    const startPolling = () => {
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+        }
 
-        const url = `${config.API_BASE_URL}/chat/stream-chat/${orderid}?lastId=${lastMessageIdRef.current}&tenant=skydent`;
+        pollingIntervalRef.current = setInterval(fetchNewMessages, 3000);
+        setIsConnected(true);
+    };
+
+    const fetchNewMessages = async () => {
+        if (!orderid || !token) return;
 
         try {
-            eventSourceRef.current = new EventSource(url);
+            const response = await fetch(
+                `${config.API_BASE_URL}/chat/get-chat-history/${orderid}?lastId=${lastMessageIdRef.current}`,
+                { headers: { 'X-Tenant': 'skydent' } }
+            );
 
-            eventSourceRef.current.onopen = () => setIsConnected(true);
-
-            eventSourceRef.current.onmessage = (event) => {
-                if (event.data === ': heartbeat') return;
-
-                try {
-                    const data = JSON.parse(event.data);
-
-                    if (data.messages && Array.isArray(data.messages)) {
-                        const newMessages = data.messages.map(msg => {
-                            const isClient = msg.user_type === 'Client';
-                            const isDesigner = msg.user_type === 'Designer';
-                            const showRight = (userRole === 'client' && isClient) || (userRole === 'designer' && isDesigner);
-
-                            return {
-                                id: msg.id,
-                                text: msg.message,
-                                timestamp: msg.message_date,
-                                alignment: showRight ? 'right' : 'left',
-                                file_path: msg.file_path || null,
-                                filename: msg.attachment || null,
-                                hasAttachment: !!msg.file_path
-                            };
-                        });
-
-                        setMessages(prev => {
-                            const existingIds = new Set(prev.map(m => m.id));
-                            const unique = newMessages.filter(m => !existingIds.has(m.id));
-
-                            if (unique.length > 0) {
-                                lastMessageIdRef.current = Math.max(...unique.map(m => m.id));
-                                return [...prev, ...unique];
-                            }
-                            return prev;
-                        });
-                    }
-                } catch (err) { }
-            };
-
-            eventSourceRef.current.addEventListener('connected', () => setIsConnected(true));
-
-            eventSourceRef.current.addEventListener('end', () => {
-                eventSourceRef.current?.close();
+            if (!response.ok) {
                 setIsConnected(false);
-            });
+                return;
+            }
 
-            eventSourceRef.current.onerror = (err) => {
-                setIsConnected(false);
-                setTimeout(() => {
-                    if (eventSourceRef.current) {
-                        eventSourceRef.current.close();
-                        eventSourceRef.current = null;
-                    }
-                    startSSEConnection();
-                }, 3000);
-            };
+            const data = await response.json();
 
+            if (data.status === 'success' && data.data) {
+                const newMessages = data.data
+                    .filter(msg => msg.id > lastMessageIdRef.current)
+                    .map(msg => {
+                        const isClient = msg.user_type === 'Client';
+                        const isDesigner = msg.user_type === 'Designer';
+                        const isAdmin = msg.user_type === 'Admin';
+
+                        const showRight = (userRole === 'client' && isClient) ||
+                            (userRole === 'designer' && isDesigner) ||
+                            (userRole === 'admin' && !isClient);
+
+                        return {
+                            id: msg.id,
+                            text: msg.message,
+                            timestamp: msg.message_date,
+                            alignment: showRight ? 'right' : 'left',
+                            file_path: msg.file_path || null,
+                            filename: msg.attachment || null,
+                            hasAttachment: !!msg.file_path
+                        };
+                    });
+
+                if (newMessages.length > 0) {
+                    setMessages(prev => {
+                        const existingIds = new Set(prev.map(m => m.id));
+                        const unique = newMessages.filter(m => !existingIds.has(m.id));
+
+                        if (unique.length > 0) {
+                            lastMessageIdRef.current = Math.max(...unique.map(m => m.id));
+                            return [...prev, ...unique];
+                        }
+                        return prev;
+                    });
+
+                    setIsConnected(true);
+                }
+            }
         } catch (error) {
             setIsConnected(false);
         }
@@ -178,9 +194,19 @@ function Chatbox({ orderid, theme }) {
 
     useEffect(() => {
         return () => {
-            if (eventSourceRef.current) eventSourceRef.current.close();
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
         };
     }, []);
+
+    const getUserTypeForApi = () => {
+        if (userRole === 'client') return 'Client';
+        if (userRole === 'designer') return 'Designer';
+        if (userRole === 'admin') return 'Admin';
+        return 'Designer';
+    };
 
     const sendMessage = async () => {
         if (!newMessage.trim() || !orderid) return;
@@ -196,13 +222,39 @@ function Chatbox({ orderid, theme }) {
                 body: JSON.stringify({
                     orderid,
                     text: newMessage.trim(),
-                    user_type: userRole === "client" ? "Client" : "Designer"
+                    user_type: getUserTypeForApi()
                 }),
             });
 
             const data = await response.json();
-            if (data.status === 'success') lastMessageIdRef.current = data.data.id;
-            setNewMessage('');
+            if (data.status === 'success') {
+                lastMessageIdRef.current = data.data.id;
+
+                // Add message immediately with correct alignment
+                const isClient = getUserTypeForApi() === 'Client';
+                const isDesigner = getUserTypeForApi() === 'Designer';
+                const isAdmin = getUserTypeForApi() === 'Admin';
+
+                const showRight = (userRole === 'client' && isClient) ||
+                    (userRole === 'designer' && isDesigner) ||
+                    (userRole === 'admin' && !isClient);
+
+                const newMsg = {
+                    id: data.data.id,
+                    text: newMessage.trim(),
+                    timestamp: new Date().toISOString(),
+                    alignment: showRight ? 'right' : 'left',
+                    file_path: null,
+                    filename: null,
+                    hasAttachment: false
+                };
+
+                setMessages(prev => [...prev, newMsg]);
+                setNewMessage('');
+
+                // Trigger immediate poll
+                setTimeout(() => fetchNewMessages(), 500);
+            }
         } catch (err) {
             setNewMessage('');
         }
@@ -226,12 +278,14 @@ function Chatbox({ orderid, theme }) {
                     },
                     body: formData
                 });
+
+                // Trigger immediate poll
+                setTimeout(() => fetchNewMessages(), 500);
             } catch (err) {
-                alert(`Failed to upload ${file.name}`, err);
+                toast.error(`Failed to upload ${file.name}`);
             }
         }
 
-        // Reset input so same files can be selected again
         e.target.value = '';
     };
 
@@ -569,14 +623,14 @@ export default function OrderDetails() {
 
             try {
                 const xhr = new XMLHttpRequest();
-                
+
                 xhr.upload.addEventListener('progress', (e) => {
                     if (e.lengthComputable) {
                         const progress = Math.round((e.loaded / e.total) * 100);
                         setUploadProgress(prev => ({
                             ...prev,
-                            [file.name]: { 
-                                ...prev[file.name], 
+                            [file.name]: {
+                                ...prev[file.name],
                                 progress: progress,
                                 status: progress === 100 ? 'processing' : 'uploading'
                             }
@@ -650,7 +704,7 @@ export default function OrderDetails() {
                 xhr.timeout = 300000; // 5 minutes timeout
 
                 xhr.send(formData);
-                
+
                 await uploadPromise;
 
             } catch (error) {
@@ -664,12 +718,12 @@ export default function OrderDetails() {
             if (completedCount === files.length) {
                 clearInterval(checkCompletion);
                 setUploading(false);
-                
+
                 // Show success/error messages
                 if (successCount > 0) {
                     toast.success(`${successCount} file(s) uploaded successfully`);
                     fetchFileHistory();
-                    
+
                     // Clear progress after 3 seconds
                     setTimeout(() => {
                         setUploadProgress({});
@@ -878,30 +932,28 @@ export default function OrderDetails() {
                                                                 </span>
                                                             </div>
                                                             <div className={`h-2 rounded-full overflow-hidden ${theme === "light" ? "bg-gray-200" : "bg-gray-600"}`}>
-                                                                <div 
-                                                                    className={`h-full transition-all duration-300 ${
-                                                                        progress.status === 'completed' ? 'bg-green-500' :
-                                                                        progress.status === 'error' ? 'bg-red-500' :
-                                                                        progress.status === 'processing' ? 'bg-yellow-500' :
-                                                                        'bg-blue-500'
-                                                                    }`}
+                                                                <div
+                                                                    className={`h-full transition-all duration-300 ${progress.status === 'completed' ? 'bg-green-500' :
+                                                                            progress.status === 'error' ? 'bg-red-500' :
+                                                                                progress.status === 'processing' ? 'bg-yellow-500' :
+                                                                                    'bg-blue-500'
+                                                                        }`}
                                                                     style={{ width: `${progress.progress}%` }}
                                                                 />
                                                             </div>
                                                             <div className="flex justify-between items-center text-xs">
-                                                                <span className={`font-medium ${
-                                                                    progress.status === 'completed' ? 'text-green-600' :
-                                                                    progress.status === 'error' ? 'text-red-600' :
-                                                                    progress.status === 'processing' ? 'text-yellow-600' :
-                                                                    'text-blue-600'
-                                                                }`}>
+                                                                <span className={`font-medium ${progress.status === 'completed' ? 'text-green-600' :
+                                                                        progress.status === 'error' ? 'text-red-600' :
+                                                                            progress.status === 'processing' ? 'text-yellow-600' :
+                                                                                'text-blue-600'
+                                                                    }`}>
                                                                     {progress.status === 'uploading' ? 'Uploading...' :
-                                                                     progress.status === 'processing' ? 'Processing...' :
-                                                                     progress.status === 'completed' ? 'Completed' :
-                                                                     progress.status === 'error' ? `Error: ${progress.error}` : 'Pending'}
+                                                                        progress.status === 'processing' ? 'Processing...' :
+                                                                            progress.status === 'completed' ? 'Completed' :
+                                                                                progress.status === 'error' ? `Error: ${progress.error}` : 'Pending'}
                                                                 </span>
                                                                 {progress.status === 'error' && (
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => setUploadProgress(prev => {
                                                                             const newProgress = { ...prev };
                                                                             delete newProgress[fileName];
@@ -921,24 +973,23 @@ export default function OrderDetails() {
                                     )}
 
                                     <div className={`rounded-lg border-2 border-dashed p-8 flex flex-col items-center justify-center min-h-[200px] ${theme === "light" ? "bg-gray-50 border-gray-300" : "bg-gray-700 border-gray-600"}`}>
-                                        <input 
-                                            type="file" 
-                                            ref={fileInputRef} 
-                                            accept=".stl,.zip,.rar,.7z" 
-                                            multiple 
-                                            onChange={handleFileUpload} 
-                                            className="hidden" 
-                                            disabled={uploading} 
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            accept=".stl,.zip,.rar,.7z"
+                                            multiple
+                                            onChange={handleFileUpload}
+                                            className="hidden"
+                                            disabled={uploading}
                                         />
                                         <div className="text-center">
-                                            <button 
-                                                onClick={() => fileInputRef.current?.click()} 
-                                                disabled={uploading} 
-                                                className={`w-full flex flex-col items-center gap-3 px-8 py-8 rounded-lg font-bold text-lg transition-all hover:scale-105 ${
-                                                    uploading ? 'bg-gray-400 cursor-not-allowed' : 
-                                                    theme === "light" ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg' : 
-                                                    'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 shadow-lg'
-                                                }`}
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={uploading}
+                                                className={`w-full flex flex-col items-center gap-3 px-8 py-8 rounded-lg font-bold text-lg transition-all hover:scale-105 ${uploading ? 'bg-gray-400 cursor-not-allowed' :
+                                                        theme === "light" ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg' :
+                                                            'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 shadow-lg'
+                                                    }`}
                                             >
                                                 {uploading ? (
                                                     <>
