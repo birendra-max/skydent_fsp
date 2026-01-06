@@ -541,7 +541,7 @@ export default function CasesDatatable({
                                                     >
                                                         {col.header === 'Order Id' ? (
                                                             <div>
-                                                                <div className="text-sm text-black" > {row.orderid} </div>
+                                                                <Link to={`/admin/orderDeatails/${row.orderid}`} className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-bold" > {row.orderid} </Link>
                                                             </div>
                                                         ) : col.header === 'Message' ? (
                                                             <div className="flex justify-center items-center relative">
