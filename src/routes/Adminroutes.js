@@ -31,6 +31,7 @@ import AllClients from '../pages/admin/AllClients';
 import AllDesigners from '../pages/admin/AllDesigner';
 import AssignOrders from '../pages/admin/AssignOrders';
 import OrderDetails from '../pages/admin/OrderDetails';
+import SearchOrder from '../pages/admin/SearchOrder';
 export default function Adminroutes() {
 
     document.title = 'Admin Login | Portal';
@@ -72,6 +73,7 @@ export default function Adminroutes() {
                 <Route path='/reset-password-client' element={<ResetPsswordClient />} />
                 <Route path='/reset-password-designer' element={<ResetPasswordDesigner />} />
                 <Route path="/orderDeatails/:id" element={<OrderDetails />} />
+                <Route path='/search-order/:searchData' element={<SearchOrder />} />
             </Routes>
         </AdminProvider>
     )
