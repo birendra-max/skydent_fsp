@@ -4,7 +4,7 @@ import Chatbox from "../../Components/Chatbox";
 import { ThemeContext } from "../../Context/ThemeContext";
 import { exportToExcel } from '../../helper/ExcelGenerate';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faTrashCan, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
+import { faDownload, faTrashCan, faFolderOpen, faPenToSquare, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../../utils/adminapi";
 
 export default function DesignerDatatable({
@@ -22,6 +22,19 @@ export default function DesignerDatatable({
     const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
     const [orderid, setOrderid] = useState(null);
     const [tableData, setTableData] = useState(data); // ✅ Maintain local UI data
+    const [showModal, setShowModal] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [message, setMessage] = useState({ text: "", type: "" });
+    const [formLoading, setFormLoading] = useState(false);
+
+    // Form state
+    const [formData, setFormData] = useState({
+        name: "",
+        designation: "",
+        email: "",
+        mobile: "",
+        password: ""
+    });
 
     useEffect(() => {
         setTableData(data);
@@ -135,7 +148,6 @@ export default function DesignerDatatable({
             : { ...getPaginationButtonStyle(), background: "#f8f9fa", color: "#6c757d", cursor: "not-allowed" };
     };
 
-
     const getPageNumbers = (totalPages, currentPage) => {
         const maxButtons = 5;
         const pages = [];
@@ -156,7 +168,7 @@ export default function DesignerDatatable({
         // Instant UI update
         setTableData((prev) =>
             prev.map((item) =>
-                item.desiid === desiid ? { ...item, status: newStatus } : item
+                item.id === desiid ? { ...item, status: newStatus } : item
             )
         );
 
@@ -165,12 +177,12 @@ export default function DesignerDatatable({
                 method: "PUT",
                 body: JSON.stringify({ status: newStatus }),
             });
-            if (res.status !== "success") throw new Error("Update failed"); // ✅ FIX 2: Correct success check
+            if (res.status !== "success") throw new Error("Update failed");
 
         } catch (error) {
             setTableData((prev) =>
                 prev.map((item) =>
-                    item.desiid === desiid ? { ...item, status: currentStatus } : item
+                    item.id === desiid ? { ...item, status: currentStatus } : item
                 )
             );
         }
@@ -185,14 +197,96 @@ export default function DesignerDatatable({
             });
 
             if (res.status === "success") {
-                setTableData((prev) => prev.filter((item) => item.desiid !== desiId));
+                setTableData((prev) => prev.filter((item) => item.id !== desiId));
                 alert("✅ Designer deleted successfully!");
             } else {
-                alert(data.message || "Failed to delete designer");
+                alert(res.message || "Failed to delete designer");
             }
         } catch (error) {
             console.error("Error deleting designer:", error);
             alert("⚠️ Something went wrong. Please try again.");
+        }
+    };
+
+    const editDesigner = (desiid) => {
+        if (desiid !== '' && desiid != null) {
+            const designer = tableData.find(item => item.id === desiid);
+            if (designer) {
+                setFormData({
+                    name: designer.name || "",
+                    designation: designer.designation || "",
+                    email: designer.email || "",
+                    mobile: designer.mobile || "",
+                    password: ""
+                });
+                setShowModal(true);
+            } else {
+                alert('Designer not found');
+            }
+        } else {
+            alert('Designer ID not found');
+        }
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setFormLoading(true);
+        setMessage({ text: "", type: "" });
+
+        try {
+            const designerId = tableData.find(item =>
+                item.email === formData.email ||
+                item.mobile === formData.mobile
+            )?.id;
+
+            const url = `/update-designer/${designerId}`
+            const method = 'PUT';
+
+            const res = await fetchWithAuth(url, {
+                method: method,
+                body: JSON.stringify(formData),
+            });
+
+            if (res.status === "success") {
+                setMessage({
+                    text: res.message,
+                    type: res.status,
+                });
+
+                setTimeout(() => {
+                    setFormData({
+                        name: "",
+                        designation: "",
+                        email: "",
+                        mobile: "",
+                        password: ""
+                    });
+                    setShowModal(false);
+                    setMessage({ text: "", type: "" });
+                }, 2000);
+            } else {
+                setMessage({
+                    text: res.message || "Failed to save designer",
+                    type: "error"
+                });
+            }
+        } catch (error) {
+            console.error("Error saving designer:", error);
+            setMessage({
+                text: "Something went wrong. Please try again.",
+                type: "error"
+            });
+        } finally {
+            setFormLoading(false);
         }
     };
 
@@ -221,6 +315,144 @@ export default function DesignerDatatable({
             <Loder status={status} />
             <Chatbox orderid={orderid} />
 
+            {/* Popup Modal */}
+            {showModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    {/* Overlay */}
+                    <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setShowModal(false)}
+                    ></div>
+
+                    {/* Modal Content */}
+                    <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        {/* Modal Header */}
+                        <div className={`flex items-center justify-between p-6 rounded-t-2xl ${theme === "dark"
+                            ? "bg-gray-800 border-b border-gray-700"
+                            : "bg-white border-b border-gray-200"
+                            }`}>
+                            <h2 className="text-xl font-bold">Edit Designer</h2>
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className={`p-2 rounded-lg hover:bg-opacity-20 ${theme === "dark"
+                                    ? "hover:bg-gray-700 text-gray-300"
+                                    : "hover:bg-gray-200 text-gray-600"
+                                    }`}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Form Card */}
+                        <div className={`p-8 rounded-b-2xl ${theme === "dark"
+                            ? "bg-gray-900"
+                            : "bg-white"
+                            }`}
+                        >
+                            <form
+                                onSubmit={handleSubmit}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                            >
+                                {/* Common input component */}
+                                {[
+                                    { label: "Full Name", name: "name", placeholder: "Enter designer's name" },
+                                    { label: "Designation", name: "designation", placeholder: "e.g., Dentist, Technician" },
+                                    { label: "Email Address", name: "email", type: "email", placeholder: "Enter email" },
+                                    { label: "Mobile Number", name: "mobile", placeholder: "Enter mobile number" },
+                                ].map((field) => (
+                                    <div key={field.name}>
+                                        <label className="font-semibold block mb-2">{field.label}</label>
+                                        <input
+                                            type={field.type || "text"}
+                                            name={field.name}
+                                            value={formData[field.name]}
+                                            onChange={handleChange}
+                                            required
+                                            placeholder={field.placeholder}
+                                            className={`w-full p-3 rounded-md border focus:ring-2 focus:ring-blue-500 ${theme === "dark"
+                                                ? "bg-gray-800 border-gray-700"
+                                                : "bg-gray-50 border-gray-300"
+                                                }`}
+                                        />
+                                    </div>
+                                ))}
+
+                                {/* Password Field with Eye Toggle */}
+                                <div className="md:col-span-2">
+                                    <label className="font-semibold block mb-2">Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleChange}
+                                            placeholder="Enter new password (leave blank to keep current)"
+                                            className={`w-full p-3 pr-10 rounded-md border focus:ring-2 focus:ring-blue-500 ${theme === "dark"
+                                                ? "bg-gray-800 border-gray-700"
+                                                : "bg-gray-50 border-gray-300"
+                                                }`}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-3 text-gray-500 hover:text-blue-600"
+                                        >
+                                            <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Leave blank to keep current password
+                                    </p>
+                                </div>
+
+                                {/* Submit Section */}
+                                <div className="md:col-span-2 flex items-center justify-between mt-6">
+                                    {/* Message Alert */}
+                                    {message.text && (
+                                        <div
+                                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${message.type === "success"
+                                                ? "bg-green-100 text-green-700 border border-green-300"
+                                                : "bg-red-100 text-red-700 border border-red-300"
+                                                }`}
+                                        >
+                                            {message.text}
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center space-x-4 ml-auto">
+                                        {/* Cancel Button */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowModal(false)}
+                                            className={`px-6 py-2.5 rounded-lg font-semibold transition-all ${theme === "dark"
+                                                ? "bg-gray-700 hover:bg-gray-600 text-white"
+                                                : "bg-gray-200 hover:bg-gray-300 text-gray-800"
+                                                }`}
+                                        >
+                                            Cancel
+                                        </button>
+
+                                        {/* Submit Button */}
+                                        <button
+                                            type="submit"
+                                            disabled={formLoading}
+                                            className={`px-8 py-2.5 rounded-lg font-semibold transition-all ${formLoading
+                                                ? "bg-blue-400 text-white cursor-not-allowed"
+                                                : "bg-blue-600 hover:bg-blue-700 text-white"
+                                                }`}
+                                        >
+                                            {formLoading ? "Saving..." : "Save Changes"}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {status === "hide" && (
                 <section className={`overflow-scroll md:overflow-hidden mt-4 ${getBackgroundClass()}`}>
                     {columns.length === 0 ? (
@@ -248,7 +480,7 @@ export default function DesignerDatatable({
                                     </label>
 
                                     <button
-                                        onClick={() => exportToExcel(tableData, "Reports")}
+                                        onClick={() => exportToExcel(tableData, "Designer Reports")}
                                         className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-700 text-white text-sm font-medium rounded-md border border-green-600 transition-all duration-200"
                                     >
                                         <FontAwesomeIcon icon={faDownload} />
@@ -298,7 +530,7 @@ export default function DesignerDatatable({
                                                                         <input
                                                                             type="checkbox"
                                                                             checked={row.status?.toLowerCase() === "active"}
-                                                                            onChange={() => handleStatusToggle(row.desiid, row.status)}
+                                                                            onChange={() => handleStatusToggle(row.id, row.status)}
                                                                             className="sr-only peer"
                                                                         />
                                                                         <div className="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 transition-all duration-300"></div>
@@ -306,10 +538,26 @@ export default function DesignerDatatable({
                                                                     </label>
                                                                 )}
                                                             </div>
-                                                        ) : col.header === 'Delete' ? (
-                                                            <button className="cursor-pointer" onClick={() => deleteUser(row.desiid)}>
-                                                                <FontAwesomeIcon icon={faTrashCan} className="text-red-500 text-lg" />
-                                                            </button>
+                                                        ) : col.header === 'Action' ? (
+                                                            <div>
+                                                                <button
+                                                                    className="cursor-pointer mr-3"
+                                                                    onClick={() => editDesigner(row.id)}
+                                                                    title="Edit Designer"
+                                                                >
+                                                                    <FontAwesomeIcon
+                                                                        icon={faPenToSquare}
+                                                                        className="text-blue-500 text-lg"
+                                                                    />
+                                                                </button>
+                                                                <button
+                                                                    className="cursor-pointer"
+                                                                    onClick={() => deleteUser(row.id)}
+                                                                    title="Delete Designer"
+                                                                >
+                                                                    <FontAwesomeIcon icon={faTrashCan} className="text-red-500 text-lg" />
+                                                                </button>
+                                                            </div>
                                                         ) : (
                                                             row[col.accessor] ?? "-"
                                                         )}

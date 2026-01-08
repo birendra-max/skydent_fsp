@@ -34,7 +34,7 @@ export default function AllClients() {
                 { header: "Password", accessor: "password" },
                 { header: "Mobile", accessor: "mobile" },
                 { header: "Status", accessor: "status" },
-                { header: "Delete", accessor: "delete" },
+                { header: "Action", accessor: "Action" },
             ],
         },
 
@@ -48,7 +48,7 @@ export default function AllClients() {
                 { header: "Password", accessor: "password" },
                 { header: "Mobile", accessor: "mobile" },
                 { header: "Status", accessor: "status" },
-                { header: "Delete", accessor: "delete" },
+                { header: "Action", accessor: "Action" },
             ],
         },
 
@@ -62,7 +62,7 @@ export default function AllClients() {
                 { header: "Password", accessor: "password" },
                 { header: "Mobile", accessor: "mobile" },
                 { header: "Status", accessor: "status" },
-                { header: "Delete", accessor: "delete" },
+                { header: "Action", accessor: "Action" },
             ],
         },
     };

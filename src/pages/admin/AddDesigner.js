@@ -25,14 +25,14 @@ export default function AddDesigner() {
     });
 
     const columns = [
-        { header: "Designer Id", accessor: "desiid" },
+        { header: "Id", accessor: "id" },
         { header: "Name", accessor: "name" },
         { header: "Designation", accessor: "designation" },
         { header: "Email", accessor: "email" },
         { header: "Password", accessor: "password" },
         { header: "Mobile", accessor: "mobile" },
         { header: "Status", accessor: "status" },
-        { header: "Delete", accessor: "delete" },
+        { header: "Action", accessor: "Action" },
     ];
 
     const getClients = async () => {
@@ -223,7 +223,7 @@ export default function AddDesigner() {
                     </div>
 
                     {/* Designer Table */}
-                    <DesignerDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error}/>
+                    <DesignerDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
                 </div>
             </main>
             <Foot />

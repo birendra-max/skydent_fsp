@@ -26,7 +26,7 @@ export default function ResetPsswordClient() {
         { header: "Lab Name", accessor: "labname" },
         { header: "Mobile", accessor: "mobile" },
         { header: "Status", accessor: "status" },
-        { header: "Delete", accessor: "delete" },
+        { header: "Action", accessor: "Action" },
     ];
 
     useEffect(() => {

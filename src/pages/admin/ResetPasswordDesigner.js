@@ -19,14 +19,14 @@ export default function ResetPasswordDesigner() {
     const [error, setError] = useState(null);
 
     const columns = [
-        { header: "Designer Id", accessor: "desiid" },
+        { header: "Id", accessor: "id" },
         { header: "Name", accessor: "name" },
         { header: "Designation", accessor: "designation" },
         { header: "Email", accessor: "email" },
         { header: "Password", accessor: "password" },
         { header: "Mobile", accessor: "mobile" },
         { header: "Status", accessor: "status" },
-        { header: "Delete", accessor: "delete" },
+        { header: "Action", accessor: "Action" },
     ];
 
     useEffect(() => {

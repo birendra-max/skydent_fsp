@@ -27,42 +27,42 @@ export default function AllDesigners() {
         "all": {
             title: "All Designers",
             columns: [
-                { header: "Designer Id", accessor: "desiid" },
+                { header: "Id", accessor: "id" },
                 { header: "Name", accessor: "name" },
                 { header: "Designation", accessor: "designation" },
                 { header: "Email", accessor: "email" },
                 { header: "Password", accessor: "password" },
                 { header: "Mobile", accessor: "mobile" },
                 { header: "Status", accessor: "status" },
-                { header: "Delete", accessor: "delete" },
+                { header: "Action", accessor: "Action" },
             ],
         },
 
         "active": {
             title: "Active Designers",
             columns: [
-                { header: "Designer Id", accessor: "desiid" },
+                { header: "Id", accessor: "id" },
                 { header: "Name", accessor: "name" },
                 { header: "Designation", accessor: "designation" },
                 { header: "Email", accessor: "email" },
                 { header: "Password", accessor: "password" },
                 { header: "Mobile", accessor: "mobile" },
                 { header: "Status", accessor: "status" },
-                { header: "Delete", accessor: "delete" },
+                { header: "Action", accessor: "Action" },
             ],
         },
 
         "inactive": {
             title: "Inactive Designers",
             columns: [
-                { header: "Designer Id", accessor: "desiid" },
+                { header: "Id", accessor: "id" },
                 { header: "Name", accessor: "name" },
                 { header: "Designation", accessor: "designation" },
                 { header: "Email", accessor: "email" },
                 { header: "Password", accessor: "password" },
                 { header: "Mobile", accessor: "mobile" },
                 { header: "Status", accessor: "status" },
-                { header: "Delete", accessor: "delete" },
+                { header: "Action", accessor: "Action" },
             ],
         },
     };
