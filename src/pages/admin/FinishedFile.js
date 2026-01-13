@@ -82,7 +82,7 @@ export default function FinishedFile() {
                     </div>
 
                     {/* Client Table */}
-                    <CommanDatatable columns={columns} data={data} rowsPerPage={50} loading={loading} error={error} />
+                    <CommanDatatable columns={columns} data={data} onRefresh={() => getClients()} rowsPerPage={50} loading={loading} error={error} />
                 </div>
             </main>
             <Foot />

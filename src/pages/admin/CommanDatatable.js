@@ -9,6 +9,7 @@ import { fetchWithAuth } from '../../utils/adminapi';
 import {
     faTrash
 } from '@fortawesome/free-solid-svg-icons';
+import Swal from 'sweetalert2'; // Optional: For better alert styling
 
 export default function CommanDatatable({
     columns = [],
@@ -16,7 +17,8 @@ export default function CommanDatatable({
     rowsPerPageOptions = [50, 100, 200, 500, 'All'],
     loading = false,
     error = null,
-    onSelectionChange = () => { }
+    onSelectionChange = () => { },
+    onRefresh = () => { } // ✅ Add refresh callback prop
 }) {
     const { theme } = useContext(ThemeContext);
     const [status, setStatus] = useState("show");
@@ -138,7 +140,7 @@ export default function CommanDatatable({
 
             const response = await fetch(fullUrl, {
                 headers: {
-                    'X-Tenant': 'skydent',
+                    'X-Tenant': 'skydentdent',
                     'Authorization': `Bearer ${localStorage.getItem('skydent_admin_token')}`,
                     'Content-Type': 'application/json'
                 }
@@ -165,11 +167,30 @@ export default function CommanDatatable({
             setSelectedRows([]);
         } catch (error) {
             console.error("Failed to fetch:", error);
-            alert("Failed to load page");
+            showAlert("Error", "Failed to load data. Please try again.", "error");
         } finally {
             setIsFetchingPage(false);
             setStatus("hide");
         }
+    };
+
+    // ✅ Professional alert function (non-AI style)
+    const showAlert = (title, text, icon = "info", confirmButtonText = "OK") => {
+        // Using native browser alert for simplicity
+        if (icon === "error" || icon === "warning") {
+            alert(text);
+        } else {
+            alert(text);
+        }
+        
+        // Alternative: Using SweetAlert2 if installed (uncomment if you have it)
+        // Swal.fire({
+        //     title,
+        //     text,
+        //     icon,
+        //     confirmButtonText,
+        //     confirmButtonColor: icon === "error" ? "#d33" : "#3085d6"
+        // });
     };
 
     const handlePreviousPage = () => {
@@ -410,7 +431,7 @@ export default function CommanDatatable({
     };
 
     const handleBulkDownload = () => {
-        if (!selectedRows.length) return alert("Please select at least one record!");
+        if (!selectedRows.length) return showAlert("Info", "Please select at least one record!", "info");
 
         let missingFiles = [];
         let downloadedCount = 0;
@@ -456,15 +477,29 @@ export default function CommanDatatable({
         });
 
         if (missingFiles.length > 0) {
-            alert(`File not available for these record(s): ${missingFiles.join(", ")}`);
+            showAlert("Info", `File not available for order(s): ${missingFiles.join(", ")}`, "info");
         } else if (downloadedCount === 0) {
-            alert("No files available for the selected type.");
+            showAlert("Info", "No files available for the selected type.", "info");
+        }
+    };
+
+    // ✅ Refresh table data function
+    const refreshTableData = () => {
+        if (previousPage || nextPage) {
+            // Refresh current page
+            const urlToRefresh = previousPage || nextPage;
+            fetchPage(urlToRefresh);
+        } else if (onRefresh) {
+            // Use parent component's refresh function if provided
+            onRefresh();
+        } else {
+            // Fallback: trigger a re-fetch of current data
+            window.location.reload(); // Last resort
         }
     };
 
     const handleDelete = async (orderid, fname) => {
         try {
-            // Use fetchWithAuth with base_url support
             let deleteUrl = '/delete-file';
             if (base_url && !deleteUrl.startsWith('http')) {
                 deleteUrl = `${base_url}${deleteUrl}`;
@@ -475,7 +510,7 @@ export default function CommanDatatable({
                 headers: {
                     "Content-Type": "application/json",
                     'Authorization': `Bearer ${localStorage.getItem('skydent_admin_token')}`,
-                    'X-Tenant': 'skydent'
+                    'X-Tenant': 'skydentdent'
                 },
                 body: JSON.stringify({ orderid, filename: fname })
             });
@@ -484,12 +519,15 @@ export default function CommanDatatable({
             return result;
         } catch (err) {
             console.error("Error deleting file:", err);
-            return { status: 'error', message: `Error deleting file for order ${orderid}` };
+            return { status: 'error', message: `Network error while deleting file for order ${orderid}` };
         }
     };
 
     const handleBulkDelete = async () => {
-        if (!selectedRows.length) return alert("Please select at least one record!");
+        if (!selectedRows.length) {
+            showAlert("Info", "Please select at least one record.", "info");
+            return;
+        }
 
         const selectedRowsData = casesData.filter(row => selectedRows.includes(row.orderid));
         const confirmMessage = `Are you sure you want to delete files for ${selectedRows.length} selected records?\n\nSelected Order IDs: ${selectedRows.join(", ")}`;
@@ -500,28 +538,34 @@ export default function CommanDatatable({
         let failedCount = 0;
         let failedOrders = [];
 
-        // ✅ Use Promise.all to delete all files in parallel
-        const results = await Promise.all(
-            selectedRowsData.map(async (row) => {
-                const result = await handleDelete(row.orderid, row.fname);
-                if (result.status === 'success') successCount++;
-                else {
-                    failedCount++;
-                    failedOrders.push(row.orderid);
-                }
-            })
-        );
+        const deletePromises = selectedRowsData.map(async (row) => {
+            const result = await handleDelete(row.orderid, row.fname);
+            return { orderid: row.orderid, result };
+        });
 
-        // ✅ Show one summary alert after all deletions
-        let message = `🗑️ Bulk Delete Summary:\n\n`;
-        message += `✅ Successfully deleted: ${successCount}\n`;
+        const results = await Promise.all(deletePromises);
+
+        results.forEach(({ orderid, result }) => {
+            if (result.status === 'success') {
+                successCount++;
+            } else {
+                failedCount++;
+                failedOrders.push(orderid);
+            }
+        });
+
+        refreshTableData();
+
+        let message = `File Deletion Summary:\n\n`;
+        message += `Successfully deleted: ${successCount}\n`;
         if (failedCount > 0) {
-            message += `❌ Failed to delete: ${failedCount}\n`;
-            message += `Failed Order IDs: ${failedOrders.join(", ")}\n`;
+            message += `Failed to delete: ${failedCount}\n`;
+            if (failedOrders.length > 0) {
+                message += `Orders with errors: ${failedOrders.join(", ")}\n`;
+            }
         }
-        alert(message);
-
-        // ✅ Clear selection
+        
+        showAlert("Deletion Complete", message, successCount === selectedRows.length ? "success" : "warning");
         setSelectedRows([]);
     };
 
@@ -842,7 +886,7 @@ export default function CommanDatatable({
                                         onClick={handleBulkDelete}
                                         className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-md flex items-center gap-2 transition"
                                     >
-                                        <FontAwesomeIcon icon={faTrash} /> Delete File
+                                        <FontAwesomeIcon icon={faTrash} /> Delete Files
                                     </button>
                                 </div>
                             )}
