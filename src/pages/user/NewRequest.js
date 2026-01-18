@@ -631,7 +631,6 @@ export default function NewRequest() {
                             { name: "PRODUCT TYPE", width: "w-32" },
                             { name: "UNIT", width: "w-20" },
                             { name: "TOOTH", width: "w-20" },
-                            { name: "ACTION", width: "w-20" },
                             { name: "MESSAGE", width: "w-48" },
                           ].map((header, index) => (
                             <th
@@ -679,18 +678,6 @@ export default function NewRequest() {
                             </td>
                             <td className="px-4 py-3">
                               <span className="text-sm font-medium">{file.tooth}</span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() => cancelOrder(file.orderId, file.id)}
-                                disabled={file.uploadStatus === "Cancelling..." || file.uploadStatus.startsWith("Uploading...")}
-                                className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${file.uploadStatus === "Cancelling..." || file.uploadStatus.startsWith("Uploading...")
-                                  ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                                  : "bg-red-600 text-white hover:bg-red-700 cursor-pointer"
-                                  }`}
-                              >
-                                {file.uploadStatus === "Cancelling..." ? "Cancelling..." : "Cancel"}
-                              </button>
                             </td>
                             <td className="px-4 py-3">
                               <input
