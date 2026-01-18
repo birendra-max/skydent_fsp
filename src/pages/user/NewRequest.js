@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useRef } from "react";
 import Hd from "./Hd";
 import Foot from "./Foot";
 import { useNavigate } from "react-router-dom";
@@ -18,38 +18,44 @@ export default function NewRequest() {
   const [uploadRequests, setUploadRequests] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Add these refs for queue management
+  const processingQueueRef = useRef([]);
+  const isProcessingRef = useRef(false);
+
   const handleFiles = (selectedFiles) => {
     const fileArray = Array.from(selectedFiles);
 
-    // 1. Separate valid and invalid files upfront
     const zipFiles = fileArray.filter((file) => file.name.endsWith(".zip"));
     const invalidFiles = fileArray.filter((file) => !file.name.endsWith(".zip"));
 
-    // 2. Process valid .zip files first (if any exist)
     if (zipFiles.length > 0) {
-      zipFiles.forEach((file) => {
-        setFiles((prev) => [
-          ...prev,
-          {
-            fileName: file.name,
-            progress: 0,
-            uploadStatus: "Waiting...",
-            orderId: "-",
-            productType: "-",
-            unit: "-",
-            tooth: "-",
-            message: "",
-            file: file,
-          },
-        ]);
-        uploadFile(file);
+      const newFiles = zipFiles.map((file) => ({
+        id: `${file.name}-${Date.now()}-${Math.random()}`,
+        fileName: file.name,
+        progress: 0,
+        uploadStatus: "Waiting...",
+        orderId: "-",
+        productType: "-",
+        unit: "-",
+        tooth: "-",
+        message: "",
+        file: file,
+      }));
+
+      setFiles((prev) => [...prev, ...newFiles]);
+
+      newFiles.forEach(fileData => {
+        processingQueueRef.current.push(fileData);
       });
+
+      if (!isProcessingRef.current) {
+        processQueue();
+      }
     }
 
-    // 3. Show error for invalid files (if any exist)
     if (invalidFiles.length > 0) {
-      // Show temporary error message
       setFiles(prev => [...prev, {
+        id: `invalid-${Date.now()}`,
         fileName: `Invalid files detected (${invalidFiles.length})`,
         progress: 0,
         uploadStatus: "Error",
@@ -61,7 +67,6 @@ export default function NewRequest() {
         isError: true
       }]);
 
-      // Auto-remove the error message after 5 seconds
       setTimeout(() => {
         setFiles(prev => prev.filter(f => !f.isError));
       }, 5000);
@@ -70,143 +75,250 @@ export default function NewRequest() {
 
   const token = localStorage.getItem('skydent_user_token');
 
-  const uploadFile = async (file) => {
-    try {
-      const checkResponse = await fetchWithAuth(`check-file-exists?file=${encodeURIComponent(file.name)}`);
-
-      if (checkResponse.message === 'File already exists') {
-        const confirmUpload = window.confirm(
-          `The file "${file.name}" already exists.\nDo you want to proceed with uploading?`
-        );
-
-        if (!confirmUpload) {
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.fileName === file.name
-                ? { ...f, uploadStatus: "Cancelled", progress: 0 }
-                : f
-            )
-          );
-          return;
-        }
-      }
-    } catch (err) {
+  const processQueue = () => {
+    if (isProcessingRef.current || processingQueueRef.current.length === 0) {
+      return;
     }
 
-    return new Promise((resolve, reject) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("userid", user.userid);
-      formData.append("labname", user.labname);
+    const fileData = processingQueueRef.current.shift();
+    isProcessingRef.current = true;
 
-      const xhr = new XMLHttpRequest();
+    setFiles(prev =>
+      prev.map(f =>
+        f.id === fileData.id
+          ? { ...f, uploadStatus: "Uploading... 0%", progress: 0 }
+          : f
+      )
+    );
 
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable) {
-          const percentComplete = Math.round((event.loaded / event.total) * 100);
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.fileName === file.name
-                ? {
-                  ...f,
-                  progress: percentComplete,
-                  uploadStatus: `Uploading... ${percentComplete}%`
-                }
-                : f
-            )
+    uploadFile(fileData.file, fileData.id);
+  };
+
+  const uploadFile = (file, fileId) => {
+    fetchWithAuth(`check-file-exists?file=${encodeURIComponent(file.name)}`)
+      .then(checkResponse => {
+        if (checkResponse.message === 'File already exists') {
+          const confirmUpload = window.confirm(
+            `The file "${file.name}" already exists.\nDo you want to proceed with uploading?`
           );
-        }
-      });
 
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const result = JSON.parse(xhr.responseText);
+          if (!confirmUpload) {
             setFiles((prev) =>
               prev.map((f) =>
-                f.fileName === file.name
-                  ? {
-                    ...f,
-                    progress: 100,
-                    uploadStatus: "Success",
-                    orderId: result.id,
-                    productType: result.product_type,
-                    unit: result.unit,
-                    tooth: result.tooth,
-                    message: result.message
-                  }
+                f.id === fileId
+                  ? { ...f, uploadStatus: "Cancelled", progress: 0 }
                   : f
               )
             );
-            resolve(result);
-          } catch (error) {
-            setFiles((prev) =>
-              prev.map((f) =>
-                f.fileName === file.name
-                  ? {
-                    ...f,
-                    progress: 100,
-                    uploadStatus: "Failed",
-                    message: "Invalid response from server"
-                  }
-                  : f
-              )
-            );
-            reject(error);
+            isProcessingRef.current = false;
+            processQueue();
+            return;
           }
-        } else {
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.fileName === file.name
-                ? {
-                  ...f,
-                  progress: 100,
-                  uploadStatus: "Failed",
-                  message: `Server error: ${xhr.status}`
-                }
-                : f
-            )
-          );
-          reject(new Error(`Server error: ${xhr.status}`));
         }
-
-        setUploadRequests(prev => {
-          const newRequests = { ...prev };
-          delete newRequests[file.name];
-          return newRequests;
-        });
+      })
+      .catch(err => {
+        console.error("File check error:", err);
       });
 
-      xhr.addEventListener('error', () => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("userid", user.userid);
+    formData.append("labname", user.labname);
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
         setFiles((prev) =>
           prev.map((f) =>
-            f.fileName === file.name
+            f.id === fileId
               ? {
                 ...f,
-                progress: 100,
-                uploadStatus: "Failed",
-                message: "Network error"
+                progress: percentComplete,
+                uploadStatus: `Uploading... ${percentComplete}%`
               }
               : f
           )
         );
-        reject(new Error('Network error'));
 
-        setUploadRequests(prev => {
-          const newRequests = { ...prev };
-          delete newRequests[file.name];
-          return newRequests;
-        });
+        if (percentComplete === 100) {
+          isProcessingRef.current = false;
+          processQueue();
+        }
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const result = JSON.parse(xhr.responseText);
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileId
+                ? {
+                  ...f,
+                  progress: 100,
+                  uploadStatus: "Success",
+                  orderId: result.id,
+                  productType: result.product_type,
+                  unit: result.unit,
+                  tooth: result.tooth,
+                  message: result.message
+                }
+                : f
+            )
+          );
+        } catch (error) {
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileId
+                ? {
+                  ...f,
+                  progress: 100,
+                  uploadStatus: "Failed",
+                  message: "Invalid response from server"
+                }
+                : f
+            )
+          );
+        }
+      } else {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId
+              ? {
+                ...f,
+                progress: 100,
+                uploadStatus: "Failed",
+                message: `Server error: ${xhr.status}`
+              }
+              : f
+          )
+        );
+      }
+
+      setUploadRequests(prev => {
+        const newRequests = { ...prev };
+        delete newRequests[fileId];
+        return newRequests;
+      });
+    });
+
+    xhr.addEventListener('error', () => {
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === fileId
+            ? {
+              ...f,
+              progress: 100,
+              uploadStatus: "Failed",
+              message: "Network error"
+            }
+            : f
+        )
+      );
+
+      setUploadRequests(prev => {
+        const newRequests = { ...prev };
+        delete newRequests[fileId];
+        return newRequests;
+      });
+    });
+
+    xhr.open('POST', `${base_url}/new-orders`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('X-Tenant', 'skydent');
+    xhr.timeout = 300000;
+    xhr.send(formData);
+
+    setUploadRequests(prev => ({ ...prev, [fileId]: xhr }));
+  };
+
+  const cancelUpload = (fileId) => {
+    if (uploadRequests[fileId]) {
+      uploadRequests[fileId].abort();
+      setFiles(prev =>
+        prev.map(f =>
+          f.id === fileId
+            ? { ...f, uploadStatus: "Cancelled", progress: 0 }
+            : f
+        )
+      );
+
+      processingQueueRef.current = processingQueueRef.current.filter(f => f.id !== fileId);
+
+      setUploadRequests(prev => {
+        const newRequests = { ...prev };
+        delete newRequests[fileId];
+        return newRequests;
       });
 
-      xhr.open('POST', `${base_url}/new-orders`);
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      xhr.setRequestHeader('X-Tenant', 'skydent');
-      xhr.timeout = 300000;
-      xhr.send(formData);
+      if (isProcessingRef.current) {
+        isProcessingRef.current = false;
+        setTimeout(() => processQueue(), 100);
+      }
+    } else {
+      const inQueue = processingQueueRef.current.find(f => f.id === fileId);
+      if (inQueue) {
+        processingQueueRef.current = processingQueueRef.current.filter(f => f.id !== fileId);
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === fileId
+              ? { ...f, uploadStatus: "Cancelled", progress: 0 }
+              : f
+          )
+        );
+      }
+    }
+  };
 
-      setUploadRequests(prev => ({ ...prev, [file.name]: xhr }));
-    });
+  const cancelOrder = async (orderId, fileId) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    if (!orderId || orderId === "-") {
+      cancelUpload(fileId);
+      return;
+    }
+
+    try {
+      setFiles(prev =>
+        prev.map(f =>
+          f.id === fileId
+            ? { ...f, uploadStatus: "Cancelling..." }
+            : f
+        )
+      );
+
+      const response = await fetchWithAuth(`/cancel-order/${orderId}`);
+      const result = response;
+      if (result.status === 'success') {
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === fileId
+              ? { ...f, uploadStatus: "Cancelled", message: "Order cancelled successfully" }
+              : f
+          )
+        );
+      } else {
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === fileId
+              ? { ...f, uploadStatus: "Failed", message: `Failed to cancel: ${result.message || 'Unknown error'}` }
+              : f
+          )
+        );
+      }
+    } catch (error) {
+      setFiles(prev =>
+        prev.map(f =>
+          f.id === fileId
+            ? { ...f, uploadStatus: "Failed", message: `Network error: ${error.message}` }
+            : f
+        )
+      );
+    }
   };
 
   const handleDrop = (e) => {
@@ -219,9 +331,9 @@ export default function NewRequest() {
     }
   };
 
-  const handleMessageChange = (fileName, value) => {
+  const handleMessageChange = (fileId, value) => {
     setFiles((prev) =>
-      prev.map((f) => (f.fileName === fileName ? { ...f, message: value } : f))
+      prev.map((f) => (f.id === fileId ? { ...f, message: value } : f))
     );
   };
 
@@ -229,6 +341,8 @@ export default function NewRequest() {
     setFiles([]);
     setSelectedDuration("");
     setShowSuccessPopup(false);
+    processingQueueRef.current = [];
+    isProcessingRef.current = false;
   };
 
   const handleSubmit = async (e) => {
@@ -241,10 +355,18 @@ export default function NewRequest() {
       return;
     }
 
-    const filesWithDuration = files.map(file => ({
-      ...file,
-      tduration: selectedDuration
-    }));
+    const filesWithDuration = files
+      .filter(f => f.uploadStatus === "Success")
+      .map(file => ({
+        ...file,
+        tduration: selectedDuration
+      }));
+
+    if (filesWithDuration.length === 0) {
+      alert("No successful uploads to submit!");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const response = await fetch(`${base_url}/new-orders-data`, {
@@ -259,7 +381,7 @@ export default function NewRequest() {
 
       const resp = await response.json();
       if (resp.status === 'completed') {
-        if (resp.results.length === files.length) {
+        if (resp.results.length === filesWithDuration.length) {
           setShowSuccessPopup(true);
           setTimeout(() => {
             resetPage();
@@ -272,6 +394,7 @@ export default function NewRequest() {
         }
       }
     } catch (error) {
+      console.error("Error submitting:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -279,7 +402,7 @@ export default function NewRequest() {
 
   const canSubmit = files.length > 0 &&
     files.some(f => f.uploadStatus === "Success") &&
-    !files.some(f => f.uploadStatus.startsWith("Uploading...")) &&
+    !files.some(f => f.uploadStatus === "Uploading... 0%" || f.uploadStatus === "Waiting...") &&
     selectedDuration &&
     !isSubmitting;
 
@@ -345,13 +468,22 @@ export default function NewRequest() {
         "Waiting...": {
           light: { bg: "bg-gray-100", text: "text-gray-700", border: "border-gray-200" },
           dark: { bg: "bg-gray-800", text: "text-gray-400", border: "border-gray-700" }
+        },
+        Cancelled: {
+          light: { bg: "bg-gray-100", text: "text-gray-700", border: "border-gray-200" },
+          dark: { bg: "bg-gray-800", text: "text-gray-400", border: "border-gray-700" }
+        },
+        "Cancelling...": {
+          light: { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200" },
+          dark: { bg: "bg-yellow-900/20", text: "text-yellow-400", border: "border-yellow-800" }
         }
       };
 
-      return theme === 'light' ? config[status]?.light : config[status]?.dark;
+      const statusKey = status.startsWith("Uploading...") ? "Uploading..." : status.split(' ')[0];
+      return theme === 'light' ? config[statusKey]?.light : config[statusKey]?.dark;
     };
 
-    const config = getStatusConfig(status.split(' ')[0]);
+    const config = getStatusConfig(status);
     const isUploading = status.startsWith("Uploading...");
 
     return (
@@ -359,8 +491,9 @@ export default function NewRequest() {
         <div className={`inline-flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium border ${config?.bg || 'bg-gray-100'} ${config?.text || 'text-gray-700'} ${config?.border || 'border-gray-200'}`}>
           <div className={`w-2 h-2 rounded-full ${status === "Success" ? "bg-green-500" :
             status === "Failed" ? "bg-red-500" :
-              isUploading ? "bg-blue-500 animate-pulse" :
-                "bg-gray-400"
+              status === "Cancelled" || status === "Cancelling..." ? "bg-gray-500" :
+                isUploading ? "bg-blue-500 animate-pulse" :
+                  "bg-gray-400"
             }`} />
           <span>{status}</span>
         </div>
@@ -392,11 +525,9 @@ export default function NewRequest() {
       <main id="main" className={`flex-grow px-6 transition-colors duration-300 ${theme === 'light' ? 'bg-gray-50 text-gray-900' : 'bg-gray-950 text-white'} pt-20`}>
         {showSuccessPopup && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className={`rounded-xl p-8 max-w-md mx-4 shadow-xl ${theme === 'light' ? 'bg-white text-gray-900' : 'bg-gray-800 text-white'
-              }`}>
+            <div className={`rounded-xl p-8 max-w-md mx-4 shadow-xl ${theme === 'light' ? 'bg-white text-gray-900' : 'bg-gray-800 text-white'}`}>
               <div className="text-center">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${theme === 'light' ? 'bg-green-100' : 'bg-green-900/20'
-                  }`}>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${theme === 'light' ? 'bg-green-100' : 'bg-green-900/20'}`}>
                   <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -438,8 +569,7 @@ export default function NewRequest() {
                   }}
                   onDrop={handleDrop}
                 >
-                  <div className={`w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center ${theme === 'light' ? 'bg-blue-100' : 'bg-blue-900/20'
-                    }`}>
+                  <div className={`w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center ${theme === 'light' ? 'bg-blue-100' : 'bg-blue-900/20'}`}>
                     <svg className={`w-8 h-8 ${theme === 'light' ? 'text-blue-600' : 'text-blue-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
@@ -447,12 +577,10 @@ export default function NewRequest() {
                   <h3 className="text-xl font-semibold mb-3 text-gray-400">
                     {drag ? "Drop files to upload" : "Upload Order Files"}
                   </h3>
-                  <p className={`mb-6 max-w-md mx-auto text-sm ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'
-                    }`}>
+                  <p className={`mb-6 max-w-md mx-auto text-sm ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
                     Drag and drop your ZIP files here or click the button below
                   </p>
-                  <p className={`text-xs mb-6 ${theme === 'light' ? 'text-gray-500' : 'text-gray-500'
-                    }`}>
+                  <p className={`text-xs mb-6 ${theme === 'light' ? 'text-gray-500' : 'text-gray-500'}`}>
                     Supported format: .zip only
                   </p>
                   <label className={`inline-flex items-center px-6 py-3 font-medium rounded-lg cursor-pointer transition-colors ${theme === 'light'
@@ -503,6 +631,7 @@ export default function NewRequest() {
                             { name: "PRODUCT TYPE", width: "w-32" },
                             { name: "UNIT", width: "w-20" },
                             { name: "TOOTH", width: "w-20" },
+                            { name: "ACTION", width: "w-20" },
                             { name: "MESSAGE", width: "w-48" },
                           ].map((header, index) => (
                             <th
@@ -515,11 +644,10 @@ export default function NewRequest() {
                         </tr>
                       </thead>
                       <tbody>
-                        {files.map((file, idx) => (
-                          <tr key={idx} className={getTableRowClass()}>
+                        {files.map((file) => (
+                          <tr key={file.id} className={getTableRowClass()}>
                             <td className="px-4 py-3">
-                              <span className={`text-sm font-medium px-2 py-1 rounded ${theme === 'light' ? 'bg-gray-100 text-gray-900' : 'bg-gray-700 text-white'
-                                }`}>
+                              <span className={`text-sm font-medium px-2 py-1 rounded ${theme === 'light' ? 'bg-gray-100 text-gray-900' : 'bg-gray-700 text-white'}`}>
                                 {file.orderId}
                               </span>
                             </td>
@@ -527,8 +655,9 @@ export default function NewRequest() {
                               <div className="flex items-center space-x-3">
                                 <div className={`w-2 h-2 rounded-full ${file.uploadStatus === "Success" ? "bg-green-500" :
                                   file.uploadStatus === "Failed" ? "bg-red-500" :
-                                    file.uploadStatus.startsWith("Uploading...") ? "bg-blue-500 animate-pulse" :
-                                      "bg-gray-400"
+                                    file.uploadStatus === "Cancelled" || file.uploadStatus === "Cancelling..." ? "bg-gray-500" :
+                                      file.uploadStatus.startsWith("Uploading...") ? "bg-blue-500 animate-pulse" :
+                                        "bg-gray-400"
                                   }`} />
                                 <span className="text-sm font-medium">
                                   {file.fileName}
@@ -552,12 +681,25 @@ export default function NewRequest() {
                               <span className="text-sm font-medium">{file.tooth}</span>
                             </td>
                             <td className="px-4 py-3">
+                              <button
+                                onClick={() => cancelOrder(file.orderId, file.id)}
+                                disabled={file.uploadStatus === "Cancelling..." || file.uploadStatus.startsWith("Uploading...")}
+                                className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${file.uploadStatus === "Cancelling..." || file.uploadStatus.startsWith("Uploading...")
+                                  ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                                  : "bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                                  }`}
+                              >
+                                {file.uploadStatus === "Cancelling..." ? "Cancelling..." : "Cancel"}
+                              </button>
+                            </td>
+                            <td className="px-4 py-3">
                               <input
                                 type="text"
                                 value={file.message}
-                                onChange={(e) => handleMessageChange(file.fileName, e.target.value)}
+                                onChange={(e) => handleMessageChange(file.id, e.target.value)}
                                 className={`w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${getInputClass()}`}
                                 placeholder="Add instructions..."
+                                disabled={file.uploadStatus === "Cancelled" || file.uploadStatus === "Cancelling..." || file.uploadStatus.startsWith("Uploading...")}
                               />
                             </td>
                           </tr>
@@ -713,7 +855,7 @@ export default function NewRequest() {
                     <div className="flex flex-col justify-between">
                       <div>
                         <h3 className={`text-xl font-bold mb-6 ${theme === 'light' ? 'text-black' : 'text-white'}`}>Submit Orders</h3>
-                        <div className={`flex items-center p-4 rounded-lg mb-6 text-sm font-medium ${files.some(f => f.uploadStatus.startsWith("Uploading..."))
+                        <div className={`flex items-center p-4 rounded-lg mb-6 text-sm font-medium ${files.some(f => f.uploadStatus === "Uploading... 0%" || f.uploadStatus === "Waiting...")
                           ? theme === 'light'
                             ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
                             : "bg-yellow-900/20 text-yellow-300 border border-yellow-800"
@@ -730,7 +872,7 @@ export default function NewRequest() {
                                 : "bg-gray-800 text-gray-400 border border-gray-700"
                           }`}>
                           <div className="flex items-center space-x-2">
-                            {files.some(f => f.uploadStatus.startsWith("Uploading...")) ? (
+                            {files.some(f => f.uploadStatus === "Uploading... 0%" || f.uploadStatus === "Waiting...") ? (
                               <>
                                 <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
                                 <span>Please wait for all uploads to complete</span>

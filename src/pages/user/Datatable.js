@@ -1,10 +1,12 @@
-import React,{ useState, useMemo, useEffect, useContext, useRef, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useContext, useRef, useCallback } from "react";
 import Loder from "../../Components/Loder";
 import Chatbox from "../../Components/Chatbox";
 import { ThemeContext } from "../../Context/ThemeContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from '../../utils/userapi';
+import { UserContext } from "../../Context/UserContext";
+
 import {
     faRepeat,
     faFolderOpen,
@@ -186,6 +188,7 @@ export default function Datatable({
     const [rowsPerPage, setRowsPerPage] = useState(rowsPerPageOptions[0]);
     const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
     const [orderid, setOrderid] = useState(null);
+    const { user } = useContext(UserContext);
 
     // ✅ NEW STATES for multi-select & dropdown
     const [selectedRows, setSelectedRows] = useState([]);
@@ -218,8 +221,8 @@ export default function Datatable({
             filtered = filtered.filter((row) =>
                 columns.some((col) => {
                     const value = row[col.accessor];
-                    return value != null && 
-                           String(value).toLowerCase().includes(searchLower);
+                    return value != null &&
+                        String(value).toLowerCase().includes(searchLower);
                 })
             );
         }
@@ -315,7 +318,8 @@ export default function Datatable({
                 },
                 body: JSON.stringify({
                     orders: orderIds,
-                    message: message
+                    message: message,
+                    labname: user.labname
                 }),
             });
 
@@ -426,19 +430,19 @@ export default function Datatable({
 
         if (res.status === "success") {
             let successMsg = res.message || "Orders sent for redesign successfully.";
-            
+
             if (newOrderIds.length > 0) {
                 successMsg += "\n\nNote: " + (newOrderIds.length === 1
                     ? `Order ${newOrderIds[0]} was skipped as it's a new order.`
                     : `Orders ${newOrderIds.join(', ')} were skipped as they are new orders.`);
             }
-            
+
             if (redesignIds.length > 0) {
                 successMsg += "\n\nNote: " + (redesignIds.length === 1
                     ? `Order ${redesignIds[0]} was skipped as it's already in redesign.`
                     : `Orders ${redesignIds.join(', ')} were skipped as they are already in redesign.`);
             }
-            
+
             alert(successMsg);
             window.location.reload();
         } else {
