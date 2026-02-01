@@ -32,6 +32,7 @@ import {
 import { UserContext } from "../../Context/UserContext";
 import { DesignerContext } from "../../Context/DesignerContext";
 
+
 function Chatbox({ orderid, theme }) {
     const userToken = localStorage.getItem('skydent_user_token');
     const adminToken = localStorage.getItem('skydent_admin_token');
@@ -92,13 +93,9 @@ function Chatbox({ orderid, theme }) {
                 const formatted = data.data.map(msg => {
                     // Client messages -> LEFT, Designer/Admin messages -> RIGHT
                     const isClient = msg.user_type === 'Client';
-                    const isDesigner = msg.user_type === 'Designer';
-                    const isAdmin = msg.user_type === 'Admin';
 
-                    // Show right if: (client viewing own message) OR (designer viewing designer message) OR (admin viewing any non-client message)
-                    const showRight = (userRole === 'client' && isClient) ||
-                        (userRole === 'designer' && isDesigner) ||
-                        (userRole === 'admin' && !isClient);
+                    // Simple rule: Client messages = left, Designer/Admin messages = right
+                    const showRight = !isClient;
 
                     return {
                         id: msg.id,
@@ -150,12 +147,9 @@ function Chatbox({ orderid, theme }) {
                     .filter(msg => msg.id > lastMessageIdRef.current)
                     .map(msg => {
                         const isClient = msg.user_type === 'Client';
-                        const isDesigner = msg.user_type === 'Designer';
-                        const isAdmin = msg.user_type === 'Admin';
 
-                        const showRight = (userRole === 'client' && isClient) ||
-                            (userRole === 'designer' && isDesigner) ||
-                            (userRole === 'admin' && !isClient);
+                        // Simple rule: Client messages = left, Designer/Admin messages = right
+                        const showRight = !isClient;
 
                         return {
                             id: msg.id,
@@ -232,12 +226,9 @@ function Chatbox({ orderid, theme }) {
 
                 // Add message immediately with correct alignment
                 const isClient = getUserTypeForApi() === 'Client';
-                const isDesigner = getUserTypeForApi() === 'Designer';
-                const isAdmin = getUserTypeForApi() === 'Admin';
 
-                const showRight = (userRole === 'client' && isClient) ||
-                    (userRole === 'designer' && isDesigner) ||
-                    (userRole === 'admin' && !isClient);
+                // Simple rule: Client messages = left, Designer/Admin messages = right
+                const showRight = !isClient;
 
                 const newMsg = {
                     id: data.data.id,
@@ -321,7 +312,7 @@ function Chatbox({ orderid, theme }) {
     };
 
     return (
-        <div className={`flex flex-col h-full rounded-xl overflow-hidden border ${theme === "light" ? "bg-white border-gray-200" : "bg-gray-900 border-gray-700"}`}>
+        <div className={`flex flex-col h-[500px] rounded-xl overflow-hidden border ${theme === "light" ? "bg-white border-gray-200" : "bg-gray-900 border-gray-700"}`}>
 
             {/* ================= HEADER ================= */}
             <div className={`shrink-0 flex items-center justify-between px-6 py-4 border-b ${theme === "light" ? "bg-white border-gray-200" : "bg-gray-800 border-gray-700"}`}>
@@ -410,6 +401,7 @@ function Chatbox({ orderid, theme }) {
         </div>
     );
 }
+
 
 export default function OrderDetails() {
     const { theme } = useContext(ThemeContext);
@@ -537,8 +529,8 @@ export default function OrderDetails() {
     };
 
     const handleDeleteFile = async (fileId, type) => {
-        if (!window.confirm("Are you sure you want to delete this file?")) return;
 
+        if (type === 'finished' && !window.confirm("Are you sure you want to delete this file?")) return;
         toast.loading("Deleting file...");
         try {
             const response = await fetch(`${base_url}/delete-file`, {
@@ -827,27 +819,57 @@ export default function OrderDetails() {
                     <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`rounded-xl shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-800"}`}>
                             <div className="p-6">
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                                    <div>
+                                <div className="flex items-center gap-12 mb-6 flex-nowrap">
+                                    <div className="whitespace-nowrap">
                                         <label className="font-bold text-lg">Order ID: </label>
                                         <span className="text-xl font-bold text-blue-600">{order?.orderid}</span>
                                     </div>
-                                    <div>
-                                        <label className="font-bold text-lg"><FontAwesomeIcon icon={faClock} className="mr-2" />Status:</label>
-                                        <span className={`ml-2 px-4 py-2 rounded-full text-sm font-bold ${order?.status === 'Completed' ? 'bg-green-500 text-white' : order?.status === 'Cancel' || order?.status === 'Cancelled' ? 'bg-red-500 text-white' : 'bg-yellow-500 text-gray-900'}`}>
+
+                                    <div className="whitespace-nowrap">
+                                        <label className="font-bold text-lg">
+                                            <FontAwesomeIcon icon={faClock} className="mr-2" />
+                                            Status:
+                                        </label>
+                                        <span
+                                            className={`ml-2 px-4 py-2 rounded-full text-sm font-bold ${order?.status === 'Completed'
+                                                ? 'bg-green-500 text-white'
+                                                : order?.status === 'Cancel' || order?.status === 'Cancelled'
+                                                    ? 'bg-red-500 text-white'
+                                                    : 'bg-yellow-500 text-gray-900'
+                                                }`}
+                                        >
                                             {order?.status === 'progress' ? 'In Progress' : order?.status}
                                         </span>
                                     </div>
-                                    <div>
-                                        <label className="font-bold text-lg">Run Self By: </label>
-                                        <span className="text-xl font-bold text-blue-600">{order?.run_self_by}</span>
+
+                                    <div className="whitespace-nowrap">
+                                        <label className="font-bold text-lg">
+                                            <FontAwesomeIcon icon={faClock} className="mr-2" />
+                                            Redesign Date:
+                                        </label>
+                                        <span className="px-4 py-2 rounded-full text-sm font-bold">
+                                            {order?.redesign_date}
+                                        </span>
                                     </div>
-                                    <div className="text-right">
-                                        <button onClick={() => navigate(-1)} className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg cursor-pointer">
-                                            <FontAwesomeIcon icon={faBackward} className="mr-2" />Back to Orders
+
+                                    <div className="whitespace-nowrap">
+                                        <label className="font-bold text-lg">Run Self By: </label>
+                                        <span className="text-xl font-bold text-blue-600">
+                                            {order?.run_self_by}
+                                        </span>
+                                    </div>
+
+                                    <div className="ml-auto">
+                                        <button
+                                            onClick={() => navigate(-1)}
+                                            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg cursor-pointer whitespace-nowrap"
+                                        >
+                                            <FontAwesomeIcon icon={faBackward} className="mr-2" />
+                                            Back to Orders
                                         </button>
                                     </div>
                                 </div>
+
 
                                 <div className="border-t pt-6">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
@@ -934,18 +956,18 @@ export default function OrderDetails() {
                                                             <div className={`h-2 rounded-full overflow-hidden ${theme === "light" ? "bg-gray-200" : "bg-gray-600"}`}>
                                                                 <div
                                                                     className={`h-full transition-all duration-300 ${progress.status === 'completed' ? 'bg-green-500' :
-                                                                            progress.status === 'error' ? 'bg-red-500' :
-                                                                                progress.status === 'processing' ? 'bg-yellow-500' :
-                                                                                    'bg-blue-500'
+                                                                        progress.status === 'error' ? 'bg-red-500' :
+                                                                            progress.status === 'processing' ? 'bg-yellow-500' :
+                                                                                'bg-blue-500'
                                                                         }`}
                                                                     style={{ width: `${progress.progress}%` }}
                                                                 />
                                                             </div>
                                                             <div className="flex justify-between items-center text-xs">
                                                                 <span className={`font-medium ${progress.status === 'completed' ? 'text-green-600' :
-                                                                        progress.status === 'error' ? 'text-red-600' :
-                                                                            progress.status === 'processing' ? 'text-yellow-600' :
-                                                                                'text-blue-600'
+                                                                    progress.status === 'error' ? 'text-red-600' :
+                                                                        progress.status === 'processing' ? 'text-yellow-600' :
+                                                                            'text-blue-600'
                                                                     }`}>
                                                                     {progress.status === 'uploading' ? 'Uploading...' :
                                                                         progress.status === 'processing' ? 'Processing...' :
@@ -987,8 +1009,8 @@ export default function OrderDetails() {
                                                 onClick={() => fileInputRef.current?.click()}
                                                 disabled={uploading}
                                                 className={`w-full flex flex-col items-center gap-3 px-8 py-8 rounded-lg font-bold text-lg transition-all hover:scale-105 ${uploading ? 'bg-gray-400 cursor-not-allowed' :
-                                                        theme === "light" ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg' :
-                                                            'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 shadow-lg'
+                                                    theme === "light" ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg' :
+                                                        'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 shadow-lg'
                                                     }`}
                                             >
                                                 {uploading ? (
