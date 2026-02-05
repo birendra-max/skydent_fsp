@@ -29,33 +29,25 @@ export default function Hd() {
     const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Authentication check
     useEffect(() => {
         const data = localStorage.getItem('skydent_user');
         const token = localStorage.getItem('skydent_user_token');
-
-        if (!data || !token) {
-            navigate('/user');
-        }
+        if (!data || !token) navigate('/user');
     }, [navigate]);
 
-    // Initialize theme from localStorage or system preference
     useEffect(() => {
         const savedMode = localStorage.getItem('theme') || 'light';
         setMode(savedMode);
-        applyTheme(savedMode);
-    }, []);
+        localStorage.setItem('theme', savedMode);
+        setTheme(savedMode);
+    }, [setTheme]);
 
-    // Handle scroll effect for subtle header transformation
     useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 20);
-        };
+        const handleScroll = () => setScrolled(window.scrollY > 20);
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    // Determine active page based on current route
     useEffect(() => {
         const pathname = location.pathname;
         if (pathname.includes("new_request")) setActivePage("new_request");
@@ -65,18 +57,11 @@ export default function Hd() {
         else setActivePage("index");
     }, [location]);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (dropdownOpen && !event.target.closest('.dropdown-container')) {
-                setDropdownOpen(false);
-            }
-            if (isOpen && !event.target.closest('.mobile-menu-container')) {
-                setIsOpen(false);
-            }
-            if (mobileSearchOpen && !event.target.closest('.search-container')) {
-                setMobileSearchOpen(false);
-            }
+            if (dropdownOpen && !event.target.closest('.dropdown-container')) setDropdownOpen(false);
+            if (isOpen && !event.target.closest('.mobile-menu-container')) setIsOpen(false);
+            if (mobileSearchOpen && !event.target.closest('.search-container')) setMobileSearchOpen(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         document.addEventListener('touchstart', handleClickOutside);
@@ -93,76 +78,60 @@ export default function Hd() {
         { href: "/user/reports", label: "Reports", key: "reports", icon: faChartLine }
     ];
 
-    const applyTheme = (newTheme) => {
-        localStorage.setItem('theme', newTheme);
-        setTheme(newTheme);
-    };
-
-    const changeIcon = () => {
-        const newMode = mode === 'light' ? 'dark' : 'light';
-        setMode(newMode);
-        applyTheme(newMode);
+    const handleNavigate = (href) => {
+        setIsOpen(false);
+        setMobileSearchOpen(false);
+        
+        if (location.pathname === href) {
+            window.location.reload();
+        } else {
+            navigate(href);
+        }
     };
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) {
             setMobileSearchOpen(false);
-            navigate(`/user/search-order/${searchQuery}`)
+            navigate(`/user/search-order/${searchQuery}`);
         }
     };
 
-    const clearSearch = () => {
-        setSearchQuery("");
-    };
+    const clearSearch = () => setSearchQuery("");
 
     return (
         <header className="fixed z-50 top-0 left-0 w-full h-16 bg-gray-900 border-b border-gray-700">
             <nav className="w-full h-full">
                 <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 h-full">
-                    {/* Main Navigation Bar */}
                     <div className="flex items-center justify-between h-full">
-                        {/* Left Side - Logo */}
                         <div className="flex items-center">
-                            <Link
-                                to="/user/home"
-                                className="flex items-center"
-                                onClick={() => {
-                                    setIsOpen(false);
-                                    setMobileSearchOpen(false);
-                                }}
+                            <button
+                                onClick={() => handleNavigate("/user/home")}
+                                className="flex items-center focus:outline-none"
                             >
-                                <div className="h-full w-full rounded-lg flex items-center justify-center">
-                                    <img src="/img/logo.png" alt="Logo" className="h-10 w-auto" onError={(e) => { e.target.src = '/img/placeholder-logo.png'; }} />
-                                </div>
-                            </Link>
+                                <img src="/img/logo.png" alt="Logo" className="h-10 w-auto" onError={(e) => { e.target.src = '/img/placeholder-logo.png'; }} />
+                            </button>
                         </div>
 
-                        {/* Center - Desktop Navigation */}
                         <div className="hidden lg:flex items-center justify-center flex-1 max-w-2xl mx-8">
                             <div className="flex items-center space-x-4">
                                 {navItems.map((item) => (
-                                    <Link
-                                        to={item.href}
+                                    <button
                                         key={item.key}
+                                        onClick={() => handleNavigate(item.href)}
                                         className={`px-4 py-2 rounded-md font-medium transition-all duration-200 flex items-center space-x-2 text-sm ${activePage === item.key
                                             ? "bg-blue-600 text-white"
                                             : "text-gray-300 hover:text-white hover:bg-gray-800"
                                             }`}
                                     >
-                                        <FontAwesomeIcon
-                                            icon={item.icon}
-                                            className="w-4 h-4"
-                                        />
+                                        <FontAwesomeIcon icon={item.icon} className="w-4 h-4" />
                                         <span className="whitespace-nowrap font-bold">{item.label}</span>
-                                    </Link>
+                                    </button>
                                 ))}
                             </div>
                         </div>
 
-                        {/* Right Side - Search, Theme, and Profile */}
                         <div className="flex items-center space-x-4">
-                            {/* Search - Desktop */}
                             <div className="hidden lg:block search-container">
                                 <form className="flex items-center" onSubmit={handleSearchSubmit}>
                                     <div className="relative">
@@ -189,9 +158,13 @@ export default function Hd() {
                                 </form>
                             </div>
 
-                            {/* Theme Toggle */}
                             <button
-                                onClick={changeIcon}
+                                onClick={() => {
+                                    const newMode = mode === 'light' ? 'dark' : 'light';
+                                    setMode(newMode);
+                                    localStorage.setItem('theme', newMode);
+                                    setTheme(newMode);
+                                }}
                                 className="p-2 text-gray-300 hover:text-white transition-all duration-200 rounded-lg hover:bg-gray-800"
                                 aria-label="Toggle theme"
                             >
@@ -202,7 +175,6 @@ export default function Hd() {
                                 )}
                             </button>
 
-                            {/* Mobile Search Button */}
                             <button
                                 onClick={() => {
                                     setMobileSearchOpen(!mobileSearchOpen);
@@ -216,7 +188,6 @@ export default function Hd() {
                                 />
                             </button>
 
-                            {/* Profile Dropdown */}
                             <div className="relative dropdown-container">
                                 <button
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -231,9 +202,7 @@ export default function Hd() {
                                                 src={user?.pic && user.pic !== '' ? user.pic : '/img/user.webp'}
                                                 alt="User profile"
                                                 className="h-8 w-8 rounded-full border-2 border-gray-600 object-cover"
-                                                onError={(e) => {
-                                                    e.target.src = '/img/user.webp';
-                                                }}
+                                                onError={(e) => { e.target.src = '/img/user.webp'; }}
                                             />
                                             <div className="absolute bottom-0 right-0 h-2 w-2 bg-green-500 rounded-full border-2 border-gray-900"></div>
                                         </div>
@@ -251,14 +220,16 @@ export default function Hd() {
                                             </div>
                                         </div>
                                         <div className="py-1">
-                                            <Link
-                                                to="/user/profile"
-                                                className="block px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-all duration-200 flex items-center text-sm sm:text-base"
-                                                onClick={() => setDropdownOpen(false)}
+                                            <button
+                                                onClick={() => {
+                                                    handleNavigate("/user/profile");
+                                                    setDropdownOpen(false);
+                                                }}
+                                                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-all duration-200 flex items-center text-sm sm:text-base"
                                             >
                                                 <FontAwesomeIcon icon={faUser} className="w-4 h-4 mr-3" />
                                                 Profile
-                                            </Link>
+                                            </button>
                                             <button
                                                 onClick={logout}
                                                 className="block w-full text-left px-4 py-3 text-red-400 hover:bg-red-600 hover:text-white transition-all duration-200 flex items-center text-sm sm:text-base"
@@ -271,7 +242,6 @@ export default function Hd() {
                                 )}
                             </div>
 
-                            {/* Mobile Menu Button */}
                             <button
                                 onClick={() => {
                                     setIsOpen(!isOpen);
@@ -280,15 +250,11 @@ export default function Hd() {
                                 className="lg:hidden p-2 text-gray-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-gray-800"
                                 aria-label="Toggle menu"
                             >
-                                <FontAwesomeIcon
-                                    icon={isOpen ? faTimes : faBars}
-                                    className="w-5 h-5"
-                                />
+                                <FontAwesomeIcon icon={isOpen ? faTimes : faBars} className="w-5 h-5" />
                             </button>
                         </div>
                     </div>
 
-                    {/* Mobile Search Bar */}
                     {mobileSearchOpen && (
                         <div className="lg:hidden bg-gray-800 px-4 py-3 border-t border-gray-700">
                             <form onSubmit={handleSearchSubmit} className="flex space-x-3">
@@ -321,26 +287,21 @@ export default function Hd() {
                         </div>
                     )}
 
-                    {/* Mobile Navigation Menu */}
                     {isOpen && (
-                        <div className="lg:hidden bg-gray-800 border-t border-gray-700">
+                        <div className="lg:hidden bg-gray-800 border-t border-gray-700 mobile-menu-container">
                             <div className="px-3 py-2 space-y-1">
                                 {navItems.map((item) => (
-                                    <Link
-                                        to={item.href}
+                                    <button
                                         key={item.key}
-                                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-colors duration-200 text-sm ${activePage === item.key
+                                        onClick={() => handleNavigate(item.href)}
+                                        className={`flex items-center space-x-3 w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 text-sm ${activePage === item.key
                                             ? "bg-blue-600 text-white border border-blue-500"
                                             : "text-gray-300 hover:text-white hover:bg-gray-700"
                                             }`}
-                                        onClick={() => setIsOpen(false)}
                                     >
-                                        <FontAwesomeIcon
-                                            icon={item.icon}
-                                            className="w-4 h-4"
-                                        />
+                                        <FontAwesomeIcon icon={item.icon} className="w-4 h-4" />
                                         <span>{item.label}</span>
-                                    </Link>
+                                    </button>
                                 ))}
                             </div>
                         </div>
